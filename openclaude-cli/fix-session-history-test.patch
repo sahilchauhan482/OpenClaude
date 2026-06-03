@@ -1,0 +1,7 @@
+--- src/assistant/sessionHistory.test.ts
++++ src/assistant/sessionHistory.test.ts
+@@ -2,3 +2,3 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+-import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
++import type { Message as SDKMessage } from '../utils/conversationCache.js'
+ import { saveSessionHistory, loadSessionHistory } from './sessionHistory.js'

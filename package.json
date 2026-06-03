@@ -1,0 +1,17 @@
+{
+  "name": "openclaude-monorepo",
+  "private": true,
+  "workspaces": [
+    "openclaude-cli",
+    "openclaude-vscode"
+  ],
+  "scripts": {
+    "cli:build": "npm --prefix openclaude-cli run build",
+    "cli:test": "npm --prefix openclaude-cli run test:full",
+    "cli:typecheck": "npm --prefix openclaude-cli run typecheck",
+    "vscode:build": "npm --prefix openclaude-vscode run build",
+    "vscode:test": "npm --prefix openclaude-vscode run test",
+    "vscode:lint": "npm --prefix openclaude-vscode run lint",
+    "install:all": "npm install --prefix openclaude-cli && npm install --prefix openclaude-vscode"
+  }
+}

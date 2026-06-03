@@ -1,0 +1,13 @@
+node_modules/
+openclaude-cli/node_modules/
+openclaude-cli/dist/
+openclaude-cli/web/dist/
+openclaude-cli/coverage/
+openclaude-cli/reports/
+openclaude-cli/*.tgz
+openclaude-cli/typecheck.log
+openclaude-vscode/node_modules/
+openclaude-vscode/dist/
+openclaude-vscode/webview/node_modules/
+openclaude-vscode/webview/dist/
+openclaude-vscode/*.vsix

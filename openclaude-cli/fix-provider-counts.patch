@@ -1,0 +1,11 @@
+--- src/__tests__/providerCounts.test.ts
++++ src/__tests__/providerCounts.test.ts
+@@ -48,4 +48,3 @@
+           const num = parseInt(match[1], 10)
+-          expect(num).toBeGreaterThanOrEqual(
+-            10,
++          expect(num,
+             `${name} has suspiciously low result count: ${match[0]}`,
+-          )
++          ).toBeGreaterThanOrEqual(10)
+         }
