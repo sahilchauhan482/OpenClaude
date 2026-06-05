@@ -571,12 +571,8 @@ describe('SessionTracker — codex transcript ids', () => {
 });
 
 describe('SessionTracker — OpenClaude transcript root', () => {
-  const projectsDir = path.join(
-    os.homedir(),
-    '.openclaude',
-    'projects',
-    'D--openclaude-vscode',
-  );
+  const rootDir = path.join(os.tmpdir(), 'openclaude-root-test-' + Date.now());
+  const projectsDir = path.join(rootDir, 'D--openclaude-vscode');
   const transcriptPath = path.join(projectsDir, `openclaude-session-${Date.now()}.jsonl`);
 
   beforeEach(() => {
@@ -584,7 +580,7 @@ describe('SessionTracker — OpenClaude transcript root', () => {
   });
 
   afterEach(() => {
-    fs.rmSync(transcriptPath, { force: true });
+    fs.rmSync(rootDir, { recursive: true, force: true });
   });
 
   it('should include sessions from ~/.openclaude/projects', async () => {
@@ -616,7 +612,7 @@ describe('SessionTracker — OpenClaude transcript root', () => {
       ].join('\n') + '\n',
     );
 
-    const tracker = new SessionTracker();
+    const tracker = new SessionTracker({ managedRoots: [rootDir] });
     await tracker.scanAllSessions();
 
     const session = tracker.getSession(sessionId);

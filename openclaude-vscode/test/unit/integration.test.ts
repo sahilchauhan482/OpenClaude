@@ -36,12 +36,33 @@ function createMessageRouter() {
 // ============================================================================
 
 interface ChatState {
-  messages: Array<{ id: string; role: string; text?: string }>;
+  messages: Array<{
+    id: string;
+    role: string;
+    text?: string;
+    system?: {
+      tone?: 'info' | 'warning' | 'error' | 'success';
+      title?: string;
+      detail?: string;
+    };
+  }>;
   error: string | null;
   promptSuggestions: string[];
   sessionId: string | null;
   sessionTitle: string | null;
   rateLimitInfo: { resetsAt: number; rateLimitType: string; message: string } | null;
+  agentTeamBoard: {
+    enabled: boolean;
+    mode: 'off' | 'assist' | 'coordinate';
+    maxWorkers: number;
+    useWorktrees: boolean;
+    worktreeAvailable: boolean;
+    currentWorktreeName?: string | null;
+    runningTaskCount: number;
+    warnings: string[];
+    tasks: Array<{ id: string; description: string; status: string }>;
+    summaries: Array<{ id: string; title: string; statusCategory: string }>;
+  } | null;
 }
 
 function createChatState(): ChatState {
@@ -52,6 +73,43 @@ function createChatState(): ChatState {
     sessionId: null,
     sessionTitle: null,
     rateLimitInfo: null,
+    agentTeamBoard: null,
+  };
+}
+
+function parseSystemInlineMessage(text: string) {
+  const trimmed = text.trim();
+  const normalized = trimmed.toLowerCase();
+
+  if (normalized.includes('retrying once with an alternate strategy')) {
+    return {
+      tone: 'warning' as const,
+      title: 'Agent adapted strategy',
+      detail:
+        'Repeated tool failures were detected, so OpenClaude is retrying once with a different recovery path instead of stopping.',
+    };
+  }
+
+  if (normalized.includes('compacted')) {
+    return {
+      tone: 'info' as const,
+      title: 'Context compacted',
+      detail: trimmed,
+    };
+  }
+
+  if (normalized.includes('retrying api call')) {
+    return {
+      tone: 'info' as const,
+      title: 'Retrying request',
+      detail: trimmed,
+    };
+  }
+
+  return {
+    tone: 'info' as const,
+    title: trimmed,
+    detail: undefined,
   };
 }
 
@@ -82,6 +140,11 @@ function routeCliMessage(state: ChatState, msg: Record<string, unknown>): ChatSt
           id: `tool-summary-${Date.now()}`,
           role: 'system',
           text: `${toolName}: ${summary}`,
+          system: {
+            tone: 'info',
+            title: toolName,
+            detail: summary,
+          },
         });
       }
       break;
@@ -104,18 +167,25 @@ function routeCliMessage(state: ChatState, msg: Record<string, unknown>): ChatSt
         next.sessionId = (msg.session_id as string) ?? null;
       } else if (subtype === 'ai-title') {
         next.sessionTitle = (msg.title as string) ?? null;
-      } else if (subtype === 'api_retry') {
-        const attempt = (msg.attempt as number) ?? 1;
+      } else if (subtype === 'informational') {
+        const content = (msg.content as string) ?? '';
         next.messages.push({
-          id: `retry-${Date.now()}`,
+          id: `informational-${Date.now()}`,
           role: 'system',
-          text: `Retrying API call (attempt ${attempt})...`,
+          text: content,
+          system: parseSystemInlineMessage(content),
         });
+      } else if (subtype === 'api_retry') {
       } else if (subtype === 'compact_boundary') {
         next.messages.push({
           id: `compact-${Date.now()}`,
           role: 'system',
           text: 'Context compacted to fit within limits.',
+          system: {
+            tone: 'info',
+            title: 'Context compacted',
+            detail: 'Older context was compressed to keep the session moving.',
+          },
         });
       }
       break;
@@ -128,6 +198,20 @@ function routeCliMessage(state: ChatState, msg: Record<string, unknown>): ChatSt
       }
       break;
     }
+  }
+
+  return next;
+}
+
+function routeHostMessage(state: ChatState, data: Record<string, unknown>): ChatState {
+  const next = { ...state };
+
+  if (data.type === 'agent_team_board') {
+    next.agentTeamBoard = (data.board as ChatState['agentTeamBoard']) ?? null;
+  }
+
+  if (data.type === 'clearMessages') {
+    next.agentTeamBoard = null;
   }
 
   return next;
@@ -268,11 +352,10 @@ describe('Integration: CLI message → webview routing', () => {
     expect(state.promptSuggestions.length).toBeLessThanOrEqual(5);
   });
 
-  it('routes system/api_retry as system message', () => {
+  it('keeps system/api_retry out of the visible transcript', () => {
     let state = createChatState();
     state = routeCliMessage(state, { type: 'system', subtype: 'api_retry', attempt: 2 });
-    expect(state.messages).toHaveLength(1);
-    expect(state.messages[0].text).toContain('attempt 2');
+    expect(state.messages).toHaveLength(0);
   });
 
   it('routes system/compact_boundary as system message', () => {
@@ -280,6 +363,78 @@ describe('Integration: CLI message → webview routing', () => {
     state = routeCliMessage(state, { type: 'system', subtype: 'compact_boundary' });
     expect(state.messages).toHaveLength(1);
     expect(state.messages[0].text).toContain('compacted');
+    expect(state.messages[0].system?.title).toBe('Context compacted');
+  });
+
+  it('routes informational recovery messages as richer system state', () => {
+    let state = createChatState();
+    state = routeCliMessage(state, {
+      type: 'system',
+      subtype: 'informational',
+      content:
+        'Repeated tool failures detected. Retrying once with an alternate strategy instead of stopping.',
+    });
+    expect(state.messages).toHaveLength(1);
+    expect(state.messages[0].system?.tone).toBe('warning');
+    expect(state.messages[0].system?.title).toBe('Agent adapted strategy');
+  });
+
+  it('keeps recommendation approval flow session-scoped', () => {
+    const shownIds = new Set<string>();
+    const dismissedIds = new Set<string>();
+    const appliedIds = new Set<string>();
+
+    shownIds.add('postgres-mcp');
+    dismissedIds.add('playwright-mcp');
+    appliedIds.add('lsp-plugin');
+
+    expect(shownIds.has('postgres-mcp')).toBe(true);
+    expect(dismissedIds.has('playwright-mcp')).toBe(true);
+    expect(appliedIds.has('lsp-plugin')).toBe(true);
+  });
+
+  it('routes agent team board host updates into chat state', () => {
+    let state = createChatState();
+    state = routeHostMessage(state, {
+      type: 'agent_team_board',
+      board: {
+        enabled: true,
+        mode: 'assist',
+        maxWorkers: 3,
+        useWorktrees: true,
+        worktreeAvailable: true,
+        currentWorktreeName: 'feature-agent-board',
+        runningTaskCount: 1,
+        warnings: [],
+        tasks: [{ id: 't1', description: 'Investigate test failures', status: 'running' }],
+        summaries: [],
+      },
+    });
+
+    expect(state.agentTeamBoard?.enabled).toBe(true);
+    expect(state.agentTeamBoard?.tasks[0]?.description).toBe('Investigate test failures');
+  });
+
+  it('clears agent team board state on new conversation reset', () => {
+    let state = createChatState();
+    state = routeHostMessage(state, {
+      type: 'agent_team_board',
+      board: {
+        enabled: true,
+        mode: 'assist',
+        maxWorkers: 3,
+        useWorktrees: true,
+        worktreeAvailable: false,
+        currentWorktreeName: null,
+        runningTaskCount: 1,
+        warnings: ['warning'],
+        tasks: [{ id: 't1', description: 'Investigate', status: 'running' }],
+        summaries: [],
+      },
+    });
+    state = routeHostMessage(state, { type: 'clearMessages' });
+
+    expect(state.agentTeamBoard).toBeNull();
   });
 });
 

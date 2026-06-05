@@ -1,11 +1,22 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { vscode } from '../vscode';
 import { useStream } from './useStream';
-import type { ChatMessage, FileEditMessageState, SessionCost } from '../types/chat';
+import type {
+  AgentTeamBoardState,
+  ChatMessage,
+  FileEditMessageState,
+  SessionCost,
+  SystemInlineMessageState,
+} from '../types/chat';
 import type { AttachmentItem } from '../types/attachments';
 import { describeUserMessageContent } from '../utils/messageContent';
 import { getProviderStateModel } from '../utils/providerState';
 import { resolveModelSupportsImages } from '../utils/modelCapabilities';
+import { formatToolDelta, getToolPresentation } from '../utils/toolPresentation';
+import {
+  sanitizeAssistantContentBlocks,
+  sanitizeAssistantRenderableBlocks,
+} from '../utils/transcriptFilters';
 import type {
   SDKMessage,
   StreamEvent,
@@ -88,44 +99,19 @@ function formatToolActivity(
 ): string {
   if (progress) return progress;
 
-  // Map known tool names to human-readable descriptions
-  const name = toolName.toLowerCase();
+  const presentation = getToolPresentation(toolName, input ?? {});
+  const delta = formatToolDelta(presentation.delta);
 
-  if (name.includes('bash') || name.includes('terminal')) {
-    const cmd = input?.command as string;
-    if (cmd) {
-      const short = cmd.length > 60 ? cmd.slice(0, 57) + '...' : cmd;
-      return `Running: ${short}`;
-    }
-    return 'Running command...';
+  if (presentation.kind === 'command') {
+    return presentation.summary || 'Running command...';
   }
 
-  if (name.includes('edit') || name.includes('write') || name.includes('file_edit')) {
-    const filePath = (input?.file_path ?? input?.path ?? input?.filename) as string;
-    if (filePath) {
-      const fileName = filePath.split('/').pop() ?? filePath;
-      return `Editing ${fileName}`;
-    }
-    return 'Editing file...';
+  if (presentation.kind === 'file') {
+    return delta ? `${presentation.summary} ${delta}` : presentation.summary;
   }
 
-  if (name.includes('read')) {
-    const filePath = (input?.file_path ?? input?.path ?? input?.filename) as string;
-    if (filePath) {
-      const fileName = filePath.split('/').pop() ?? filePath;
-      return `Reading ${fileName}`;
-    }
-    return 'Reading file...';
-  }
-
-  if (name.includes('search') || name.includes('grep') || name.includes('glob')) {
-    const pattern = (input?.pattern ?? input?.query ?? input?.regex) as string;
-    if (pattern) return `Searching: ${pattern}`;
-    return 'Searching...';
-  }
-
-  if (name.includes('web') || name.includes('fetch') || name.includes('browser')) {
-    return 'Browsing web...';
+  if (presentation.kind === 'search' || presentation.kind === 'web') {
+    return presentation.summary;
   }
 
   return `${toolName}...`;
@@ -172,6 +158,52 @@ function parseFileEditMessage(data: Record<string, unknown>): FileEditMessageSta
   };
 }
 
+function parseSystemInlineMessage(text: string): SystemInlineMessageState {
+  const trimmed = text.trim();
+  const lines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const first = lines[0] ?? trimmed;
+  const rest = lines.slice(1).join(' ');
+  const normalized = trimmed.toLowerCase();
+
+  if (normalized.includes('retrying once with an alternate strategy')) {
+    return {
+      tone: 'warning',
+      title: 'Agent adapted strategy',
+      detail: 'Repeated tool failures were detected, so OpenClaude is retrying once with a different recovery path instead of stopping.',
+    };
+  }
+
+  if (normalized.startsWith('provider ') && normalized.includes('rate-limited')) {
+    return {
+      tone: 'warning',
+      title: 'Provider fallback',
+      detail: trimmed,
+    };
+  }
+
+  if (normalized.includes('compacted')) {
+    return {
+      tone: 'info',
+      title: 'Context compacted',
+      detail: trimmed,
+    };
+  }
+
+  if (normalized.includes('retrying api call')) {
+    return {
+      tone: 'info',
+      title: 'Retrying request',
+      detail: trimmed,
+    };
+  }
+
+  return {
+    tone: normalized.includes('warning') ? 'warning' : 'info',
+    title: first,
+    detail: rest || undefined,
+  };
+}
+
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
@@ -192,6 +224,7 @@ export function useChat() {
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [attachmentProcessing, setAttachmentProcessing] = useState<string | null>(null);
   const [activeFileEdit, setActiveFileEdit] = useState<FileEditMessageState | null>(null);
+  const [agentTeamBoard, setAgentTeamBoard] = useState<AgentTeamBoardState | null>(null);
 
   const { processStreamEvent, resetStream } = useStream();
   const streamingUuidRef = useRef<string | null>(null);
@@ -249,9 +282,10 @@ export function useChat() {
         case 'block_stop': {
           const uuid = streamingUuidRef.current;
           if (!uuid) break;
+          const sanitizedBlocks = sanitizeAssistantRenderableBlocks(update.blocks ?? []);
           setMessages((prev) =>
             prev.map((msg) =>
-              msg.id === uuid ? { ...msg, blocks: update.blocks } : msg,
+              msg.id === uuid ? { ...msg, blocks: sanitizedBlocks } : msg,
             ),
           );
           // Extract tool activity from tool_use blocks
@@ -275,15 +309,22 @@ export function useChat() {
           const uuid = streamingUuidRef.current;
           if (uuid) {
             setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === uuid
-                  ? {
-                      ...msg,
-                      isStreaming: false,
-                      blocks: msg.blocks?.map((b) => ({ ...b, isStreaming: false })),
-                    }
-                  : msg,
-              ),
+              prev.flatMap((msg) => {
+                if (msg.id !== uuid) {
+                  return [msg];
+                }
+
+                const finalizedBlocks = msg.blocks?.map((b) => ({ ...b, isStreaming: false })) ?? [];
+                if (finalizedBlocks.length === 0) {
+                  return [];
+                }
+
+                return [{
+                  ...msg,
+                  isStreaming: false,
+                  blocks: finalizedBlocks,
+                }];
+              }),
             );
           }
           setIsStreaming(false);
@@ -299,11 +340,15 @@ export function useChat() {
   );
 
   const handleAssistantMessage = useCallback((msg: AssistantMessage) => {
-    const blocks = (msg.message.content || []).map((block, index) => ({
+    const blocks = sanitizeAssistantContentBlocks(msg.message.content || []).map((block, index) => ({
       index,
       block,
       isStreaming: false,
     }));
+
+    if (blocks.length === 0) {
+      return;
+    }
 
     const chatMsg: ChatMessage = {
       id: msg.uuid,
@@ -362,13 +407,14 @@ export function useChat() {
   }, []);
 
   // Add a system-style inline message to the chat
-  const addSystemMessage = useCallback((text: string, id?: string) => {
+  const addSystemMessage = useCallback((text: string, id?: string, system?: SystemInlineMessageState) => {
     setMessages((prev) => [
       ...prev,
       {
         id: id ?? `sys-${Date.now()}`,
         role: 'system' as const,
         text,
+        system,
         isStreaming: false,
         timestamp: Date.now(),
         parentToolUseId: null,
@@ -457,6 +503,11 @@ export function useChat() {
         return;
       }
 
+      if (data.type === 'agent_team_board') {
+        setAgentTeamBoard((data.board as AgentTeamBoardState | null) ?? null);
+        return;
+      }
+
       // Unwrap cli_output envelope
       const msg: SDKMessage = data.type === 'cli_output' ? data.data : data;
       if (!msg || typeof msg !== 'object') return;
@@ -540,7 +591,15 @@ export function useChat() {
             const toolName = msgAny.tool_name as string ?? 'tool';
             const summary = msgAny.summary as string ?? '';
             if (summary) {
-              addSystemMessage(`${toolName}: ${summary}`, `tool-summary-${Date.now()}`);
+              addSystemMessage(
+                `${toolName}: ${summary}`,
+                `tool-summary-${Date.now()}`,
+                {
+                  tone: 'info',
+                  title: toolName,
+                  detail: summary,
+                },
+              );
             }
             // Clear tool activity after summary
             setToolActivity(null);
@@ -628,13 +687,71 @@ export function useChat() {
                 if (title) handleSessionTitle(title);
                 break;
               }
+              case 'informational': {
+                const content = (msgAny.content as string) ?? '';
+                if (content) {
+                  addSystemMessage(
+                    content,
+                    `informational-${Date.now()}`,
+                    parseSystemInlineMessage(content),
+                  );
+                }
+                break;
+              }
               case 'api_retry': {
-                const attempt = msgAny.attempt as number ?? 1;
-                addSystemMessage(`Retrying API call (attempt ${attempt})...`, `retry-${Date.now()}`);
                 break;
               }
               case 'compact_boundary':
-                addSystemMessage('Context compacted to fit within limits.', `compact-${Date.now()}`);
+                addSystemMessage(
+                  'Context compacted to fit within limits.',
+                  `compact-${Date.now()}`,
+                  {
+                    tone: 'info',
+                    title: 'Context compacted',
+                    detail: 'Older context was compressed to keep the session moving.',
+                  },
+                );
+                break;
+              case 'task_started': {
+                const taskDescription = typeof msgAny.description === 'string' ? msgAny.description.trim() : '';
+                if (taskDescription) {
+                  addSystemMessage(
+                    `Delegated: ${taskDescription}`,
+                    `task-started-${String(msgAny.task_id ?? Date.now())}`,
+                    {
+                      tone: 'info',
+                      title: 'Worker started',
+                      detail: taskDescription,
+                    },
+                  );
+                }
+                break;
+              }
+              case 'task_progress':
+                break;
+              case 'task_notification': {
+                const status = typeof msgAny.status === 'string' ? msgAny.status : 'completed';
+                const summary = typeof msgAny.summary === 'string' ? msgAny.summary.trim() : '';
+                const title =
+                  status === 'failed'
+                    ? 'Worker failed'
+                    : status === 'stopped'
+                      ? 'Worker stopped'
+                      : 'Worker completed';
+                if (summary) {
+                  addSystemMessage(
+                    summary,
+                    `task-notification-${String(msgAny.task_id ?? Date.now())}`,
+                    {
+                      tone: status === 'failed' ? 'warning' : 'success',
+                      title,
+                      detail: summary,
+                    },
+                  );
+                }
+                break;
+              }
+              case 'post_turn_summary':
                 break;
               // hook_started, hook_response, session_state_changed, files_persisted
               // — handled by extension host, ignore in webview
@@ -665,6 +782,7 @@ export function useChat() {
           setToolActivity(null);
           setAttachmentProcessing(null);
           setActiveFileEdit(null);
+          setAgentTeamBoard(null);
           streamingUuidRef.current = null;
           resetStream();
         }
@@ -701,11 +819,16 @@ export function useChat() {
                 : null;
               const rawContent = msg?.content ?? entry.content;
               const contentArr = Array.isArray(rawContent) ? rawContent as Array<Record<string, unknown>> : [];
-              const blocks = contentArr.map((block, index) => ({
+              const blocks = sanitizeAssistantContentBlocks(
+                contentArr as unknown as import('../types/messages').ContentBlock[],
+              ).map((block, index) => ({
                 index,
                 block: block as unknown as import('../types/messages').ContentBlock,
                 isStreaming: false,
               }));
+              if (blocks.length === 0) {
+                continue;
+              }
               historyMsgs.push({
                 id: (entry.uuid as string) || `asst-hist-${historyMsgs.length}`,
                 role: 'assistant',
@@ -804,6 +927,7 @@ export function useChat() {
     setPromptSuggestions([]);
     setToolActivity(null);
     setActiveFileEdit(null);
+    setAgentTeamBoard(null);
     streamingUuidRef.current = null;
     resetStream();
   }, [resetStream]);
@@ -835,6 +959,7 @@ export function useChat() {
     toolActivity,
     attachmentProcessing,
     activeFileEdit,
+    agentTeamBoard,
     sendMessage,
     clearMessages,
     interrupt,

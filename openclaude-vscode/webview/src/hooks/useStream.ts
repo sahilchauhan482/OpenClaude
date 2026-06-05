@@ -21,6 +21,7 @@ import type {
   ToolUseBlock,
   ToolResultBlock,
 } from '../types/blocks';
+import type { ToolResultMeta } from '../types/toolResultMeta';
 
 interface UseStreamReturn {
   /** Process a single stream_event and return updated blocks */
@@ -279,8 +280,13 @@ function applyDelta(
     case 'input_json_delta': {
       // Accumulate partial JSON for tool_use blocks
       if (block.type === 'tool_use' || block.type === 'server_tool_use') {
-        state.toolInputBuffers[index] =
+        const partialJson =
           (state.toolInputBuffers[index] || '') + (d.partial_json as string);
+        state.toolInputBuffers[index] = partialJson;
+        return {
+          ...block,
+          input: parsePartialToolInput(partialJson, block.input),
+        };
       }
       return block;
     }
@@ -288,6 +294,43 @@ function applyDelta(
     default:
       return block;
   }
+}
+
+function parsePartialToolInput(
+  partialJson: string,
+  previousInput: Record<string, unknown>,
+): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(partialJson);
+    return parsed && typeof parsed === 'object'
+      ? parsed as Record<string, unknown>
+      : previousInput;
+  } catch {
+    const partialInput: Record<string, unknown> = { ...previousInput };
+    for (const key of ['command', 'cmd', 'script', 'file_path', 'path', 'filename']) {
+      const value = extractPartialJsonString(partialJson, key);
+      if (typeof value === 'string' && value.length > 0) {
+        partialInput[key] = value;
+      }
+    }
+    return partialInput;
+  }
+}
+
+function extractPartialJsonString(partialJson: string, key: string): string | undefined {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`"${escapedKey}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)`);
+  const match = partialJson.match(pattern);
+  if (!match) {
+    return undefined;
+  }
+
+  return match[1]
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t');
 }
 
 /**
@@ -386,6 +429,7 @@ export function parseContentBlock(event: {
         tool_use_id: cb.tool_use_id,
         content: typeof cb.content === 'string' ? cb.content : JSON.stringify(cb.content),
         is_error: cb.is_error ?? false,
+        meta: parseToolResultMeta(cb),
         isStreaming: false,
       } satisfies ToolResultBlock;
 
@@ -431,6 +475,84 @@ export function accumulateDelta(block: ContentBlock, delta: Record<string, any>)
     default:
       return block;
   }
+}
+
+function parseToolResultMeta(cb: Record<string, any>): ToolResultMeta | undefined {
+  const meta = cb._meta;
+  if (!meta || typeof meta !== 'object') {
+    return undefined;
+  }
+
+  const record = meta as Record<string, unknown>;
+  const next: ToolResultMeta = {};
+
+  if (typeof record.agentType === 'string') {
+    next.agentType = record.agentType;
+  }
+
+  if (record.verification && typeof record.verification === 'object') {
+    const verification = record.verification as Record<string, unknown>;
+    if (
+      (verification.verdict === 'PASS' ||
+        verification.verdict === 'FAIL' ||
+        verification.verdict === 'PARTIAL') &&
+      typeof verification.checkCount === 'number' &&
+      typeof verification.commandBlockCount === 'number' &&
+      typeof verification.hasEvidence === 'boolean'
+    ) {
+      next.verification = {
+        verdict: verification.verdict,
+        checkCount: verification.checkCount,
+        commandBlockCount: verification.commandBlockCount,
+        hasEvidence: verification.hasEvidence,
+      };
+    }
+  }
+
+  if (record.reviewer && typeof record.reviewer === 'object') {
+    const reviewer = record.reviewer as Record<string, unknown>;
+    if (Array.isArray(reviewer.findings) && typeof reviewer.hasFindings === 'boolean') {
+      next.reviewer = {
+        hasFindings: reviewer.hasFindings,
+        findings: reviewer.findings.flatMap((finding) => {
+          if (!finding || typeof finding !== 'object') {
+            return [];
+          }
+          const item = finding as Record<string, unknown>;
+          if (
+            item.severity !== 'critical' &&
+            item.severity !== 'high' &&
+            item.severity !== 'medium' &&
+            item.severity !== 'low'
+          ) {
+            return [];
+          }
+          if (typeof item.problem !== 'string') {
+            return [];
+          }
+          return [{
+            severity: item.severity,
+            location: typeof item.location === 'string' ? item.location : undefined,
+            problem: item.problem,
+            whyItMatters: typeof item.whyItMatters === 'string' ? item.whyItMatters : undefined,
+            evidence: typeof item.evidence === 'string' ? item.evidence : undefined,
+          }];
+        }),
+        openQuestions: Array.isArray(reviewer.openQuestions)
+          ? reviewer.openQuestions.filter(
+              (item): item is string => typeof item === 'string' && item.trim().length > 0,
+            )
+          : undefined,
+        residualRisks: Array.isArray(reviewer.residualRisks)
+          ? reviewer.residualRisks.filter(
+              (item): item is string => typeof item === 'string' && item.trim().length > 0,
+            )
+          : undefined,
+      };
+    }
+  }
+
+  return Object.keys(next).length > 0 ? next : undefined;
 }
 
 /**

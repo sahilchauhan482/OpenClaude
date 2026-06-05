@@ -6,13 +6,6 @@ interface FileEditCardProps {
   live?: boolean;
 }
 
-function formatDelta(additions: number, deletions: number): string {
-  const parts: string[] = [];
-  if (additions > 0) parts.push(`+${additions}`);
-  if (deletions > 0) parts.push(`-${deletions}`);
-  return parts.join(' ');
-}
-
 function stageLabel(stage: FileEditMessageState['stage']): string {
   if (stage === 'reviewing') return 'Review';
   if (stage === 'applied') return 'Edited';
@@ -21,7 +14,6 @@ function stageLabel(stage: FileEditMessageState['stage']): string {
 
 export function FileEditCard({ fileEdit, live = false }: FileEditCardProps) {
   const [expanded, setExpanded] = useState(fileEdit.stage === 'reviewing');
-  const delta = formatDelta(fileEdit.additions, fileEdit.deletions);
   const preview = fileEdit.preview;
   const hasPreview = preview
     && (
@@ -74,6 +66,19 @@ export function FileEditCard({ fileEdit, live = false }: FileEditCardProps) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, fontWeight: 600 }}>{stageLabel(fileEdit.stage)}</span>
+            {live ? (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 0.4,
+                  textTransform: 'uppercase',
+                  color: 'var(--vscode-focusBorder)',
+                }}
+              >
+                Live
+              </span>
+            ) : null}
             <span
               style={{
                 fontSize: 12,
@@ -83,17 +88,12 @@ export function FileEditCard({ fileEdit, live = false }: FileEditCardProps) {
             >
               {fileEdit.fileName}
             </span>
-            {delta && (
-              <span
-                style={{
-                  fontSize: 12,
-                  color: 'var(--app-success-foreground)',
-                  fontFamily: 'var(--app-monospace-font-family)',
-                }}
-              >
-                {delta}
-              </span>
-            )}
+            {fileEdit.additions > 0 ? (
+              <DeltaBadge tone="added" text={`+${fileEdit.additions}`} />
+            ) : null}
+            {fileEdit.deletions > 0 ? (
+              <DeltaBadge tone="removed" text={`-${fileEdit.deletions}`} />
+            ) : null}
           </div>
           <div style={{ fontSize: 11, opacity: 0.65, marginTop: 2 }}>
             {fileEdit.filePath}
@@ -131,6 +131,27 @@ export function FileEditCard({ fileEdit, live = false }: FileEditCardProps) {
         </div>
       )}
     </div>
+  );
+}
+
+function DeltaBadge({ tone, text }: { tone: 'added' | 'removed'; text: string }) {
+  const color = tone === 'added'
+    ? 'var(--app-success-foreground)'
+    : 'var(--app-error-foreground)';
+
+  return (
+    <span
+      style={{
+        fontSize: 11,
+        color,
+        fontFamily: 'var(--app-monospace-font-family)',
+        background: `color-mix(in srgb, ${color} 14%, transparent)`,
+        borderRadius: 999,
+        padding: '1px 8px',
+      }}
+    >
+      {text}
+    </span>
   );
 }
 

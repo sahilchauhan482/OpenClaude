@@ -25,12 +25,18 @@ export interface ElicitationOption {
   value: string;
   label: string;
   description?: string;
+  recommended?: boolean;
+  recommendationNote?: string;
 }
 
 export interface ElicitationRequest {
   requestId: string;
   message: string;
   fields: ElicitationField[];
+  title?: string;
+  helperText?: string;
+  submitLabel?: string;
+  cancelLabel?: string;
 }
 
 export interface ElicitationField {
@@ -39,6 +45,7 @@ export interface ElicitationField {
   type: ElicitationFieldType;
   required: boolean;
   default?: unknown;
+  helperText?: string;
 }
 
 export interface ElicitationResponse {

@@ -2,8 +2,8 @@
 	"name": "openclaude-vscode",
 	"displayName": "OpenClaude VS Code",
 	"description": "OpenClaude VS Code: AI coding assistant powered by any LLM",
-	"version": "0.2.15",
-	"publisher": "HarshAgarwal1012",
+	"version": "0.2.16",
+	"publisher": "OpenClaude",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -264,18 +264,6 @@
 				"title": "OpenClaude: Install Plugin"
 			},
 			{
-				"command": "openclaude.acceptProposedDiff",
-				"title": "OpenClaude: Accept Proposed Changes",
-				"enablement": "openclaude.viewingProposedDiff",
-				"icon": "$(check)"
-			},
-			{
-				"command": "openclaude.rejectProposedDiff",
-				"title": "OpenClaude: Reject Proposed Changes",
-				"enablement": "openclaude.viewingProposedDiff",
-				"icon": "$(discard)"
-			},
-			{
 				"command": "openclaude.insertAtMentioned",
 				"title": "OpenClaude: Insert At-Mentioned"
 			},
@@ -441,16 +429,6 @@
 		],
 		"menus": {
 			"editor/title": [
-				{
-					"command": "openclaude.acceptProposedDiff",
-					"when": "openclaude.viewingProposedDiff",
-					"group": "navigation"
-				},
-				{
-					"command": "openclaude.rejectProposedDiff",
-					"when": "openclaude.viewingProposedDiff",
-					"group": "navigation"
-				},
 				{
 					"command": "openclaude.acceptProposedDiff",
 					"when": "openclaude.viewingProposedDiff",

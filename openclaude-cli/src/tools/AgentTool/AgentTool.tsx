@@ -57,6 +57,7 @@ import { filterAgentsByMcpRequirements, hasRequiredMcpServers, isBuiltInAgent } 
 import { getPrompt } from './prompt.js';
 import { runAgent } from './runAgent.js';
 import { renderGroupedAgentToolUse, renderToolResultMessage, renderToolUseErrorMessage, renderToolUseMessage, renderToolUseProgressMessage, renderToolUseRejectedMessage, renderToolUseTag, userFacingName, userFacingNameBackgroundColor } from './UI.js';
+import { getVerificationFollowupInstruction } from './verificationFollowup.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const proactiveModule = feature('PROACTIVE') || feature('KAIROS') ? require('../../proactive/index.js') as typeof import('../../proactive/index.js') : null;
@@ -1388,6 +1389,11 @@ The agent is now running and will receive instructions via mailbox.`
     if (data.status === 'completed') {
       const worktreeData = data as Record<string, unknown>;
       const worktreeInfoText = worktreeData.worktreePath ? `\nworktreePath: ${worktreeData.worktreePath}\nworktreeBranch: ${worktreeData.worktreeBranch}` : '';
+      const verificationInstruction = getVerificationFollowupInstruction(data.verification);
+      const verificationBlock = verificationInstruction ? [{
+        type: 'text' as const,
+        text: verificationInstruction
+      }] : [];
       // If the subagent completes with no content, the tool_result is just the
       // agentId/usage trailer below — a metadata-only block at the prompt tail.
       // Some models read that as "nothing to act on" and end their turn
@@ -1396,6 +1402,14 @@ The agent is now running and will receive instructions via mailbox.`
         type: 'text' as const,
         text: '(Subagent completed but returned no output.)'
       }];
+      const structuredMeta =
+        data.agentType || data.verification || data.reviewer
+          ? {
+              ...(data.agentType ? { agentType: data.agentType } : {}),
+              ...(data.verification ? { verification: data.verification } : {}),
+              ...(data.reviewer ? { reviewer: data.reviewer } : {})
+            }
+          : undefined;
       // One-shot built-ins (Explore, Plan) are never continued via SendMessage
       // — the agentId hint and <usage> block are dead weight (~135 chars ×
       // 34M Explore runs/week ≈ 1-2 Gtok/week). Telemetry doesn't parse this
@@ -1405,13 +1419,15 @@ The agent is now running and will receive instructions via mailbox.`
         return {
           tool_use_id: toolUseID,
           type: 'tool_result',
-          content: contentOrMarker
+          ...(structuredMeta ? { _meta: structuredMeta } : {}),
+          content: [...contentOrMarker, ...verificationBlock]
         };
       }
       return {
         tool_use_id: toolUseID,
         type: 'tool_result',
-        content: [...contentOrMarker, {
+        ...(structuredMeta ? { _meta: structuredMeta } : {}),
+        content: [...contentOrMarker, ...verificationBlock, {
           type: 'text',
           text: `agentId: ${data.agentId} (use SendMessage with to: '${data.agentId}' to continue this agent)${worktreeInfoText}
 <usage>total_tokens: ${data.totalTokens}

@@ -411,6 +411,28 @@ describe('ProcessManager', () => {
       expect(initReq.request.appendSystemPrompt).toContain('Git repository: no');
     });
 
+    it('should forward agentProgressSummaries during initialize when enabled', async () => {
+      manager = new ProcessManager({
+        cwd: '/tmp/test-project',
+        executable: 'openclaude',
+        agentProgressSummaries: true,
+      });
+
+      const stdinChunks: Buffer[] = [];
+      mockProc.stdin.on('data', (chunk: Buffer) => {
+        stdinChunks.push(chunk);
+      });
+
+      manager.spawn();
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      const initLine = Buffer.concat(stdinChunks).toString().trim().split('\n')[0];
+      const initReq = JSON.parse(initLine);
+      expect(initReq.request.subtype).toBe('initialize');
+      expect(initReq.request.agentProgressSummaries).toBe(true);
+    });
+
     it('should include channelId on control requests when provided', async () => {
       const stdinChunks: Buffer[] = [];
       mockProc.stdin.on('data', (chunk: Buffer) => {

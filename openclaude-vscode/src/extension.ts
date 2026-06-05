@@ -21,13 +21,26 @@ import { resolveCliExecutable } from './settings/cliExecutable';
 import type { PermissionMode } from './types/session';
 import { McpIdeServer } from './mcp/mcpIdeServer';
 import { normalizePluginState, buildToggleRequest, buildInstallCommand, buildReloadRequest } from './plugins/pluginBridge';
+import type { PluginInfo } from './plugins/types';
 import { WorktreeManager } from './worktree/worktreeManager';
+import {
+  applyAgentTeamEvent,
+  buildAgentTeamEnv,
+  buildAgentTeamPrompt,
+  createAgentTeamBoardState,
+  resetAgentTeamBoardState,
+  updateAgentTeamBoardContext,
+  type AgentTeamBoardState,
+  type AgentTeamContext,
+  type AgentTeamSettings,
+} from './agentTeams/policy';
 import { parseOpenClaudeUri } from './uriHandler';
 import { AtMentionProvider } from './mentions/atMentionProvider';
 import { BlackboxBridge, BLACKBOX_FREE_MODELS, normalizeBlackboxModel } from './providers/blackboxBridge';
 import { buildPromptContent, resolveAttachmentForPrompt } from './attachments/promptAttachments';
 import { filePathToDataUrl, isImageFilePath } from './attachments/imageAttachment';
 import { BlackboxSessionStore } from './session/blackboxSessionStore';
+import { normalizeElicitationRequest } from './utils/elicitationSchema';
 import {
   buildWorkspaceContextPrompt,
   resolveNearestGitRepositoryPath,
@@ -47,6 +60,21 @@ import {
   resolveModelSupportsImagesForSelection,
   type ModelCapabilityDescriptor,
 } from './utils/modelCapabilities';
+import type { GetSettingsResponse, McpStatusResponse } from './types/protocol';
+import { findCapabilityRecommendation } from './recommendations/recommendationEngine';
+import { createRecommendationSessionState } from './recommendations/state';
+import type {
+  CapabilityEnvironmentState,
+  CapabilityRecommendation,
+  CapabilityRecommendationAction,
+} from './recommendations/types';
+import {
+  buildObservabilitySnapshotFromEvents,
+  ObservabilityEventLog,
+} from './observability/eventLog';
+import { ObservabilityEventStore } from './observability/eventStore';
+import { createTranscriptEvalFixture } from './observability/evalFixtures';
+import { buildToolPlaybackFixtures } from './observability/uiPlaybackFixtures';
 
 let webviewManager: WebviewManager | undefined;
 let diffManagerInstance: DiffManager | undefined;
@@ -327,6 +355,10 @@ export function activate(context: vscode.ExtensionContext) {
   const authManager = new AuthManager(settingsSync);
   const blackboxBridge = new BlackboxBridge(output);
   const blackboxSessionStore = new BlackboxSessionStore(context);
+  const observabilityLog = new ObservabilityEventLog();
+  const observabilityStore = new ObservabilityEventStore(
+    path.join(context.globalStorageUri.fsPath, 'observability'),
+  );
   context.subscriptions.push(blackboxBridge);
   let activeBlackboxSessionId = blackboxBridge.sessionId;
   const ocrWorkerPath = path.join(context.extensionPath, 'dist', 'ocr-worker.js');
@@ -367,6 +399,575 @@ export function activate(context: vscode.ExtensionContext) {
   let lastCrashTime = 0;
   let currentSessionId: string | undefined;
   let currentModelCatalog: ModelCapabilityDescriptor[] = [];
+  let installedPluginState: PluginInfo[] = [];
+  let currentMcpServerState: CapabilityEnvironmentState['mcpServers'] = [];
+  let activeRecommendation: CapabilityRecommendation | null = null;
+  let agentTeamBoardState: AgentTeamBoardState = createAgentTeamBoardState(
+    {
+      mode: settingsSync.agentTeamMode,
+      maxWorkers: settingsSync.agentTeamMaxWorkers,
+      useWorktrees: settingsSync.agentTeamUseWorktrees,
+    },
+    {
+      worktreeAvailable: false,
+      currentWorktreeName: null,
+    },
+  );
+  const recommendationSessionState = createRecommendationSessionState();
+
+  async function recordObservabilityEvent(
+    input: Parameters<ObservabilityEventLog['record']>[0],
+  ): Promise<void> {
+    const event = observabilityLog.record(input);
+    await observabilityStore.append(event);
+  }
+
+  async function recordCliObservabilityMessage(msg: Record<string, unknown>): Promise<void> {
+    const event = observabilityLog.recordCliMessage(msg);
+    if (!event) {
+      return;
+    }
+
+    if (event.sessionId === null && currentSessionId) {
+      event.sessionId = currentSessionId;
+    }
+
+    if (!currentSessionId && event.sessionId) {
+      currentSessionId = event.sessionId;
+      observabilityLog.rebindSession(null, event.sessionId);
+      await observabilityStore.rebindSession(null, event.sessionId);
+    }
+
+    await observabilityStore.append(event);
+  }
+
+  async function exportObservabilityFixture(sessionId?: string): Promise<vscode.Uri | undefined> {
+    const targetSessionId = sessionId ?? currentSessionId ?? activeBlackboxSessionId;
+    if (!targetSessionId) {
+      vscode.window.showWarningMessage('OpenClaude: No session available to export.');
+      return undefined;
+    }
+
+    const sessionInfo = sessionTracker.getSession(targetSessionId);
+    const transcriptMessages = sessionInfo
+      ? await sessionTracker.loadSessionMessages(targetSessionId)
+      : blackboxSessionStore.loadSessionMessages(targetSessionId);
+    const storedEvents = await observabilityStore.readSessionEvents(targetSessionId);
+    const snapshot = buildObservabilitySnapshotFromEvents(storedEvents, targetSessionId);
+    const fixture = createTranscriptEvalFixture({
+      session: sessionInfo,
+      transcriptMessages,
+      observability: snapshot,
+      playbackFixtures: buildToolPlaybackFixtures(transcriptMessages),
+    });
+
+    const exportDir = path.join(context.globalStorageUri.fsPath, 'eval-fixtures');
+    await vscode.workspace.fs.createDirectory(vscode.Uri.file(exportDir));
+    const filePath = path.join(exportDir, `${targetSessionId}.eval.json`);
+    await vscode.workspace.fs.writeFile(
+      vscode.Uri.file(filePath),
+      Buffer.from(JSON.stringify(fixture, null, 2), 'utf-8'),
+    );
+    return vscode.Uri.file(filePath);
+  }
+
+  function emitProcessState(
+    state: 'starting' | 'running' | 'stopped' | 'crashed' | 'restarting',
+    detail?: Record<string, unknown>,
+  ): void {
+    webviewManager!.broadcast({ type: 'process_state', state } as never);
+    void recordObservabilityEvent({
+      sessionId: currentSessionId,
+      source: 'host',
+      category: 'process',
+      kind: 'host_process_state_changed',
+      summary: `Process state changed to ${state}`,
+      payload: {
+        state,
+        ...(detail ?? {}),
+      },
+    });
+  }
+
+  function toCapabilityEnvironmentState(): CapabilityEnvironmentState {
+    return {
+      installedPlugins: installedPluginState.map((plugin) => plugin.name),
+      enabledPlugins: installedPluginState
+        .filter((plugin) => plugin.status === 'enabled')
+        .map((plugin) => plugin.name),
+      mcpServers: currentMcpServerState,
+    };
+  }
+
+  function broadcastRecommendation(panelId?: string): void {
+    const payload = {
+      type: 'extension_recommendation' as const,
+      recommendation: activeRecommendation
+        ? {
+            id: activeRecommendation.id,
+            kind: activeRecommendation.kind,
+            title: activeRecommendation.title,
+            capabilityLabel: activeRecommendation.capabilityLabel,
+            rationale: activeRecommendation.rationale,
+            reasonDetail: activeRecommendation.reasonDetail,
+            recommendedActionLabel: activeRecommendation.recommendedActionLabel,
+            secondaryActionLabel: activeRecommendation.secondaryActionLabel,
+          }
+        : null,
+    };
+    if (panelId) {
+      webviewManager!.sendToPanel(panelId, payload as never);
+      return;
+    }
+    webviewManager!.broadcast(payload as never);
+  }
+
+  function clearRecommendation(id?: string): void {
+    if (!activeRecommendation) {
+      return;
+    }
+    if (id && activeRecommendation.id !== id) {
+      return;
+    }
+    activeRecommendation = null;
+    broadcastRecommendation();
+  }
+
+  function getAgentTeamSettings(): AgentTeamSettings {
+    return {
+      mode: settingsSync.agentTeamMode,
+      maxWorkers: settingsSync.agentTeamMaxWorkers,
+      useWorktrees: settingsSync.agentTeamUseWorktrees,
+    };
+  }
+
+  async function resolveAgentTeamContext(
+    workspacePath: string,
+    gitRootPath: string,
+  ): Promise<AgentTeamContext> {
+    const worktreeName = await WorktreeManager.detectWorktree(workspacePath);
+    const repoWorktrees = await WorktreeManager.listWorktrees(gitRootPath);
+    return {
+      worktreeAvailable: repoWorktrees.length > 1 || Boolean(worktreeName),
+      currentWorktreeName: worktreeName,
+    };
+  }
+
+  function syncAgentTeamBoard(
+    settings: AgentTeamSettings,
+    context: AgentTeamContext,
+  ): AgentTeamBoardState {
+    agentTeamBoardState = updateAgentTeamBoardContext(agentTeamBoardState, settings, context);
+    return agentTeamBoardState;
+  }
+
+  function resetAgentTeamBoard(
+    settings: AgentTeamSettings,
+    context: AgentTeamContext,
+  ): AgentTeamBoardState {
+    agentTeamBoardState = resetAgentTeamBoardState(
+      updateAgentTeamBoardContext(agentTeamBoardState, settings, context),
+    );
+    return agentTeamBoardState;
+  }
+
+  function broadcastAgentTeamBoard(panelId?: string): void {
+    const payload = {
+      type: 'agent_team_board' as const,
+      board: agentTeamBoardState,
+    };
+    if (panelId) {
+      webviewManager!.sendToPanel(panelId, payload as never);
+      return;
+    }
+    webviewManager!.broadcast(payload as never);
+  }
+
+  function handleAgentTeamCliMessage(msg: Record<string, unknown>): void {
+    if (msg.type !== 'system') {
+      return;
+    }
+
+    const subtype = msg.subtype;
+    if (
+      subtype !== 'task_started' &&
+      subtype !== 'task_progress' &&
+      subtype !== 'task_notification' &&
+      subtype !== 'post_turn_summary'
+    ) {
+      return;
+    }
+
+    agentTeamBoardState = applyAgentTeamEvent(
+      agentTeamBoardState,
+      msg as Parameters<typeof applyAgentTeamEvent>[1],
+    );
+    broadcastAgentTeamBoard();
+  }
+
+  function wireProcessManagerCommon(pm: ProcessManager): void {
+    pm.registerControlHandler(
+      'can_use_tool',
+      createCanUseToolHandler(
+        diffManager,
+        () => processManager?.ndjsonTransport,
+        output,
+        permissionHandler,
+      ),
+    );
+
+    pm.registerControlHandler(
+      'set_permission_mode',
+      async (request) => {
+        const modeRequest = request as import('./types/messages').ControlRequestSetPermissionMode;
+        const result = permissionHandler.handleSetPermissionMode(modeRequest);
+        await settingsSync.setInitialPermissionMode(modeRequest.mode);
+        return result;
+      },
+    );
+
+    pm.registerControlHandler(
+      'elicitation',
+      async (request, signal, requestId) => {
+        const req = request as Record<string, unknown>;
+        const normalized = normalizeElicitationRequest({
+          requestedSchema:
+            req.requested_schema && typeof req.requested_schema === 'object'
+              ? req.requested_schema as Record<string, unknown>
+              : undefined,
+          legacyFields: Array.isArray(req.fields) ? req.fields as unknown[] : undefined,
+        });
+        webviewManager!.broadcast({
+          type: 'show_elicitation',
+          requestId,
+          message: req.message,
+          fields: normalized.fields,
+          title: normalized.title,
+          helperText: normalized.helperText,
+          submitLabel: normalized.submitLabel,
+          cancelLabel: normalized.cancelLabel,
+        } as never);
+        const { SELF_HANDLED } = await import('./process/controlRouter');
+        return SELF_HANDLED;
+      },
+    );
+
+    permissionHandler.setWriteToStdin((msg) => processManager?.ndjsonTransport?.write(msg));
+  }
+
+  function wirePrimaryProcessLifecycle(pm: ProcessManager): void {
+    pm.onMessage((msg) => {
+      output.info(`[CLI→Webview] ${JSON.stringify(msg).substring(0, 300)}`);
+      webviewManager!.broadcast({ type: 'cli_output', data: msg });
+
+      const msgObj = msg as Record<string, unknown>;
+      void recordCliObservabilityMessage(msgObj);
+      handleAgentTeamCliMessage(msgObj);
+
+      if (msgObj.type === 'control_request') {
+        const req = msgObj.request as Record<string, unknown> | undefined;
+        if (req?.subtype === 'can_use_tool') {
+          statusBarManager.setPendingPermission(true);
+        }
+      }
+
+      if (msgObj.type === 'result' || msgObj.subtype === 'result') {
+        if (!webviewManager!.hasVisibleWebview()) {
+          statusBarManager.setCompletedWhileHidden(true);
+        }
+      }
+
+      if (typeof msgObj.session_id === 'string') {
+        currentSessionId = msgObj.session_id;
+      }
+
+      if (msgObj.type === 'system' && msgObj.subtype === 'ai-title' && typeof msgObj.title === 'string' && typeof msgObj.session_id === 'string') {
+        sessionTracker.updateSessionTitle(msgObj.session_id, msgObj.title);
+      }
+
+      if (msgObj.type === 'assistant' && typeof msgObj.uuid === 'string' && typeof msgObj.session_id === 'string') {
+        checkpointManager.registerAssistantMessage(msgObj.uuid, msgObj.session_id);
+        webviewManager!.broadcast({
+          type: 'checkpoint_state',
+          checkpoints: checkpointManager.getWebviewState(),
+        });
+      }
+
+      if (msgObj.type === 'system' && msgObj.subtype === 'files_persisted' && typeof msgObj.uuid === 'string') {
+        const files = (msgObj.files as Array<{ filename: string; file_id: string }>) ?? [];
+        checkpointManager.markFilesPersisted(msgObj.uuid, files);
+        webviewManager!.broadcast({
+          type: 'checkpoint_state',
+          checkpoints: checkpointManager.getWebviewState(),
+        });
+      }
+
+      if (msgObj.type === 'system' && msgObj.subtype === 'session_state_changed') {
+        const state = msgObj.state as 'idle' | 'running' | 'requires_action';
+        const sessionId = msgObj.session_id as string;
+        if (state && sessionId) {
+          checkpointManager.handleSessionStateChanged(state, sessionId);
+        }
+      }
+    });
+
+    pm.onError((err) => {
+      output.error(`[OpenClaude] Error: ${err.message}`);
+      emitProcessState('crashed', { error: err.message });
+    });
+
+    pm.onExit((code, signal) => {
+      output.info(`[OpenClaude] CLI exited: code=${code}, signal=${signal}`);
+      isSpawning = false;
+
+      if (code !== 0 && code !== null && currentSessionId) {
+        const now = Date.now();
+        if (now - lastCrashTime > 30_000) {
+          crashRestartCount = 0;
+        }
+        crashRestartCount++;
+        lastCrashTime = now;
+
+        if (crashRestartCount <= 3) {
+          output.warn(`[OpenClaude] CLI crashed (attempt ${crashRestartCount}/3), restarting with --resume...`);
+          emitProcessState('restarting', { crashRestartCount, code, signal });
+          setTimeout(async () => {
+            processManager = undefined;
+            await ensureProcess({ forceRestart: true, sessionId: currentSessionId });
+          }, 1000);
+          return;
+        }
+
+        output.error('[OpenClaude] CLI crashed too many times, giving up.');
+        vscode.window.showErrorMessage('OpenClaude: CLI crashed repeatedly. Check the Output panel for logs.');
+      }
+
+      emitProcessState('stopped', { code, signal });
+    });
+
+    pm.onStateChange((state) => {
+      output.info(`[OpenClaude] State: ${state}`);
+      if (state === ProcessState.Ready) {
+        emitProcessState('running');
+      }
+    });
+
+    pm.onStderr((line) => {
+      output.warn(`[CLI stderr] ${line}`);
+    });
+  }
+
+  function wireResumeProcessLifecycle(pm: ProcessManager): void {
+    pm.onMessage((msg) => {
+      output.info(`[CLI→Webview] ${JSON.stringify(msg).substring(0, 300)}`);
+      webviewManager!.broadcast({ type: 'cli_output', data: msg });
+
+      const msgObj = msg as Record<string, unknown>;
+      void recordCliObservabilityMessage(msgObj);
+      handleAgentTeamCliMessage(msgObj);
+
+      if (msgObj.type === 'control_request') {
+        const req = msgObj.request as Record<string, unknown> | undefined;
+        if (req?.subtype === 'can_use_tool') {
+          statusBarManager.setPendingPermission(true);
+        }
+      }
+
+      if (msgObj.type === 'result' || msgObj.subtype === 'result') {
+        if (!webviewManager!.hasVisibleWebview()) {
+          statusBarManager.setCompletedWhileHidden(true);
+        }
+      }
+    });
+
+    pm.onError((err) => {
+      output.error(`[OpenClaude] Error: ${err.message}`);
+      emitProcessState('crashed', { error: err.message });
+    });
+
+    pm.onExit((code, signal) => {
+      output.info(`[OpenClaude] CLI exited: code=${code}, signal=${signal}`);
+      emitProcessState('stopped', { code, signal });
+      isSpawning = false;
+    });
+
+    pm.onStateChange((state) => {
+      output.info(`[OpenClaude] State: ${state}`);
+      if (state === ProcessState.Ready) {
+        emitProcessState('running');
+      }
+    });
+
+    pm.onStderr((line) => {
+      output.warn(`[CLI stderr] ${line}`);
+    });
+  }
+
+  function updateActiveRecommendation(promptText: string, panelId?: string): void {
+    const recommendation = findCapabilityRecommendation(
+      promptText,
+      toCapabilityEnvironmentState(),
+      recommendationSessionState,
+    );
+    if (!recommendation) {
+      return;
+    }
+
+    activeRecommendation = recommendation;
+    recommendationSessionState.shownIds.add(recommendation.id);
+    broadcastRecommendation(panelId);
+  }
+
+  function normalizePluginStateFromSettingsResponse(response: GetSettingsResponse | undefined): PluginInfo[] {
+    if (!response) {
+      return installedPluginState;
+    }
+
+    const enabledPlugins = response.sources
+      .map((source) => source.settings.enabledPlugins)
+      .find((value): value is Record<string, unknown> => Boolean(value && typeof value === 'object'));
+
+    if (!enabledPlugins) {
+      return installedPluginState;
+    }
+
+    const raw = Object.fromEntries(
+      Object.entries(enabledPlugins).map(([name, enabled]) => [
+        name,
+        {
+          version: '',
+          description: 'Configured plugin',
+          enabled: Boolean(enabled),
+          scope: 'user',
+        },
+      ]),
+    );
+
+    return normalizePluginState(raw);
+  }
+
+  function normalizeMcpServerState(response: McpStatusResponse | undefined): CapabilityEnvironmentState['mcpServers'] {
+    return (response?.mcpServers ?? []).map((server) => ({
+      name: server.name,
+      status: server.status,
+      toolNames: server.tools?.map((tool) => tool.name) ?? [],
+    }));
+  }
+
+  async function refreshPluginState(panelId?: string): Promise<void> {
+    if (!processManager) {
+      const payload = {
+        type: 'plugins_state',
+        installed: installedPluginState,
+        marketplace: [],
+        sources: [],
+      };
+      if (panelId) {
+        webviewManager!.sendToPanel(panelId, payload as never);
+      } else {
+        webviewManager!.broadcast(payload as never);
+      }
+      return;
+    }
+
+    const response = await processManager.sendControlRequest(
+      { subtype: 'get_settings' },
+      resolveOutgoingSessionId(currentSessionId, processManager.sessionId),
+    ) as GetSettingsResponse | undefined;
+
+    installedPluginState = normalizePluginStateFromSettingsResponse(response);
+    const payload = {
+      type: 'plugins_state',
+      installed: installedPluginState,
+      marketplace: [],
+      sources: [],
+    };
+    if (panelId) {
+      webviewManager!.sendToPanel(panelId, payload as never);
+    } else {
+      webviewManager!.broadcast(payload as never);
+    }
+  }
+
+  async function refreshMcpState(panelId?: string): Promise<void> {
+    const ideMeta = mcpIdeServer.getServerMetadata();
+    let servers: CapabilityEnvironmentState['mcpServers'] = currentMcpServerState;
+
+    if (processManager) {
+      const response = await processManager.sendControlRequest(
+        { subtype: 'mcp_status' },
+        resolveOutgoingSessionId(currentSessionId, processManager.sessionId),
+      ) as McpStatusResponse | undefined;
+      servers = normalizeMcpServerState(response);
+      currentMcpServerState = servers;
+    }
+
+    const payload = {
+      type: 'mcp_servers_state',
+      servers: servers.map((server) => ({
+        name: server.name,
+        status: (server.status as 'connected' | 'failed' | 'pending' | 'disabled' | 'needs-auth') ?? 'pending',
+        type: 'stdio' as const,
+        tools: (server.toolNames ?? []).map((toolName) => ({ name: toolName })),
+      })),
+      ideServer: {
+        running: mcpIdeServer.isRunning(),
+        port: ideMeta?.port ?? null,
+        toolCount: ideMeta?.tools.length ?? 0,
+      },
+    };
+    if (panelId) {
+      webviewManager!.sendToPanel(panelId, payload as never);
+    } else {
+      webviewManager!.broadcast(payload as never);
+    }
+  }
+
+  async function applyRecommendationAction(action: CapabilityRecommendationAction): Promise<void> {
+    switch (action.kind) {
+      case 'plugin_install': {
+        const pm = await ensureProcess();
+        if (!pm) return;
+        const outgoingSessionId = resolveOutgoingSessionId(currentSessionId, pm.sessionId);
+        pm.write(buildOutgoingUserMessage(buildInstallCommand(action.pluginName, action.scope), outgoingSessionId));
+        return;
+      }
+      case 'plugin_manager':
+        webviewManager!.broadcast({ type: 'open_plugin_manager' } as never);
+        return;
+      case 'mcp_add':
+        if (processManager) {
+          processManager.write({
+            type: 'control_request',
+            request_id: `mcp-add-${Date.now()}`,
+            request: { subtype: 'mcp_set_servers', servers: { [action.serverName]: action.config } },
+          });
+        }
+        webviewManager!.broadcast({ type: 'open_mcp_manager' } as never);
+        return;
+      case 'mcp_manager':
+        webviewManager!.broadcast({ type: 'open_mcp_manager' } as never);
+        return;
+      case 'plugin_uninstall': {
+        const pm = await ensureProcess();
+        if (!pm) return;
+        const outgoingSessionId = resolveOutgoingSessionId(currentSessionId, pm.sessionId);
+        pm.write(buildOutgoingUserMessage(`/plugin uninstall ${action.pluginName}`, outgoingSessionId));
+        return;
+      }
+      case 'mcp_disable':
+        if (processManager) {
+          processManager.write({
+            type: 'control_request',
+            request_id: `mcp-toggle-${Date.now()}`,
+            request: { subtype: 'mcp_toggle', serverName: action.serverName, enabled: false },
+          });
+        }
+        return;
+      default:
+        return;
+    }
+  }
 
   /** Map effort level string to max_thinking_tokens value */
   function effortToTokens(level: string): number | null {
@@ -416,6 +1017,9 @@ export function activate(context: vscode.ExtensionContext) {
       workspaceFolder.uri.fsPath,
       activeFilePath,
     );
+    const agentTeamSettings = getAgentTeamSettings();
+    const agentTeamContext = await resolveAgentTeamContext(workspacePath, gitRootPath);
+    syncAgentTeamBoard(agentTeamSettings, agentTeamContext);
 
     try {
       await ensureWorktreeHookConfig(gitRootPath);
@@ -428,7 +1032,10 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     isSpawning = true;
-    webviewManager!.broadcast({ type: 'process_state', state: 'starting' });
+    emitProcessState('starting', {
+      provider: settingsSync.selectedProvider,
+      requestedSessionId: options?.sessionId ?? currentSessionId ?? null,
+    });
 
     const config = vscode.workspace.getConfiguration('openclaudeCode');
     const executable = resolveCliExecutable(config);
@@ -441,7 +1048,23 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // Use AuthManager to build env vars (merges provider env + user env vars)
-    const env = authManager.buildProcessEnv();
+    const env = {
+      ...authManager.buildProcessEnv(),
+      ...buildAgentTeamEnv(agentTeamSettings),
+    };
+    const workspaceContextPrompt = buildWorkspaceContextPrompt({
+      workspacePath,
+      gitRootPath: gitRootPath !== workspacePath ? gitRootPath : undefined,
+      isGitRepository,
+      activeFilePath,
+      activeFileSelection: vscode.window.activeTextEditor && !vscode.window.activeTextEditor.selection.isEmpty
+        ? `${vscode.window.activeTextEditor.selection.start.line + 1}-${vscode.window.activeTextEditor.selection.end.line + 1}`
+        : undefined,
+    });
+    const agentTeamPrompt = buildAgentTeamPrompt(agentTeamSettings, agentTeamContext);
+    const appendSystemPrompt = [workspaceContextPrompt, agentTeamPrompt]
+      .filter((value) => value.trim().length > 0)
+      .join('\n\n');
 
     processManager = new ProcessManager({
       cwd: gitRootPath,
@@ -452,15 +1075,8 @@ export function activate(context: vscode.ExtensionContext) {
       allowDangerouslySkipPermissions,
       sessionId: resolveSessionIdForSpawn(currentSessionId, options?.sessionId),
       env,
-      appendSystemPrompt: buildWorkspaceContextPrompt({
-        workspacePath,
-        gitRootPath: gitRootPath !== workspacePath ? gitRootPath : undefined,
-        isGitRepository,
-        activeFilePath,
-        activeFileSelection: vscode.window.activeTextEditor && !vscode.window.activeTextEditor.selection.isEmpty
-          ? `${vscode.window.activeTextEditor.selection.start.line + 1}-${vscode.window.activeTextEditor.selection.end.line + 1}`
-          : undefined,
-      }),
+      appendSystemPrompt,
+      agentProgressSummaries: agentTeamSettings.mode !== 'off',
       sdkMcpServers: (() => {
         const meta = mcpIdeServer.getServerMetadata();
         if (!meta) return [];
@@ -472,151 +1088,8 @@ export function activate(context: vscode.ExtensionContext) {
         }];
       })(),
     });
-    // Register diff handler for can_use_tool requests (with permission handler for non-file-edit tools)
-    processManager.registerControlHandler(
-      'can_use_tool',
-      createCanUseToolHandler(
-        diffManager,
-        () => processManager?.ndjsonTransport,
-        output,
-        permissionHandler,
-      ),
-    );
-
-    // Register set_permission_mode handler
-    processManager.registerControlHandler(
-      'set_permission_mode',
-      async (request) => {
-        const modeRequest = request as import('./types/messages').ControlRequestSetPermissionMode;
-        const result = permissionHandler.handleSetPermissionMode(modeRequest);
-        await settingsSync.setInitialPermissionMode(modeRequest.mode);
-        return result;
-      },
-    );
-
-    // Register elicitation handler — forward to webview as show_elicitation
-    processManager.registerControlHandler(
-      'elicitation',
-      async (request, signal, requestId) => {
-        const req = request as Record<string, unknown>;
-        webviewManager!.broadcast({
-          type: 'show_elicitation',
-          requestId,
-          message: req.message,
-          fields: (req.fields as unknown[]) ?? [],
-        } as never);
-        // Response is sent asynchronously when user submits/cancels the dialog
-        const { SELF_HANDLED } = await import('./process/controlRouter');
-        return SELF_HANDLED;
-      },
-    );
-
-    // Wire permissionHandler's writeToStdin to the transport
-    permissionHandler.setWriteToStdin((msg) => processManager?.ndjsonTransport?.write(msg));
-
-    // Forward ALL CLI messages to the webview
-    processManager.onMessage((msg) => {
-      output.info(`[CLI→Webview] ${JSON.stringify(msg).substring(0, 300)}`);
-      webviewManager!.broadcast({ type: 'cli_output', data: msg });
-
-      // StatusBar: set pending permission on permission_request, clear on response
-      const msgObj = msg as Record<string, unknown>;
-      if (msgObj.type === 'control_request') {
-        const req = msgObj.request as Record<string, unknown> | undefined;
-        if (req?.subtype === 'can_use_tool') {
-          statusBarManager.setPendingPermission(true);
-        }
-      }
-
-      // StatusBar: detect result while panel is hidden → orange dot
-      if (msgObj.type === 'result' || msgObj.subtype === 'result') {
-        if (!webviewManager!.hasVisibleWebview()) {
-          statusBarManager.setCompletedWhileHidden(true);
-        }
-      }
-
-      // Track session ID for auto-restart
-      if (typeof msgObj.session_id === 'string') {
-        currentSessionId = msgObj.session_id;
-      }
-
-      // ai-title: update session tracker so the session list shows the new title
-      if (msgObj.type === 'system' && msgObj.subtype === 'ai-title' && typeof msgObj.title === 'string' && typeof msgObj.session_id === 'string') {
-        sessionTracker.updateSessionTitle(msgObj.session_id, msgObj.title);
-      }
-
-      // --- Checkpoint tracking (Story 10) ---
-      if (msgObj.type === 'assistant' && typeof msgObj.uuid === 'string' && typeof msgObj.session_id === 'string') {
-        checkpointManager.registerAssistantMessage(msgObj.uuid, msgObj.session_id);
-        webviewManager!.broadcast({
-          type: 'checkpoint_state',
-          checkpoints: checkpointManager.getWebviewState(),
-        });
-      }
-
-      if (msgObj.type === 'system' && msgObj.subtype === 'files_persisted' && typeof msgObj.uuid === 'string') {
-        const files = (msgObj.files as Array<{ filename: string; file_id: string }>) ?? [];
-        checkpointManager.markFilesPersisted(msgObj.uuid, files);
-        webviewManager!.broadcast({
-          type: 'checkpoint_state',
-          checkpoints: checkpointManager.getWebviewState(),
-        });
-      }
-
-      if (msgObj.type === 'system' && msgObj.subtype === 'session_state_changed') {
-        const state = msgObj.state as 'idle' | 'running' | 'requires_action';
-        const sessionId = msgObj.session_id as string;
-        if (state && sessionId) {
-          checkpointManager.handleSessionStateChanged(state, sessionId);
-        }
-      }
-    });
-
-    processManager.onError((err) => {
-      output.error(`[OpenClaude] Error: ${err.message}`);
-      webviewManager!.broadcast({ type: 'process_state', state: 'crashed' });
-    });
-
-    processManager.onExit((code, signal) => {
-      output.info(`[OpenClaude] CLI exited: code=${code}, signal=${signal}`);
-      isSpawning = false;
-
-      // Auto-restart on non-zero exit if we have a session to resume
-      if (code !== 0 && code !== null && currentSessionId) {
-        const now = Date.now();
-        if (now - lastCrashTime > 30_000) {
-          crashRestartCount = 0;
-        }
-        crashRestartCount++;
-        lastCrashTime = now;
-
-        if (crashRestartCount <= 3) {
-          output.warn(`[OpenClaude] CLI crashed (attempt ${crashRestartCount}/3), restarting with --resume...`);
-          webviewManager!.broadcast({ type: 'process_state', state: 'restarting' as never });
-          setTimeout(async () => {
-            processManager = undefined;
-            await ensureProcess({ forceRestart: true, sessionId: currentSessionId });
-          }, 1000);
-          return;
-        } else {
-          output.error('[OpenClaude] CLI crashed too many times, giving up.');
-          vscode.window.showErrorMessage('OpenClaude: CLI crashed repeatedly. Check the Output panel for logs.');
-        }
-      }
-
-      webviewManager!.broadcast({ type: 'process_state', state: 'stopped' });
-    });
-
-    processManager.onStateChange((state) => {
-      output.info(`[OpenClaude] State: ${state}`);
-      if (state === ProcessState.Ready) {
-        webviewManager!.broadcast({ type: 'process_state', state: 'running' });
-      }
-    });
-
-    processManager.onStderr((line) => {
-      output.warn(`[CLI stderr] ${line}`);
-    });
+    wireProcessManagerCommon(processManager);
+    wirePrimaryProcessLifecycle(processManager);
 
     try {
       const response = await processManager.spawn();
@@ -665,6 +1138,7 @@ export function activate(context: vscode.ExtensionContext) {
             account: account ?? {},
           },
           } as never);
+        broadcastAgentTeamBoard();
         output.info(`[OpenClaude] Broadcast init with ${models.length} models, permissionMode=${permMode}`);
       }
       return processManager;
@@ -673,7 +1147,7 @@ export function activate(context: vscode.ExtensionContext) {
       const msg = err instanceof Error ? err.message : String(err);
       output.error(`[OpenClaude] Failed to start: ${msg}`);
       vscode.window.showErrorMessage(`OpenClaude failed to start: ${msg}`);
-      webviewManager!.broadcast({ type: 'process_state', state: 'crashed' });
+      emitProcessState('crashed', { error: msg });
       return undefined;
     }
   }
@@ -685,6 +1159,19 @@ export function activate(context: vscode.ExtensionContext) {
   // Handle user sending a prompt
   webviewManager.onMessage('send_prompt', async (message, panelId) => {
     output.info(`[Webview→CLI] send_prompt: ${message.text.substring(0, 100)}`);
+    void recordObservabilityEvent({
+      sessionId: currentSessionId,
+      source: 'webview',
+      category: 'user',
+      kind: 'host_prompt_submitted',
+      summary: `Prompt submitted: ${message.text.slice(0, 80)}`,
+      payload: {
+        attachmentCount: Array.isArray(message.attachments) ? message.attachments.length : 0,
+        provider: settingsSync.selectedProvider,
+        model: typeof message.model === 'string' ? message.model : settingsSync.selectedModel,
+      },
+    });
+    updateActiveRecommendation(message.text, panelId);
 
     // OpenClaude-specific: /provider opens the provider picker dialog
     if (message.text.trim() === '/provider') {
@@ -883,6 +1370,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Handle new conversation
   webviewManager.onMessage('new_conversation', async () => {
     output.info('[Webview] new_conversation');
+    const previousSessionId = currentSessionId ?? activeBlackboxSessionId ?? null;
     if (processManager) {
       processManager.dispose();
       processManager = undefined;
@@ -890,12 +1378,33 @@ export function activate(context: vscode.ExtensionContext) {
     currentModelCatalog = [];
     currentSessionId = undefined;
     crashRestartCount = 0;
+    installedPluginState = [];
+    currentMcpServerState = [];
+    activeRecommendation = null;
+    agentTeamBoardState = resetAgentTeamBoardState(agentTeamBoardState);
+    recommendationSessionState.shownIds.clear();
+    recommendationSessionState.dismissedIds.clear();
+    recommendationSessionState.appliedIds.clear();
     checkpointManager.clear();
     blackboxBridge.reset();
     activeBlackboxSessionId = blackboxBridge.sessionId;
     webviewManager!.broadcast({ type: 'clearMessages' } as never);
-    webviewManager!.broadcast({ type: 'process_state', state: 'stopped' });
+    emitProcessState('stopped', { reason: 'new_conversation' });
     webviewManager!.broadcast({ type: 'checkpoint_state', checkpoints: [] });
+    broadcastRecommendation();
+    broadcastAgentTeamBoard();
+    observabilityLog.clearSession(previousSessionId);
+    void observabilityStore.clearSession(previousSessionId);
+    void recordObservabilityEvent({
+      sessionId: null,
+      source: 'host',
+      category: 'session',
+      kind: 'host_new_conversation',
+      summary: 'Started a new conversation',
+      payload: {
+        previousSessionId,
+      },
+    });
   });
 
   // Handle get sessions request
@@ -907,6 +1416,16 @@ export function activate(context: vscode.ExtensionContext) {
   // Handle resume session
   webviewManager.onMessage('resume_session', async (message) => {
     output.info(`[Webview] resume_session: ${message.sessionId}`);
+    void recordObservabilityEvent({
+      sessionId: message.sessionId,
+      source: 'host',
+      category: 'session',
+      kind: 'host_resume_session_requested',
+      summary: `Resume requested for session ${message.sessionId}`,
+      payload: {
+        requestedSessionId: message.sessionId,
+      },
+    });
 
     const localSession = blackboxSessionStore.getSession(message.sessionId);
     if (localSession) {
@@ -927,6 +1446,7 @@ export function activate(context: vscode.ExtensionContext) {
         type: 'session_history',
         messages: blackboxSessionStore.loadSessionMessages(message.sessionId),
       } as never);
+      currentSessionId = localSession.id;
       broadcastBlackboxProviderState();
       broadcastMergedSessions();
       return;
@@ -996,12 +1516,20 @@ export function activate(context: vscode.ExtensionContext) {
         model: settingsSync.selectedModel,
       },
     );
+    const agentTeamSettings = getAgentTeamSettings();
+    const agentTeamContext = await resolveAgentTeamContext(workspacePath, gitRootPath);
+    resetAgentTeamBoard(agentTeamSettings, agentTeamContext);
 
     // Clear old messages and load session history into webview
     webviewManager!.broadcast({ type: 'clearMessages' } as never);
+    broadcastAgentTeamBoard();
 
     isSpawning = true;
-    webviewManager!.broadcast({ type: 'process_state', state: 'starting' });
+    emitProcessState('starting', {
+      provider: settingsSync.selectedProvider,
+      requestedSessionId: resumeSessionId,
+      reason: 'resume_session',
+    });
 
     processManager = new ProcessManager({
       cwd: gitRootPath,
@@ -1010,77 +1538,27 @@ export function activate(context: vscode.ExtensionContext) {
       provider,
       permissionMode,
       sessionId: resolveSessionIdForSpawn(currentSessionId, resumeSessionId),
-      env,
-      appendSystemPrompt: buildWorkspaceContextPrompt({
-        workspacePath,
-        gitRootPath: gitRootPath !== workspacePath ? gitRootPath : undefined,
-        isGitRepository,
-        activeFilePath,
-        activeFileSelection: vscode.window.activeTextEditor && !vscode.window.activeTextEditor.selection.isEmpty
-          ? `${vscode.window.activeTextEditor.selection.start.line + 1}-${vscode.window.activeTextEditor.selection.end.line + 1}`
-          : undefined,
-      }),
-    });
-
-    // Re-register handlers on the new process
-    processManager.registerControlHandler(
-      'can_use_tool',
-      createCanUseToolHandler(
-        diffManager,
-        () => processManager?.ndjsonTransport,
-        output,
-        permissionHandler,
-      ),
-    );
-    processManager.registerControlHandler(
-      'set_permission_mode',
-      async (request) => {
-        const modeRequest = request as import('./types/messages').ControlRequestSetPermissionMode;
-        const result = permissionHandler.handleSetPermissionMode(modeRequest);
-        await settingsSync.setInitialPermissionMode(modeRequest.mode);
-        return result;
+      env: {
+        ...env,
+        ...buildAgentTeamEnv(agentTeamSettings),
       },
-    );
-    permissionHandler.setWriteToStdin((msg) => processManager?.ndjsonTransport?.write(msg));
+      appendSystemPrompt: [
+        buildWorkspaceContextPrompt({
+          workspacePath,
+          gitRootPath: gitRootPath !== workspacePath ? gitRootPath : undefined,
+          isGitRepository,
+          activeFilePath,
+          activeFileSelection: vscode.window.activeTextEditor && !vscode.window.activeTextEditor.selection.isEmpty
+            ? `${vscode.window.activeTextEditor.selection.start.line + 1}-${vscode.window.activeTextEditor.selection.end.line + 1}`
+            : undefined,
+        }),
+        buildAgentTeamPrompt(agentTeamSettings, agentTeamContext),
+      ].filter((value) => value.trim().length > 0).join('\n\n'),
+      agentProgressSummaries: agentTeamSettings.mode !== 'off',
+    });
 
-    processManager.onMessage((msg) => {
-      output.info(`[CLI→Webview] ${JSON.stringify(msg).substring(0, 300)}`);
-      webviewManager!.broadcast({ type: 'cli_output', data: msg });
-
-      // StatusBar: set pending permission on permission_request, clear on response
-      const msgObj = msg as Record<string, unknown>;
-      if (msgObj.type === 'control_request') {
-        const req = msgObj.request as Record<string, unknown> | undefined;
-        if (req?.subtype === 'can_use_tool') {
-          statusBarManager.setPendingPermission(true);
-        }
-      }
-
-      // StatusBar: detect result while panel is hidden → orange dot
-      if (msgObj.type === 'result' || msgObj.subtype === 'result') {
-        if (!webviewManager!.hasVisibleWebview()) {
-          statusBarManager.setCompletedWhileHidden(true);
-        }
-      }
-    });
-    processManager.onError((err) => {
-      output.error(`[OpenClaude] Error: ${err.message}`);
-      webviewManager!.broadcast({ type: 'process_state', state: 'crashed' });
-    });
-    processManager.onExit((code, signal) => {
-      output.info(`[OpenClaude] CLI exited: code=${code}, signal=${signal}`);
-      webviewManager!.broadcast({ type: 'process_state', state: 'stopped' });
-      isSpawning = false;
-    });
-    processManager.onStateChange((state) => {
-      output.info(`[OpenClaude] State: ${state}`);
-      if (state === ProcessState.Ready) {
-        webviewManager!.broadcast({ type: 'process_state', state: 'running' });
-      }
-    });
-    processManager.onStderr((line) => {
-      output.warn(`[CLI stderr] ${line}`);
-    });
+    wireProcessManagerCommon(processManager);
+    wireResumeProcessLifecycle(processManager);
 
     try {
       const historyPromise = sessionTracker.loadSessionMessages(resumeSessionId);
@@ -1099,6 +1577,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       await processManager.spawn();
       isSpawning = false;
+      broadcastAgentTeamBoard();
       const session = sessionTracker.getSession(resumeSessionId);
       webviewManager!.broadcast({
         type: 'sessionResumed',
@@ -1111,7 +1590,7 @@ export function activate(context: vscode.ExtensionContext) {
       const msg = err instanceof Error ? err.message : String(err);
       output.error(`[OpenClaude] Failed to resume: ${msg}`);
       vscode.window.showErrorMessage(`OpenClaude failed to resume session: ${msg}`);
-      webviewManager!.broadcast({ type: 'process_state', state: 'crashed' });
+      emitProcessState('crashed', { error: msg, reason: 'resume_session' });
     }
   });
 
@@ -1127,6 +1606,8 @@ export function activate(context: vscode.ExtensionContext) {
         activeBlackboxSessionId = blackboxBridge.sessionId;
         webviewManager!.broadcast({ type: 'clearMessages' } as never);
       }
+      observabilityLog.clearSession(message.sessionId);
+      void observabilityStore.clearSession(message.sessionId);
     }
     webviewManager!.sendToPanel(panelId, {
       type: 'sessionDeleted',
@@ -1198,22 +1679,31 @@ export function activate(context: vscode.ExtensionContext) {
         workspaceFolder.uri.fsPath,
         activeFilePath,
       );
+      const agentTeamSettings = getAgentTeamSettings();
+      const agentTeamContext = await resolveAgentTeamContext(workspacePath, gitRootPath);
       const forkPm = new ProcessManager({
         cwd: gitRootPath,
         executable,
         provider: authManager.getCliProvider(),
         sessionId: forkOptions.sessionId,
         forkSession: forkOptions.forkSession,
-        env: authManager.buildProcessEnv(),
-        appendSystemPrompt: buildWorkspaceContextPrompt({
-          workspacePath,
-          gitRootPath: gitRootPath !== workspacePath ? gitRootPath : undefined,
-          isGitRepository,
-          activeFilePath,
-          activeFileSelection: vscode.window.activeTextEditor && !vscode.window.activeTextEditor.selection.isEmpty
-            ? `${vscode.window.activeTextEditor.selection.start.line + 1}-${vscode.window.activeTextEditor.selection.end.line + 1}`
-            : undefined,
-        }),
+        env: {
+          ...authManager.buildProcessEnv(),
+          ...buildAgentTeamEnv(agentTeamSettings),
+        },
+        appendSystemPrompt: [
+          buildWorkspaceContextPrompt({
+            workspacePath,
+            gitRootPath: gitRootPath !== workspacePath ? gitRootPath : undefined,
+            isGitRepository,
+            activeFilePath,
+            activeFileSelection: vscode.window.activeTextEditor && !vscode.window.activeTextEditor.selection.isEmpty
+              ? `${vscode.window.activeTextEditor.selection.start.line + 1}-${vscode.window.activeTextEditor.selection.end.line + 1}`
+              : undefined,
+          }),
+          buildAgentTeamPrompt(agentTeamSettings, agentTeamContext),
+        ].filter((value) => value.trim().length > 0).join('\n\n'),
+        agentProgressSummaries: agentTeamSettings.mode !== 'off',
       });
       await forkPm.spawn();
       vscode.commands.executeCommand('openclaude.editor.open');
@@ -1234,6 +1724,8 @@ export function activate(context: vscode.ExtensionContext) {
         workspaceFolder.uri.fsPath,
         activeFilePath,
       );
+      const agentTeamSettings = getAgentTeamSettings();
+      const agentTeamContext = await resolveAgentTeamContext(workspacePath, gitRootPath);
       const executable = resolveCliExecutable(
         vscode.workspace.getConfiguration('openclaudeCode'),
       );
@@ -1243,16 +1735,23 @@ export function activate(context: vscode.ExtensionContext) {
         provider: authManager.getCliProvider(),
         sessionId: forkOptions.sessionId,
         forkSession: forkOptions.forkSession,
-        env: authManager.buildProcessEnv(),
-        appendSystemPrompt: buildWorkspaceContextPrompt({
-          workspacePath,
-          gitRootPath: gitRootPath !== workspacePath ? gitRootPath : undefined,
-          isGitRepository,
-          activeFilePath,
-          activeFileSelection: vscode.window.activeTextEditor && !vscode.window.activeTextEditor.selection.isEmpty
-            ? `${vscode.window.activeTextEditor.selection.start.line + 1}-${vscode.window.activeTextEditor.selection.end.line + 1}`
-            : undefined,
-        }),
+        env: {
+          ...authManager.buildProcessEnv(),
+          ...buildAgentTeamEnv(agentTeamSettings),
+        },
+        appendSystemPrompt: [
+          buildWorkspaceContextPrompt({
+            workspacePath,
+            gitRootPath: gitRootPath !== workspacePath ? gitRootPath : undefined,
+            isGitRepository,
+            activeFilePath,
+            activeFileSelection: vscode.window.activeTextEditor && !vscode.window.activeTextEditor.selection.isEmpty
+              ? `${vscode.window.activeTextEditor.selection.start.line + 1}-${vscode.window.activeTextEditor.selection.end.line + 1}`
+              : undefined,
+          }),
+          buildAgentTeamPrompt(agentTeamSettings, agentTeamContext),
+        ].filter((value) => value.trim().length > 0).join('\n\n'),
+        agentProgressSummaries: agentTeamSettings.mode !== 'off',
       });
       await forkPm.spawn();
 
@@ -1333,7 +1832,7 @@ export function activate(context: vscode.ExtensionContext) {
       isSpawning = false;
       currentModelCatalog = [];
       currentSessionId = undefined;
-      webviewManager!.broadcast({ type: 'process_state', state: 'stopped' });
+      emitProcessState('stopped', { reason: 'provider_changed' });
 
       if (settingsSync.selectedProvider !== 'blackbox') {
         // Recreate the backend immediately so the next prompt uses the
@@ -1357,6 +1856,17 @@ export function activate(context: vscode.ExtensionContext) {
       model: msg.providerId === 'codex' ? undefined : savedModel,
       providerOptions: msg.providerOptions,
     });
+    void recordObservabilityEvent({
+      sessionId: currentSessionId,
+      source: 'host',
+      category: 'provider',
+      kind: 'host_provider_changed',
+      summary: `Provider changed to ${msg.providerId}`,
+      payload: {
+        providerId: msg.providerId,
+        model: msg.providerId === 'codex' ? undefined : savedModel,
+      },
+    });
   });
 
   function currentProviderLabel(providerId: string): string {
@@ -1369,10 +1879,22 @@ export function activate(context: vscode.ExtensionContext) {
 
   function broadcastSyntheticCliMessage(data: Record<string, unknown>): void {
     webviewManager!.broadcast({ type: 'cli_output', data } as never);
+    void recordCliObservabilityMessage(data);
   }
 
   function broadcastBlackboxInit(model = normalizeBlackboxModel(settingsSync.selectedModel)): void {
     currentSessionId = blackboxBridge.sessionId;
+    void recordObservabilityEvent({
+      sessionId: currentSessionId,
+      source: 'host',
+      category: 'session',
+      kind: 'host_blackbox_session_initialized',
+      summary: `Blackbox session initialized with model ${model}`,
+      payload: {
+        provider: 'blackbox',
+        model,
+      },
+    });
     broadcastSyntheticCliMessage({
       type: 'system',
       subtype: 'init',
@@ -1447,6 +1969,17 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     const sessionId = activeBlackboxSessionId;
+    void recordObservabilityEvent({
+      sessionId,
+      source: 'host',
+      category: 'user',
+      kind: 'host_blackbox_prompt_submitted',
+      summary: `Blackbox prompt submitted: ${text.slice(0, 80)}`,
+      payload: {
+        attachmentCount: attachmentNames.length,
+        model,
+      },
+    });
     const existingMessages = blackboxSessionStore.getSession(sessionId)?.messages.map((msg) => ({
       role: msg.role,
       content: msg.content,
@@ -1561,7 +2094,7 @@ export function activate(context: vscode.ExtensionContext) {
       });
     };
 
-    webviewManager!.broadcast({ type: 'process_state', state: 'starting' });
+    emitProcessState('starting', { provider: 'blackbox', requestedSessionId: sessionId });
     broadcastBlackboxInit(model);
     sendStream({
       type: 'message_start',
@@ -1575,7 +2108,7 @@ export function activate(context: vscode.ExtensionContext) {
         usage: { input_tokens: 0, output_tokens: 0 },
       },
     });
-    webviewManager!.broadcast({ type: 'process_state', state: 'running' });
+    emitProcessState('running', { provider: 'blackbox' });
 
     try {
       await blackboxBridge.sendMessage({
@@ -1635,16 +2168,7 @@ export function activate(context: vscode.ExtensionContext) {
   // ==========================================
 
   webviewManager.onMessage('mcp_refresh_status', async (_message, panelId) => {
-    const meta = mcpIdeServer.getServerMetadata();
-    webviewManager!.sendToPanel(panelId, {
-      type: 'mcp_servers_state',
-      servers: [],
-      ideServer: {
-        running: mcpIdeServer.isRunning(),
-        port: meta?.port ?? null,
-        toolCount: meta?.tools.length ?? 0,
-      },
-    } as never);
+    await refreshMcpState(panelId);
   });
 
   webviewManager.onMessage('mcp_reconnect', async (message) => {
@@ -1656,6 +2180,9 @@ export function activate(context: vscode.ExtensionContext) {
         request_id: `mcp-reconnect-${Date.now()}`,
         request: { subtype: 'mcp_reconnect', serverName: msg.serverName },
       });
+      setTimeout(() => {
+        void refreshMcpState();
+      }, 250);
     }
   });
 
@@ -1668,6 +2195,9 @@ export function activate(context: vscode.ExtensionContext) {
         request_id: `mcp-toggle-${Date.now()}`,
         request: { subtype: 'mcp_toggle', serverName: msg.serverName, enabled: msg.enabled },
       });
+      setTimeout(() => {
+        void refreshMcpState();
+      }, 250);
     }
   });
 
@@ -1680,6 +2210,9 @@ export function activate(context: vscode.ExtensionContext) {
         request_id: `mcp-add-${Date.now()}`,
         request: { subtype: 'mcp_set_servers', servers: { [msg.name]: msg.config } },
       });
+      setTimeout(() => {
+        void refreshMcpState();
+      }, 250);
     }
   });
 
@@ -1692,6 +2225,9 @@ export function activate(context: vscode.ExtensionContext) {
         request_id: `mcp-remove-${Date.now()}`,
         request: { subtype: 'mcp_toggle', serverName: msg.serverName, enabled: false },
       });
+      setTimeout(() => {
+        void refreshMcpState();
+      }, 250);
     }
   });
 
@@ -1704,7 +2240,7 @@ export function activate(context: vscode.ExtensionContext) {
         processManager = undefined;
         currentSessionId = undefined;
         crashRestartCount = 0;
-        webviewManager!.broadcast({ type: 'process_state', state: 'stopped' });
+        emitProcessState('stopped', { reason: 'workspace_folder_changed' });
       }
     }),
   );
@@ -1785,7 +2321,7 @@ export function activate(context: vscode.ExtensionContext) {
       checkpointManager.clear();
       blackboxBridge.reset();
       webviewManager!.broadcast({ type: 'clearMessages' } as never);
-      webviewManager!.broadcast({ type: 'process_state', state: 'stopped' });
+      emitProcessState('stopped', { reason: 'command_new_conversation' });
       webviewManager!.broadcast({ type: 'checkpoint_state', checkpoints: [] });
     }),
   );
@@ -1849,6 +2385,24 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('openclaude.showLogs', () => output.show()),
   );
 
+  // Export current session as an eval fixture
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openclaude.exportEvalFixture', async (sessionId?: string) => {
+      try {
+        const uri = await exportObservabilityFixture(sessionId);
+        if (!uri) {
+          return;
+        }
+        const doc = await vscode.workspace.openTextDocument(uri);
+        await vscode.window.showTextDocument(doc, { preview: false });
+        vscode.window.showInformationMessage(`OpenClaude eval fixture exported: ${uri.fsPath}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`OpenClaude: Failed to export eval fixture: ${message}`);
+      }
+    }),
+  );
+
   // Open Walkthrough
   context.subscriptions.push(
     vscode.commands.registerCommand('openclaude.openWalkthrough', () => {
@@ -1881,14 +2435,8 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Plugin webview message handlers
-  webviewManager.onMessage('plugin_refresh', async () => {
-    if (processManager) {
-      processManager.write({
-        type: 'control_request',
-        request_id: `plugin-state-${Date.now()}`,
-        request: { subtype: 'get_settings' },
-      });
-    }
+  webviewManager.onMessage('plugin_refresh', async (_message, panelId) => {
+    await refreshPluginState(panelId);
   });
 
   webviewManager.onMessage('plugin_toggle', async (message) => {
@@ -1896,6 +2444,9 @@ export function activate(context: vscode.ExtensionContext) {
     if (processManager) {
       processManager.write(buildToggleRequest(msg.name, msg.enabled) as unknown as Record<string, unknown>);
       processManager.write(buildReloadRequest() as unknown as Record<string, unknown>);
+      setTimeout(() => {
+        void refreshPluginState();
+      }, 250);
     }
   });
 
@@ -1905,6 +2456,9 @@ export function activate(context: vscode.ExtensionContext) {
     if (pm) {
       const outgoingSessionId = resolveOutgoingSessionId(currentSessionId, pm.sessionId);
       pm.write(buildOutgoingUserMessage(buildInstallCommand(msg.name, msg.scope), outgoingSessionId));
+      setTimeout(() => {
+        void refreshPluginState();
+      }, 250);
     }
   });
 
@@ -1914,6 +2468,72 @@ export function activate(context: vscode.ExtensionContext) {
     if (pm) {
       const outgoingSessionId = resolveOutgoingSessionId(currentSessionId, pm.sessionId);
       pm.write(buildOutgoingUserMessage(`/plugin uninstall ${msg.name}`, outgoingSessionId));
+      setTimeout(() => {
+        void refreshPluginState();
+      }, 250);
+    }
+  });
+
+  webviewManager.onMessage('recommendation_primary_action', async (message) => {
+    if (!activeRecommendation || activeRecommendation.id !== message.recommendationId) {
+      return;
+    }
+    recommendationSessionState.appliedIds.add(activeRecommendation.id);
+    const action = activeRecommendation.recommendedAction;
+    clearRecommendation(activeRecommendation.id);
+    await applyRecommendationAction(action);
+    await Promise.allSettled([refreshPluginState(), refreshMcpState()]);
+  });
+
+  webviewManager.onMessage('recommendation_secondary_action', async (message) => {
+    if (!activeRecommendation || activeRecommendation.id !== message.recommendationId) {
+      return;
+    }
+    recommendationSessionState.appliedIds.add(activeRecommendation.id);
+    const action = activeRecommendation.secondaryAction;
+    clearRecommendation(activeRecommendation.id);
+    if (action) {
+      await applyRecommendationAction(action);
+    }
+    await Promise.allSettled([refreshPluginState(), refreshMcpState()]);
+  });
+
+  webviewManager.onMessage('recommendation_dismiss', async (message) => {
+    recommendationSessionState.dismissedIds.add(message.recommendationId);
+    clearRecommendation(message.recommendationId);
+  });
+
+  webviewManager.onMessage('set_agent_team_settings', async (message) => {
+    await settingsSync.setAgentTeamMode(message.mode);
+    await settingsSync.setAgentTeamMaxWorkers(message.maxWorkers);
+    await settingsSync.setAgentTeamUseWorktrees(message.useWorktrees);
+
+    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const gitRootPath = workspacePath
+      ? resolveNearestGitRepositoryPath(vscode.window.activeTextEditor?.document?.fileName) ??
+        resolveNearestGitRepositoryPath(workspacePath) ??
+        workspacePath
+      : undefined;
+
+    if (workspacePath && gitRootPath) {
+      const context = await resolveAgentTeamContext(workspacePath, gitRootPath);
+      syncAgentTeamBoard(getAgentTeamSettings(), context);
+    } else {
+      syncAgentTeamBoard(getAgentTeamSettings(), {
+        worktreeAvailable: false,
+        currentWorktreeName: null,
+      });
+    }
+
+    broadcastAgentTeamBoard();
+
+    if (processManager) {
+      processManager.dispose();
+      processManager = undefined;
+      isSpawning = false;
+      currentModelCatalog = [];
+      emitProcessState('stopped', { reason: 'agent_team_settings_changed' });
+      void ensureProcess({ forceRestart: true, sessionId: currentSessionId });
     }
   });
 
@@ -1927,6 +2547,68 @@ export function activate(context: vscode.ExtensionContext) {
 
   webviewManager.onMessage('plugin_add_source', async () => {
     vscode.commands.executeCommand('workbench.action.openSettingsJson');
+  });
+
+  const availablePolicyPacks = [
+    {
+      id: 'safe-default' as const,
+      label: 'Safe Default',
+      description: 'Lightweight risky-command and failure-recovery guardrails.',
+    },
+    {
+      id: 'codebase-strict' as const,
+      label: 'Codebase Strict',
+      description: 'Stronger verification pressure before completion.',
+    },
+    {
+      id: 'auto-format-and-test' as const,
+      label: 'Auto Format and Test',
+      description: 'Formatter, lint, and targeted test follow-up nudges after edits.',
+    },
+    {
+      id: 'enterprise-audit' as const,
+      label: 'Enterprise Audit',
+      description: 'Audit-oriented reminders for external and permission-sensitive actions.',
+    },
+  ];
+
+  function broadcastPolicyPackState(panelId?: string): void {
+    const payload = {
+      type: 'policy_pack_state' as const,
+      availablePacks: availablePolicyPacks,
+      enabledPacks: settingsSync.hookPolicyPacks,
+    };
+    if (panelId) {
+      webviewManager!.sendToPanel(panelId, payload as never);
+      return;
+    }
+    webviewManager!.broadcast(payload as never);
+  }
+
+  webviewManager.onMessage('get_policy_packs', async (_message, panelId) => {
+    broadcastPolicyPackState(panelId);
+  });
+
+  webviewManager.onMessage('set_policy_packs', async (message) => {
+    const packs = Array.isArray((message as { packs?: unknown[] }).packs)
+      ? (message as {
+          packs: Array<'safe-default' | 'codebase-strict' | 'auto-format-and-test' | 'enterprise-audit'>
+        }).packs
+      : [];
+    await settingsSync.setHookPolicyPacks(packs);
+    broadcastPolicyPackState();
+    if (processManager) {
+      processManager.write({
+        type: 'control_request',
+        request_id: `policy-packs-${Date.now()}`,
+        request: {
+          subtype: 'apply_flag_settings',
+          settings: {
+            hookPolicyPacks: packs,
+          },
+        },
+      });
+    }
   });
 
   // Remaining commands (not yet implemented)
@@ -2004,7 +2686,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     try {
       output.info(`[OpenClaude] Restarting CLI to apply permission mode: ${msg.mode}`);
-      webviewManager!.broadcast({ type: 'process_state', state: 'restarting' });
+      emitProcessState('restarting', { reason: 'permission_mode_changed', mode: msg.mode });
       await ensureProcess({ forceRestart: true, sessionId: currentSessionId });
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
@@ -2079,6 +2761,21 @@ export function activate(context: vscode.ExtensionContext) {
   // Handle copy_to_clipboard (alias used by some components)
   webviewManager.onMessage('copy_to_clipboard', async (message) => {
     await vscode.env.clipboard.writeText(message.text);
+  });
+
+  // Handle post-session feedback survey submissions
+  webviewManager.onMessage('feedback_survey', async (message) => {
+    const msg = message as unknown as {
+      rating?: number | null;
+      choice?: string | null;
+      feedback?: string | null;
+    };
+    const summary = [
+      typeof msg.rating === 'number' ? `rating=${msg.rating}` : null,
+      msg.choice ? `choice=${msg.choice}` : null,
+      msg.feedback ? `feedback=${msg.feedback}` : null,
+    ].filter(Boolean).join(' | ');
+    output.info(`[Webview] feedback_survey ${summary || '(empty)'}`);
   });
 
   // Handle at_mention_query — search workspace files and return results
@@ -2206,8 +2903,12 @@ export function activate(context: vscode.ExtensionContext) {
   // Clear completed-while-hidden indicator when a webview becomes visible
   // (The webview sends 'ready' when it becomes visible/re-renders)
   // Also eagerly spawn the CLI so slash commands are available immediately.
-  webviewManager.onMessage('ready', () => {
+  webviewManager.onMessage('ready', (_message, panelId) => {
     statusBarManager.clearCompletedWhileHidden();
+    broadcastRecommendation(panelId);
+    broadcastAgentTeamBoard(panelId);
+    void refreshPluginState(panelId);
+    void refreshMcpState(panelId);
     // Spawn eagerly so slash commands + models are available before first message
     ensureProcess().catch((err) => {
       output.warn(`[OpenClaude] Eager spawn failed: ${err}`);

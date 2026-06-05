@@ -227,6 +227,37 @@ export interface SetProviderMessage {
   providerOptions?: Record<string, string>;
 }
 
+export interface GetPolicyPacksMessage {
+  type: 'get_policy_packs';
+}
+
+export interface SetPolicyPacksMessage {
+  type: 'set_policy_packs';
+  packs: Array<'safe-default' | 'codebase-strict' | 'auto-format-and-test' | 'enterprise-audit'>;
+}
+
+export interface RecommendationPrimaryActionMessage {
+  type: 'recommendation_primary_action';
+  recommendationId: string;
+}
+
+export interface RecommendationSecondaryActionMessage {
+  type: 'recommendation_secondary_action';
+  recommendationId: string;
+}
+
+export interface RecommendationDismissMessage {
+  type: 'recommendation_dismiss';
+  recommendationId: string;
+}
+
+export interface SetAgentTeamSettingsMessage {
+  type: 'set_agent_team_settings';
+  mode: 'off' | 'assist' | 'coordinate';
+  maxWorkers: number;
+  useWorktrees: boolean;
+}
+
 // MCP manager messages
 export interface McpRefreshStatusMessage { type: 'mcp_refresh_status'; }
 export interface McpReconnectMessage { type: 'mcp_reconnect'; serverName: string; }
@@ -251,6 +282,14 @@ export interface RetryConnectionMessage { type: 'retry_connection'; }
 
 // Clipboard
 export interface CopyMessageMessage { type: 'copy_message'; content: string; }
+
+// Feedback survey
+export interface FeedbackSurveyMessage {
+  type: 'feedback_survey';
+  rating?: number | null;
+  choice?: string | null;
+  feedback?: string | null;
+}
 
 // Elicitation (alternate shape with `values` instead of `response`)
 export interface ElicitationResponseValuesMessage { type: 'elicitation_response'; requestId: string; values: Record<string, unknown>; }
@@ -284,6 +323,7 @@ export type WebviewToHostMessage =
   | GetContextUsageMessage
   | CopyToClipboardMessage
   | CopyMessageMessage
+  | FeedbackSurveyMessage
   | OpenFileMessage
   | DiffResponseMessage
   | OpenPluginsMessage
@@ -300,6 +340,12 @@ export type WebviewToHostMessage =
   | ForkAndRewindRequestMessage
   | GetProviderStateMessage
   | SetProviderMessage
+  | GetPolicyPacksMessage
+  | SetPolicyPacksMessage
+  | RecommendationPrimaryActionMessage
+  | RecommendationSecondaryActionMessage
+  | RecommendationDismissMessage
+  | SetAgentTeamSettingsMessage
   | AtMentionQueryMessage
   | FilePickerRequestMessage
   | AddContentMessage
@@ -575,6 +621,73 @@ export interface ProviderStateMessage {
   error?: string;
 }
 
+export interface PolicyPackStateMessage {
+  type: 'policy_pack_state';
+  availablePacks: Array<{
+    id: 'safe-default' | 'codebase-strict' | 'auto-format-and-test' | 'enterprise-audit';
+    label: string;
+    description: string;
+  }>;
+  enabledPacks: Array<'safe-default' | 'codebase-strict' | 'auto-format-and-test' | 'enterprise-audit'>;
+}
+
+export interface CapabilityRecommendationView {
+  id: string;
+  kind: 'plugin' | 'mcp';
+  title: string;
+  capabilityLabel: string;
+  rationale: string;
+  reasonDetail: string;
+  recommendedActionLabel: string;
+  secondaryActionLabel?: string;
+}
+
+export interface CapabilityRecommendationMessage {
+  type: 'extension_recommendation';
+  recommendation: CapabilityRecommendationView | null;
+}
+
+export interface AgentTeamTaskView {
+  id: string;
+  description: string;
+  status: 'running' | 'completed' | 'failed' | 'stopped';
+  taskType?: string;
+  workflowName?: string;
+  prompt?: string;
+  summary?: string;
+  lastToolName?: string;
+  toolUses: number;
+  tokenCount: number;
+  durationMs: number;
+  duplicateDescription?: boolean;
+  writeHeavy?: boolean;
+}
+
+export interface AgentTeamSummaryView {
+  id: string;
+  title: string;
+  statusCategory: 'blocked' | 'waiting' | 'completed' | 'review_ready' | 'failed';
+  description: string;
+  recentAction: string;
+  needsAction: string;
+}
+
+export interface AgentTeamBoardMessage {
+  type: 'agent_team_board';
+  board: {
+    enabled: boolean;
+    mode: 'off' | 'assist' | 'coordinate';
+    maxWorkers: number;
+    useWorktrees: boolean;
+    worktreeAvailable: boolean;
+    currentWorktreeName?: string | null;
+    runningTaskCount: number;
+    warnings: string[];
+    tasks: AgentTeamTaskView[];
+    summaries: AgentTeamSummaryView[];
+  };
+}
+
 /** All messages the extension host can send to the webview */
 export type HostToWebviewMessage =
   | InitStateMessage
@@ -595,6 +708,9 @@ export type HostToWebviewMessage =
   | RewindPreviewMessage
   | RewindResultMessage
   | ProviderStateMessage
+  | PolicyPackStateMessage
+  | CapabilityRecommendationMessage
+  | AgentTeamBoardMessage
   | AtMentionResultsMessage
   | FilePickerResultMessage
   | ActiveFileChangedMessage

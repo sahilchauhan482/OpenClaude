@@ -261,6 +261,15 @@ export interface SystemStatusMessage {
   session_id: string;
 }
 
+export interface SystemInformationalMessage {
+  type: 'system';
+  subtype: 'informational';
+  content: string;
+  level?: 'info' | 'warning' | 'error' | 'success';
+  uuid: string;
+  session_id: string;
+}
+
 /** All messages that can arrive from the extension host via postMessage */
 export type SDKMessage =
   | StreamEvent
@@ -268,4 +277,5 @@ export type SDKMessage =
   | UserMessage
   | ResultMessage
   | SystemInitMessage
-  | SystemStatusMessage;
+  | SystemStatusMessage
+  | SystemInformationalMessage;

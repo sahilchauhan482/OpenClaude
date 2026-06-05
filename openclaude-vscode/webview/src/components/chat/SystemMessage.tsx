@@ -1,38 +1,42 @@
+import type { SystemInlineMessageState } from '../../types/chat';
+
 interface SystemMessageProps {
   text: string;
+  system?: SystemInlineMessageState;
 }
 
 /**
- * Renders inline system messages (api_retry, compact_boundary, etc.)
- * Styled as subtle secondary text with a small icon — not a full message bubble.
+ * Renders inline system messages (api_retry, compact_boundary, recovery notices, etc.)
+ * with higher-signal visual treatment than generic secondary text.
  */
-export function SystemMessage({ text }: SystemMessageProps) {
+export function SystemMessage({ text, system }: SystemMessageProps) {
+  const tone = system?.tone ?? 'info';
+  const title = system?.title ?? text;
+  const detail = system?.detail;
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '2px 0',
-        color: 'var(--app-secondary-foreground)',
-        fontSize: 11,
-        opacity: 0.8,
-        userSelect: 'none',
-      }}
-    >
-      {/* Small info icon */}
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 12 12"
-        fill="currentColor"
-        style={{ flexShrink: 0, opacity: 0.7 }}
-      >
-        <circle cx="6" cy="6" r="5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-        <rect x="5.4" y="5" width="1.2" height="4" rx="0.6" />
-        <circle cx="6" cy="3.5" r="0.7" />
-      </svg>
-      <span>{text}</span>
+    <div className={`system-inline-card system-inline-card-${tone}`}>
+      <div className="system-inline-header">
+        <span className="system-inline-badge">{badgeLabel(tone)}</span>
+        <span className="system-inline-title">{title}</span>
+      </div>
+      {detail && detail !== title ? (
+        <div className="system-inline-detail">{detail}</div>
+      ) : null}
     </div>
   );
+}
+
+function badgeLabel(tone: NonNullable<SystemInlineMessageState['tone']>): string {
+  switch (tone) {
+    case 'warning':
+      return 'Recovery';
+    case 'error':
+      return 'Error';
+    case 'success':
+      return 'Done';
+    case 'info':
+    default:
+      return 'System';
+  }
 }

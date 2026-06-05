@@ -15,7 +15,7 @@ const buildOptions = {
 };
 
 const ocrWorkerOptions = {
-  entryPoints: ['node_modules/tesseract.js/src/worker-script/node/index.js'],
+  entryPoints: ['../node_modules/tesseract.js/src/worker-script/node/index.js'],
   bundle: true,
   outfile: 'dist/ocr-worker.js',
   platform: 'node',

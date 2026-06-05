@@ -87,6 +87,7 @@ export interface ToolResultBlock extends BaseBlock {
   tool_use_id: string;
   content: string;
   is_error: boolean;
+  meta?: import('./toolResultMeta').ToolResultMeta;
 }
 
 /** Union of all content block types the view model can contain */

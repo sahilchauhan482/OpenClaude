@@ -58,7 +58,11 @@ export function inferTranscriptSessionId(entry: Record<string, unknown>, fallbac
 
   const payload = entry.payload as Record<string, unknown> | undefined;
   if (payload) {
-    if (typeof payload.id === 'string' && payload.id.trim()) {
+    if (
+      entry.type === 'session_meta'
+      && typeof payload.id === 'string'
+      && payload.id.trim()
+    ) {
       return payload.id;
     }
     if (typeof payload.sessionId === 'string' && payload.sessionId.trim()) {

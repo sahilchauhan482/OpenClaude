@@ -2,12 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { getLiveStatus } from '../../webview/src/utils/liveStatus';
 
 describe('getLiveStatus', () => {
-  it('returns a thinking status while streaming without tool activity', () => {
-    expect(getLiveStatus(null, true)).toEqual({
-      kind: 'thinking',
-      label: 'Thinking...',
-      detail: 'Working through the next response',
-    });
+  it('returns null while streaming without tool activity', () => {
+    expect(getLiveStatus(null, true)).toBeNull();
   });
 
   it('returns tool activity details while streaming', () => {
@@ -19,7 +15,9 @@ describe('getLiveStatus', () => {
     ).toEqual({
       kind: 'tool',
       label: 'bash',
+      headline: 'Running command',
       detail: 'Running: npm test',
+      ticker: 'Running live',
     });
   });
 

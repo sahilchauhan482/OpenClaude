@@ -11,3 +11,7 @@ openclaude-vscode/dist/
 openclaude-vscode/webview/node_modules/
 openclaude-vscode/webview/dist/
 openclaude-vscode/*.vsix
+test_output.log
+fix_regex.js
+fix_packagejson.js
+*.patch

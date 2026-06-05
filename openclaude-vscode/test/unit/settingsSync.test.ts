@@ -53,4 +53,34 @@ describe('SettingsSync', () => {
       1,
     );
   });
+
+  it('dedupes hook policy packs before persisting', async () => {
+    const settings = new SettingsSync();
+
+    await settings.setHookPolicyPacks([
+      'safe-default',
+      'safe-default',
+      'enterprise-audit',
+    ]);
+
+    expect(update).toHaveBeenCalledWith(
+      'hookPolicyPacks',
+      ['safe-default', 'enterprise-audit'],
+      1,
+    );
+  });
+
+  it('normalizes agent team max workers to bounded integer range', () => {
+    getConfiguration.mockReturnValue({
+      get: vi.fn((key: string, fallback: unknown) => {
+        if (key === 'agentTeamMaxWorkers') return 22.4;
+        return fallback;
+      }),
+      update,
+    });
+
+    const settings = new SettingsSync();
+
+    expect(settings.agentTeamMaxWorkers).toBe(8);
+  });
 });

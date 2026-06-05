@@ -1,6 +1,6 @@
 // src/uriHandler.ts
 // Pure URI parsing helper for the OpenClaude URI handler.
-// Handles: vscode://harsh1210.openclaude-vscode/open?prompt=...&session=...
+// Handles: vscode://openclaude.openclaude-vscode/open?prompt=...&session=...
 
 import type * as vscode from 'vscode';
 

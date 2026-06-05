@@ -13,18 +13,7 @@ interface ToolProgressProps {
 export function ToolProgress({ toolName, progress, isComplete, summary }: ToolProgressProps) {
   if (isComplete && summary) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '2px 0',
-          color: 'var(--app-secondary-foreground)',
-          fontSize: 11,
-          opacity: 0.75,
-        }}
-      >
-        {/* Checkmark */}
+      <div className="tool-progress tool-progress-complete">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
           <path
             d="M2 6l3 3 5-5"
@@ -35,34 +24,21 @@ export function ToolProgress({ toolName, progress, isComplete, summary }: ToolPr
           />
         </svg>
         <span>
-          <span style={{ fontWeight: 500 }}>{toolName}</span>
-          {summary && <span style={{ marginLeft: 4, opacity: 0.8 }}>{summary}</span>}
+          <span className="tool-progress-title">{toolName}</span>
+          {summary && <span className="tool-progress-copy">{summary}</span>}
         </span>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '2px 0',
-        color: 'var(--app-secondary-foreground)',
-        fontSize: 11,
-      }}
-    >
-      {/* Spinning indicator */}
+    <div className="tool-progress tool-progress-live">
       <svg
         width="12"
         height="12"
         viewBox="0 0 12 12"
         fill="none"
-        style={{
-          flexShrink: 0,
-          animation: 'spin 1s linear infinite',
-        }}
+        className="tool-progress-spinner"
       >
         <circle
           cx="6"
@@ -75,8 +51,8 @@ export function ToolProgress({ toolName, progress, isComplete, summary }: ToolPr
         />
       </svg>
       <span>
-        <span style={{ fontWeight: 500 }}>{toolName}</span>
-        {progress && <span style={{ marginLeft: 4, opacity: 0.8 }}>{progress}</span>}
+        <span className="tool-progress-title">{toolName}</span>
+        {progress && <span className="tool-progress-copy">{progress}</span>}
       </span>
     </div>
   );

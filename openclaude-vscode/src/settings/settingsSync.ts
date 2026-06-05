@@ -11,6 +11,14 @@ export interface ProviderProfile {
   providerOptions?: Record<string, string>;
 }
 
+export type HookPolicyPackId =
+  | 'safe-default'
+  | 'codebase-strict'
+  | 'auto-format-and-test'
+  | 'enterprise-audit';
+
+export type AgentTeamMode = 'off' | 'assist' | 'coordinate';
+
 export class SettingsSync {
   private get config() {
     return vscode.workspace.getConfiguration('openclaudeCode');
@@ -109,5 +117,45 @@ export class SettingsSync {
   async setInitialPermissionMode(mode: PermissionMode): Promise<void> {
     const normalizedMode = mode === 'dontAsk' ? 'default' : mode;
     await this.config.update('initialPermissionMode', normalizedMode, vscode.ConfigurationTarget.Global);
+  }
+
+  get hookPolicyPacks(): HookPolicyPackId[] {
+    return this.config.get<HookPolicyPackId[]>('hookPolicyPacks', []);
+  }
+
+  async setHookPolicyPacks(packs: HookPolicyPackId[]): Promise<void> {
+    await this.config.update(
+      'hookPolicyPacks',
+      Array.from(new Set(packs)),
+      vscode.ConfigurationTarget.Global,
+    );
+  }
+
+  get agentTeamMode(): AgentTeamMode {
+    const raw = this.config.get<string>('agentTeamMode', 'off');
+    return raw === 'assist' || raw === 'coordinate' ? raw : 'off';
+  }
+
+  get agentTeamMaxWorkers(): number {
+    const raw = this.config.get<number>('agentTeamMaxWorkers', 3);
+    if (!Number.isFinite(raw)) return 3;
+    return Math.min(8, Math.max(1, Math.round(raw)));
+  }
+
+  get agentTeamUseWorktrees(): boolean {
+    return this.config.get<boolean>('agentTeamUseWorktrees', true);
+  }
+
+  async setAgentTeamMode(mode: AgentTeamMode): Promise<void> {
+    await this.config.update('agentTeamMode', mode, vscode.ConfigurationTarget.Global);
+  }
+
+  async setAgentTeamMaxWorkers(maxWorkers: number): Promise<void> {
+    const normalized = Math.min(8, Math.max(1, Math.round(maxWorkers)));
+    await this.config.update('agentTeamMaxWorkers', normalized, vscode.ConfigurationTarget.Global);
+  }
+
+  async setAgentTeamUseWorktrees(enabled: boolean): Promise<void> {
+    await this.config.update('agentTeamUseWorktrees', enabled, vscode.ConfigurationTarget.Global);
   }
 }

@@ -9,7 +9,7 @@ function createMockContext(): vscode.ExtensionContext {
     extensionUri: Uri.file('/test/extension') as never,
     subscriptions: [],
     extension: {
-      id: 'Harsh1210.openclaude-vscode',
+      id: 'OpenClaude.openclaude-vscode',
       packageJSON: { version: '0.1.0' },
     },
     globalState: {

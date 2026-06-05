@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { routeControlRequest } from '../../src/process/controlRouter';
 
 describe('routeControlRequest — elicitation', () => {
-  it('routes elicitation control_request to webview with parsed fields', () => {
+  it('routes elicitation control_request to webview with normalized schema fields', () => {
     const postMessage = vi.fn();
     const sendControlResponse = vi.fn();
 
@@ -12,17 +12,25 @@ describe('routeControlRequest — elicitation', () => {
       request: {
         subtype: 'elicitation',
         message: 'Which environment should I deploy to?',
-        fields: [
-          {
-            name: 'environment',
-            label: 'Environment',
-            type: { type: 'select', options: [
-              { value: 'staging', label: 'Staging' },
-              { value: 'production', label: 'Production' },
-            ]},
-            required: true,
+        requested_schema: {
+          title: 'Choose deployment target',
+          description: 'The AI is blocked and needs a clear environment decision.',
+          submitLabel: 'Continue',
+          cancelLabel: 'Not now',
+          required: ['environment'],
+          properties: {
+            environment: {
+              type: 'string',
+              title: 'Environment',
+              description: 'Pick the safest next step.',
+              default: 'staging',
+              oneOf: [
+                { const: 'staging', title: 'Staging', description: 'Validate before prod.' },
+                { const: 'production', title: 'Production', description: 'Go live immediately.' },
+              ],
+            },
           },
-        ],
+        },
       },
     };
 
@@ -32,7 +40,38 @@ describe('routeControlRequest — elicitation', () => {
       type: 'show_elicitation',
       requestId: 'elicit-001',
       message: 'Which environment should I deploy to?',
-      fields: controlRequest.request.fields,
+      fields: [
+        {
+          name: 'environment',
+          label: 'Environment',
+          required: true,
+          default: 'staging',
+          helperText: 'Pick the safest next step.',
+          type: {
+            type: 'select',
+            options: [
+              {
+                value: 'staging',
+                label: 'Staging',
+                description: 'Validate before prod.',
+                recommended: true,
+                recommendationNote: 'Default choice from the requesting tool.',
+              },
+              {
+                value: 'production',
+                label: 'Production',
+                description: 'Go live immediately.',
+                recommended: false,
+                recommendationNote: undefined,
+              },
+            ],
+          },
+        },
+      ],
+      title: 'Choose deployment target',
+      helperText: 'The AI is blocked and needs a clear environment decision.',
+      submitLabel: 'Continue',
+      cancelLabel: 'Not now',
     });
   });
 

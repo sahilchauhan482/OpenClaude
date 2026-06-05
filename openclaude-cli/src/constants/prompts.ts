@@ -60,6 +60,7 @@ import { logForDebugging } from '../utils/debug.js'
 import { loadMemoryPrompt } from '../memdir/memdir.js'
 import { isUndercover } from '../utils/undercover.js'
 import { isMcpInstructionsDeltaEnabled } from '../utils/mcpInstructionsDelta.js'
+import { buildRepoIntelligenceSummary } from '../utils/repoIntelligence.js'
 
 // Dead code elimination: conditional imports for feature-gated modules
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -148,6 +149,45 @@ function getOutputStyleSection(
 
   return `# Output Style: ${outputStyleConfig.name}
 ${outputStyleConfig.prompt}`
+}
+
+function isSmallerAgenticModel(model: string): boolean {
+  const canonical = getCanonicalName(model).toLowerCase()
+  const normalized = model.toLowerCase()
+
+  if (canonical.includes('haiku')) {
+    return true
+  }
+
+  return [
+    'mini',
+    'flash-lite',
+    'flash',
+    'lite',
+    'spark',
+    'highspeed',
+    '3b',
+    '7b',
+    '8b',
+  ].some(token => normalized.includes(token))
+}
+
+function getSmallerModelExecutionSection(model: string): string | null {
+  if (!isSmallerAgenticModel(model)) {
+    return null
+  }
+
+  return `# Execution Discipline
+
+You are operating on a smaller or speed-optimized model. Compensate with stricter execution discipline:
+
+- Before using a tool, prefer the smallest useful next step instead of a broad guess.
+- When a command or path fails, inspect the exact error and change strategy. Do not repeat the same failing call with cosmetic changes.
+- When running project commands, verify the workspace layout first. Check nearby package manifests, scripts, and node_modules locations before retrying.
+- Prefer reading the relevant file, config, or error output before proposing a fix.
+- If multiple interpretations are possible, ask one focused clarification with a recommended option instead of guessing.
+- Do not claim success unless a concrete verification step passed, or you explicitly state that you could not verify.
+- Favor deterministic actions over speculative ones: inspect, confirm, then edit.`
 }
 
 function getMcpInstructionsSection(
@@ -439,6 +479,7 @@ export async function getSystemPrompt(
   model: string,
   additionalWorkingDirectories?: string[],
   mcpClients?: MCPServerConnection[],
+  taskDescription?: string,
 ): Promise<string[]> {
   if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
     return [
@@ -447,10 +488,12 @@ export async function getSystemPrompt(
   }
 
   const cwd = getCwd()
-  const [skillToolCommands, outputStyleConfig, envInfo] = await Promise.all([
+  const [skillToolCommands, outputStyleConfig, envInfo, repoIntelligence] =
+    await Promise.all([
     getSkillToolCommands(cwd),
     getOutputStyleConfig(),
     computeSimpleEnvInfo(model, additionalWorkingDirectories),
+    buildRepoIntelligenceSummary(additionalWorkingDirectories, taskDescription),
   ])
 
   const settings = getInitialSettings()
@@ -468,6 +511,7 @@ ${CYBER_RISK_INSTRUCTION}`,
       getSystemRemindersSection(),
       await loadMemoryPrompt(),
       envInfo,
+      repoIntelligence,
       getLanguageSection(settings.language),
       // When delta enabled, instructions are announced via persisted
       // mcp_instructions_delta attachments (attachments.ts) instead.
@@ -492,11 +536,18 @@ ${CYBER_RISK_INSTRUCTION}`,
     systemPromptSection(`env_info_simple:${model}`, () =>
       computeSimpleEnvInfo(model, additionalWorkingDirectories),
     ),
+    systemPromptSection(
+      `repo_intelligence:${cwd}:${(additionalWorkingDirectories ?? []).join('|')}`,
+      () => buildRepoIntelligenceSummary(additionalWorkingDirectories, taskDescription),
+    ),
     systemPromptSection('language', () =>
       getLanguageSection(settings.language),
     ),
     systemPromptSection('output_style', () =>
       getOutputStyleSection(outputStyleConfig),
+    ),
+    systemPromptSection(`smaller_model_execution:${model}`, () =>
+      getSmallerModelExecutionSection(model),
     ),
     // When delta enabled, instructions are announced via persisted
     // mcp_instructions_delta attachments (attachments.ts) instead of this

@@ -23,6 +23,50 @@ export interface FileEditMessageState {
   preview?: FileEditPreview;
 }
 
+export interface SystemInlineMessageState {
+  tone?: 'info' | 'warning' | 'error' | 'success';
+  title?: string;
+  detail?: string;
+}
+
+export interface AgentTeamTaskState {
+  id: string;
+  description: string;
+  status: 'running' | 'completed' | 'failed' | 'stopped';
+  taskType?: string;
+  workflowName?: string;
+  prompt?: string;
+  summary?: string;
+  lastToolName?: string;
+  toolUses: number;
+  tokenCount: number;
+  durationMs: number;
+  duplicateDescription?: boolean;
+  writeHeavy?: boolean;
+}
+
+export interface AgentTeamSummaryState {
+  id: string;
+  title: string;
+  statusCategory: 'blocked' | 'waiting' | 'completed' | 'review_ready' | 'failed';
+  description: string;
+  recentAction: string;
+  needsAction: string;
+}
+
+export interface AgentTeamBoardState {
+  enabled: boolean;
+  mode: 'off' | 'assist' | 'coordinate';
+  maxWorkers: number;
+  useWorktrees: boolean;
+  worktreeAvailable: boolean;
+  currentWorktreeName?: string | null;
+  runningTaskCount: number;
+  warnings: string[];
+  tasks: AgentTeamTaskState[];
+  summaries: AgentTeamSummaryState[];
+}
+
 /** A renderable content block with streaming state */
 export interface RenderableBlock {
   /** Index of this block in the assistant message */
@@ -39,6 +83,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   /** For user messages: the text content */
   text?: string;
+  /** For richer inline system messages */
+  system?: SystemInlineMessageState;
   /** For user messages: the original attachments so images can stay visible */
   attachments?: AttachmentItem[];
   /** For system file-edit cards */
@@ -103,4 +149,5 @@ export interface ChatState {
   isStreaming: boolean;
   model: string | null;
   error: string | null;
+  agentTeamBoard?: AgentTeamBoardState | null;
 }

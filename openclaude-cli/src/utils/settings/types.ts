@@ -442,6 +442,19 @@ export const SettingsSchema = lazySchema(() =>
       hooks: HooksSchema()
         .optional()
         .describe('Custom commands to run before/after tool executions'),
+      hookPolicyPacks: z
+        .array(
+          z.enum([
+            'safe-default',
+            'codebase-strict',
+            'auto-format-and-test',
+            'enterprise-audit',
+          ]),
+        )
+        .optional()
+        .describe(
+          'Enable built-in hook policy packs that add reusable lifecycle guardrails without hand-writing every hook.',
+        ),
       autoFix: AutoFixConfigSchema
         .optional()
         .describe(

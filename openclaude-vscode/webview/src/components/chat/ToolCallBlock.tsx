@@ -1,31 +1,28 @@
 import { useState } from 'react';
 import type { ToolUseBlock, ServerToolUseBlock } from '../../types/messages';
+import { CodeBlock } from '../shared/CodeBlock';
+import {
+  getToolPresentation,
+} from '../../utils/toolPresentation';
 
 interface ToolCallBlockProps {
-  /** The tool_use or server_tool_use content block */
   block: ToolUseBlock | ServerToolUseBlock;
-  /** Whether the tool is still being invoked */
   isStreaming: boolean;
 }
 
 export function ToolCallBlock({ block, isStreaming }: ToolCallBlockProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const toolName = block.name;
-  const input = block.input;
-  const hasInput = Object.keys(input).length > 0;
+  const presentation = getToolPresentation(block.name, block.input);
+  const hasInput = Object.keys(block.input).length > 0;
+  const statusLabel = isStreaming ? 'Running' : 'Completed';
 
   return (
-    <div className="my-2 rounded-md border border-vscode-border overflow-hidden">
-      {/* Collapsible header */}
+    <div className={`tool-call-card ${isStreaming ? 'tool-call-card-live' : ''}`}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm
-          bg-[var(--vscode-editorGroupHeader-tabsBackground)]
-          hover:bg-[var(--vscode-list-hoverBackground)]
-          transition-colors"
+        className="tool-call-button"
       >
-        {/* Chevron */}
         <svg
           width="12"
           height="12"
@@ -33,60 +30,236 @@ export function ToolCallBlock({ block, isStreaming }: ToolCallBlockProps) {
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+          className={`tool-call-chevron ${isExpanded ? 'rotate-90' : ''}`}
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
 
-        {/* Tool icon */}
         <ToolIcon />
 
-        {/* Tool name */}
-        <span className="font-mono text-xs font-medium">{toolName}</span>
+        <div className="tool-call-copy">
+          <div className="tool-call-topline">
+            <span className="tool-call-title">{presentation.title}</span>
+            <DeltaChips delta={presentation.delta} />
+          </div>
+          <div className="tool-call-summary">
+            {presentation.summary}
+          </div>
+          {presentation.detail && (
+            <div className="tool-call-detail">
+              {presentation.detail}
+            </div>
+          )}
+        </div>
 
-        {/* Status indicator */}
-        {isStreaming && (
-          <span className="ml-auto flex items-center gap-1 text-xs opacity-50">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-            Running
-          </span>
-        )}
-        {!isStreaming && (
-          <span className="ml-auto text-xs opacity-40">
-            Done
-          </span>
-        )}
+        <span className={`tool-call-status ${isStreaming ? 'tool-call-status-live' : ''}`}>
+          <span className="tool-call-status-dot" />
+          {statusLabel}
+        </span>
       </button>
 
-      {/* Expandable content */}
       {isExpanded && (
-        <div className="px-3 py-2 border-t border-vscode-border">
-          {hasInput ? (
-            <div>
-              <div className="text-xs opacity-50 mb-1 font-semibold">Input</div>
-              <pre className="text-xs font-mono overflow-x-auto p-2 rounded bg-[var(--vscode-editor-background)] whitespace-pre-wrap break-all">
-                {formatToolInput(input)}
-              </pre>
-            </div>
-          ) : (
-            <div className="text-xs opacity-40 italic">No input</div>
-          )}
+        <div className="tool-call-expanded">
+          <ExpandedToolContent presentation={presentation} hasInput={hasInput} />
         </div>
       )}
     </div>
   );
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function formatToolInput(input: Record<string, unknown>): string {
-  try {
-    return JSON.stringify(input, null, 2);
-  } catch {
-    return String(input);
+function ExpandedToolContent({
+  presentation,
+  hasInput,
+}: {
+  presentation: ReturnType<typeof getToolPresentation>;
+  hasInput: boolean;
+}) {
+  if (!hasInput) {
+    return <div style={{ fontSize: 11, opacity: 0.4, fontStyle: 'italic' }}>No input</div>;
   }
+
+  if (presentation.kind === 'command' && presentation.code) {
+    return (
+      <Section label="Command">
+        <CodeBlock language={presentation.language}>
+          {presentation.code}
+        </CodeBlock>
+      </Section>
+    );
+  }
+
+  if (presentation.kind === 'file') {
+    return (
+      <div style={{ display: 'grid', gap: 12 }}>
+        {presentation.filePath && (
+          <Section label="Target file">
+            <InlinePath path={presentation.filePath} />
+          </Section>
+        )}
+
+        {presentation.hunks && presentation.hunks.length > 0 ? (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {presentation.hunks.map((hunk, index) => (
+              <div key={`${index}-${hunk.removed}-${hunk.added}`} style={{ display: 'grid', gap: 8 }}>
+                {presentation.hunks!.length > 1 ? (
+                  <div style={{ fontSize: 11, opacity: 0.55, textTransform: 'uppercase' }}>
+                    Change {index + 1}
+                  </div>
+                ) : null}
+                {hunk.removed ? (
+                  <DiffPanel label="Removing" tone="removed" code={hunk.removed} language={presentation.language} />
+                ) : null}
+                {hunk.added ? (
+                  <DiffPanel label="Adding" tone="added" code={hunk.added} language={presentation.language} />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : presentation.code ? (
+          <Section label="New content">
+            <CodeBlock language={presentation.language}>
+              {presentation.code}
+            </CodeBlock>
+          </Section>
+        ) : (
+          <Section label="Input">
+            <CodeBlock language={presentation.language ?? 'json'}>
+              {presentation.rawInput}
+            </CodeBlock>
+          </Section>
+        )}
+      </div>
+    );
+  }
+
+  if (presentation.code) {
+    return (
+      <Section label="Input">
+        <CodeBlock language={presentation.language}>
+          {presentation.code}
+        </CodeBlock>
+      </Section>
+    );
+  }
+
+  return (
+    <Section label="Input">
+      <CodeBlock language="json">
+        {presentation.rawInput}
+      </CodeBlock>
+    </Section>
+  );
+}
+
+function DeltaChips({
+  delta,
+}: {
+  delta: ReturnType<typeof getToolPresentation>['delta'];
+}) {
+  if (!delta) {
+    return null;
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      {delta.additions > 0 ? (
+        <Badge tone="added" text={`${delta.approximate ? '~' : ''}+${delta.additions}`} />
+      ) : null}
+      {delta.deletions > 0 ? (
+        <Badge tone="removed" text={`${delta.approximate ? '~' : ''}-${delta.deletions}`} />
+      ) : null}
+    </div>
+  );
+}
+
+function Badge({ tone, text }: { tone: 'added' | 'removed'; text: string }) {
+  const color = tone === 'added'
+    ? 'var(--app-success-foreground)'
+    : 'var(--app-error-foreground)';
+
+  return (
+    <span
+      style={{
+        fontSize: 11,
+        fontFamily: 'var(--app-monospace-font-family)',
+        color,
+        background: `color-mix(in srgb, ${color} 14%, transparent)`,
+        borderRadius: 999,
+        padding: '1px 8px',
+      }}
+    >
+      {text}
+    </span>
+  );
+}
+
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 4, fontWeight: 600 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function InlinePath({ path }: { path: string }) {
+  return (
+    <div
+      style={{
+        fontFamily: 'var(--app-monospace-font-family)',
+        fontSize: 12,
+        padding: '6px 8px',
+        borderRadius: 8,
+        background: 'var(--vscode-editor-background)',
+        overflowX: 'auto',
+      }}
+    >
+      {path}
+    </div>
+  );
+}
+
+function DiffPanel({
+  label,
+  tone,
+  code,
+  language,
+}: {
+  label: string;
+  tone: 'added' | 'removed';
+  code: string;
+  language?: string;
+}) {
+  const color = tone === 'added'
+    ? 'var(--app-success-foreground)'
+    : 'var(--app-error-foreground)';
+
+  return (
+    <div
+      style={{
+        border: `1px solid color-mix(in srgb, ${color} 34%, transparent)`,
+        borderRadius: 10,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          padding: '4px 8px',
+          fontSize: 11,
+          fontWeight: 600,
+          color,
+          background: `color-mix(in srgb, ${color} 12%, transparent)`,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ background: 'var(--vscode-editor-background)' }}>
+        <CodeBlock language={language}>
+          {code}
+        </CodeBlock>
+      </div>
+    </div>
+  );
 }
 
 function ToolIcon() {

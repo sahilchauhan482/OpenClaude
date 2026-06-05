@@ -5,7 +5,6 @@ import type { ToolActivity } from '../../hooks/useChat';
 import { UserMessage } from './UserMessage';
 import { AssistantMessage } from './AssistantMessage';
 import { SystemMessage } from './SystemMessage';
-import { StreamingIndicator } from './StreamingIndicator';
 import { ToolProgress } from './ToolProgress';
 import { getLiveStatus } from '../../utils/liveStatus';
 import { FileEditCard } from './FileEditCard';
@@ -52,14 +51,13 @@ export function MessageList({
         className="messages-container"
         style={{ position: 'absolute', inset: 0 }}
       >
-        {/* Message list */}
         <div>
           {messages.map((msg) => (
             <div key={msg.id} className="message">
               {msg.role === 'user' ? (
                 <UserMessage message={msg} />
               ) : msg.role === 'system' ? (
-                msg.fileEdit ? <FileEditCard fileEdit={msg.fileEdit} /> : <SystemMessage text={msg.text ?? ''} />
+                msg.fileEdit ? <FileEditCard fileEdit={msg.fileEdit} /> : <SystemMessage text={msg.text ?? ''} system={msg.system} />
               ) : (
                 <AssistantMessage message={msg} />
               )}
@@ -72,41 +70,23 @@ export function MessageList({
             </div>
           )}
 
-          {/* Live status â€” keeps the transcript visibly active while the turn runs */}
           {liveStatus && (
             <div className="message">
-              {liveStatus.kind === 'tool' ? (
-                <div style={{ padding: '4px 12px 2px' }}>
-                  <ToolProgress
-                    toolName={liveStatus.label}
-                    progress={liveStatus.detail}
-                  />
+              <div className="live-status-card live-status-card-tool">
+                <ToolProgress
+                  toolName={liveStatus.headline}
+                  progress={liveStatus.detail}
+                />
+                <div className="live-status-subline">
+                  <span className="live-status-chip">{liveStatus.label}</span>
+                  {liveStatus.ticker ? <span>{liveStatus.ticker}</span> : null}
                 </div>
-              ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '6px 12px 4px',
-                    color: 'var(--app-secondary-foreground)',
-                    fontSize: 11,
-                    opacity: 0.9,
-                  }}
-                >
-                  <StreamingIndicator visible={true} />
-                  <span>{liveStatus.label}</span>
-                  {liveStatus.detail && (
-                    <span style={{ opacity: 0.6 }}>{liveStatus.detail}</span>
-                  )}
-                </div>
-              )}
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Scroll-to-bottom button when user has scrolled up */}
       {userScrolledUp && (
         <button
           onClick={() => scrollToBottom('smooth')}
@@ -125,10 +105,6 @@ export function MessageList({
     </div>
   );
 }
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 function EmptyState() {
   return (

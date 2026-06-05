@@ -1,8 +1,12 @@
 import { afterAll, afterEach, beforeAll, expect, test } from 'bun:test'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import {
   acquireSharedMutationLock,
   releaseSharedMutationLock,
 } from '../test/sharedMutationLock.js'
+import { runWithCwdOverride } from '../utils/cwd.js'
 
 const originalSimpleEnv = process.env.CLAUDE_CODE_SIMPLE
 const originalMacro = (globalThis as Record<string, unknown>).MACRO
@@ -22,6 +26,7 @@ let EXPLORE_AGENT:
 let PLAN_AGENT: typeof import('../tools/AgentTool/built-in/planAgent.js').PLAN_AGENT
 let STATUSLINE_SETUP_AGENT:
   typeof import('../tools/AgentTool/built-in/statuslineSetup.js').STATUSLINE_SETUP_AGENT
+let tempDirs: string[] = []
 
 beforeAll(async () => {
   await acquireSharedMutationLock('constants/promptIdentity.test.ts')
@@ -77,6 +82,13 @@ afterEach(() => {
   clearSystemPromptSections()
 })
 
+afterEach(async () => {
+  await Promise.all(
+    tempDirs.map(dir => rm(dir, { recursive: true, force: true })),
+  )
+  tempDirs = []
+})
+
 test('CLI identity prefixes describe OpenClaude instead of Claude Code', () => {
   expect(getCLISyspromptPrefix()).toContain('OpenClaude')
   expect(getCLISyspromptPrefix()).not.toContain('Claude Code')
@@ -112,6 +124,108 @@ test('system prompt model identity updates when model changes mid-session', asyn
   expect(firstText).toContain('You are powered by the model old-test-model.')
   expect(secondText).toContain('You are powered by the model new-test-model.')
   expect(secondText).not.toContain('You are powered by the model old-test-model.')
+})
+
+test('smaller models get stricter execution-discipline guidance', async () => {
+  delete process.env.CLAUDE_CODE_SIMPLE
+  clearSystemPromptSections()
+
+  const prompt = await getSystemPrompt([], 'gpt-4o-mini')
+  const text = prompt.join('\n')
+
+  expect(text).toContain('# Execution Discipline')
+  expect(text).toContain(
+    'You are operating on a smaller or speed-optimized model.',
+  )
+  expect(text).toContain(
+    'verify the workspace layout first. Check nearby package manifests, scripts, and node_modules locations before retrying.',
+  )
+})
+
+test('larger models do not get smaller-model execution guidance', async () => {
+  delete process.env.CLAUDE_CODE_SIMPLE
+  clearSystemPromptSections()
+
+  const prompt = await getSystemPrompt([], 'gpt-5.5')
+  const text = prompt.join('\n')
+
+  expect(text).not.toContain('# Execution Discipline')
+  expect(text).not.toContain(
+    'You are operating on a smaller or speed-optimized model.',
+  )
+})
+
+test('system prompt includes repo intelligence for monorepo-style workspaces', async () => {
+  delete process.env.CLAUDE_CODE_SIMPLE
+  clearSystemPromptSections()
+
+  const rootDir = await mkdtemp(join(tmpdir(), 'openclaude-repo-intel-root-'))
+  const childDir = join(rootDir, 'packages', 'app')
+  tempDirs.push(rootDir)
+
+  await mkdir(childDir, { recursive: true })
+  await writeFile(
+    join(rootDir, 'package.json'),
+    JSON.stringify(
+      {
+        name: 'monster-root',
+        packageManager: 'pnpm@10.0.0',
+        workspaces: ['packages/*'],
+        scripts: {
+          build: 'turbo build',
+          test: 'turbo test',
+        },
+      },
+      null,
+      2,
+    ),
+  )
+  await writeFile(
+    join(childDir, 'package.json'),
+    JSON.stringify(
+      {
+        name: 'monster-app',
+        scripts: {
+          dev: 'vite',
+          lint: 'eslint .',
+        },
+      },
+      null,
+      2,
+    ),
+  )
+  await writeFile(
+    join(childDir, 'index.ts'),
+    'export function startApp() { return true }\n',
+  )
+  await writeFile(
+    join(childDir, 'useWorkspace.ts'),
+    'export function useWorkspace() { return "ok" }\n',
+  )
+
+  const prompt = await runWithCwdOverride(childDir, async () =>
+    getSystemPrompt([], 'gpt-5', [rootDir]),
+  )
+  const text = prompt.join('\n')
+
+  expect(text).toContain('# Repo intelligence')
+  expect(text).toContain('monster-app')
+  expect(text).toContain('monster-root')
+  expect(text).toContain('pkgmgr=pnpm@10.0.0')
+  expect(text).toContain('workspaces=1')
+  expect(text).toContain('scripts=dev, lint')
+  expect(text).toContain('scripts=build, test')
+  expect(text).toContain('# Repo map')
+  expect(text).toContain('packages | child_packages=app')
+  expect(text).toContain('dirs=packages')
+  expect(text).toContain('# Code surfaces')
+  expect(text).toContain('cwd:app:index.ts | kind=entry')
+  expect(text).toContain('exports=startApp')
+  expect(text).toContain('cwd:app:useWorkspace.ts | kind=hook')
+  expect(text).toContain('exports=useWorkspace')
+  expect(text).toContain(
+    'Prefer commands from the nearest relevant package manifest instead of guessing a repo-wide command.',
+  )
 })
 
 test('built-in agent prompts describe OpenClaude instead of Claude Code', () => {

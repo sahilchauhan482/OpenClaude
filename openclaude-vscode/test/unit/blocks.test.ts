@@ -112,12 +112,50 @@ describe('parseContentBlock', () => {
         tool_use_id: 'toolu_abc',
         content: 'done',
         is_error: false,
+        _meta: {
+          agentType: 'reviewer',
+          reviewer: {
+            hasFindings: true,
+            openQuestions: ['Did we test the retry path?'],
+            residualRisks: ['Manual verification only'],
+            findings: [
+              {
+                severity: 'high',
+                location: 'src/query.ts:120',
+                problem: 'completion gate skips failed verification',
+                whyItMatters: 'the agent can falsely claim success',
+                evidence: 'reproduced with failing verifier output',
+              },
+            ],
+          },
+        },
       },
     };
     const block = parseContentBlock(event);
-    expect(block.type).toBe('tool_result');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((block as any).content).toBe('done');
+    expect(block).toMatchObject({
+      type: 'tool_result',
+      index: 6,
+      tool_use_id: 'toolu_abc',
+      content: 'done',
+      is_error: false,
+      meta: {
+        agentType: 'reviewer',
+        reviewer: {
+          hasFindings: true,
+          openQuestions: ['Did we test the retry path?'],
+          residualRisks: ['Manual verification only'],
+          findings: [
+            {
+              severity: 'high',
+              location: 'src/query.ts:120',
+              problem: 'completion gate skips failed verification',
+              whyItMatters: 'the agent can falsely claim success',
+              evidence: 'reproduced with failing verifier output',
+            },
+          ],
+        },
+      },
+    });
   });
 });
 

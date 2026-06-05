@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { PermissionDialog } from './components/dialogs/PermissionDialog';
-import { FeedbackSurvey, shouldShowSurvey } from './components/dialogs/FeedbackSurvey';
 import { TeleportDialog } from './components/dialogs/TeleportDialog';
 import { ElicitationDialog } from './components/dialogs/ElicitationDialog';
 import { usePermissions } from './hooks/usePermissions';
@@ -10,7 +9,6 @@ import type { TeleportState, ElicitationState } from './types/interactions';
 
 function App() {
   const { currentRequest, pendingCount, respond } = usePermissions();
-  const [showSurvey, setShowSurvey] = useState(false);
   const [teleportState, setTeleportState] = useState<TeleportState>({
     isVisible: false,
     info: null,
@@ -46,6 +44,10 @@ function App() {
           request: {
             requestId: data.requestId as string,
             message: data.message as string,
+            title: data.title as string | undefined,
+            helperText: data.helperText as string | undefined,
+            submitLabel: data.submitLabel as string | undefined,
+            cancelLabel: data.cancelLabel as string | undefined,
             fields: (data.fields as unknown[]) ?? [],
           },
         });
@@ -59,14 +61,6 @@ function App() {
 
       const msg = data.type === 'cli_output' ? data.data : data;
       if (!msg || typeof msg !== 'object') return;
-
-      const msgAny = msg as Record<string, unknown>;
-      if (msgAny.type === 'result' && !msgAny.is_error) {
-        const rate = (msgAny.feedbackSurveyRate as number) ?? 0;
-        if (shouldShowSurvey(rate)) {
-          setShowSurvey(true);
-        }
-      }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
@@ -86,9 +80,6 @@ function App() {
           onDeny={(id) => respond(id, false)}
         />
       )}
-
-      {/* Post-session feedback survey */}
-      {showSurvey && <FeedbackSurvey onDismiss={() => setShowSurvey(false)} />}
 
       {/* Teleport dialog overlay */}
       {teleportState.isVisible && teleportState.info && (

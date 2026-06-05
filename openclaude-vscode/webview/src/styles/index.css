@@ -259,6 +259,42 @@ textarea.input {
   --focus-ring-color: var(--vscode-focusBorder, var(--app-button-background));
 }
 
+.tool-result-verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.tool-result-verdict-pass {
+  color: var(--app-success-foreground);
+  background: color-mix(in srgb, var(--app-success-foreground) 14%, transparent);
+  border-color: color-mix(in srgb, var(--app-success-foreground) 32%, transparent);
+}
+
+.tool-result-verdict-fail {
+  color: var(--app-error-foreground);
+  background: color-mix(in srgb, var(--app-error-foreground) 14%, transparent);
+  border-color: color-mix(in srgb, var(--app-error-foreground) 32%, transparent);
+}
+
+.tool-result-verdict-partial {
+  color: var(--app-warning-accent);
+  background: color-mix(in srgb, var(--app-warning-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--app-warning-accent) 32%, transparent);
+}
+
+.tool-result-meta {
+  font-size: 11px;
+  color: var(--app-secondary-foreground);
+  white-space: nowrap;
+}
+
 .input-container[data-permission-mode="fullAccess"]:focus-within,
 .input-container[data-permission-mode="bypassPermissions"]:focus-within,
 .input-container[data-permission-mode="auto"]:focus-within {
@@ -568,6 +604,35 @@ details[open] .thinking-toggle {
   margin-left: 0;
 }
 
+.spinner-row-elevated {
+  gap: 8px;
+  padding: 0 16px;
+  font-size: 0.85em;
+  color: var(--app-secondary-foreground);
+}
+
+.spinner-row-glyph {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--app-input-border) 88%, transparent);
+  border-top-color: var(--app-spinner-foreground);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.spinner-row-copy {
+  color: var(--app-primary-foreground);
+}
+
+.spinner-row-tip {
+  margin-left: auto;
+  opacity: 0.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
 /* ============================================================
    Input footer — exact from Claude Code .inputFooter_gGYT1w
    ============================================================ */
@@ -723,6 +788,405 @@ details[open] .thinking-toggle {
 .sendButton[data-permission-mode="bypassPermissions"] .stopIcon,
 .sendButton[data-permission-mode="auto"] .stopIcon {
   color: var(--app-button-foreground);
+}
+
+.streaming-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.streaming-indicator-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--app-secondary-foreground);
+  animation: streamingDot 1.4s ease-in-out infinite;
+}
+
+.live-status-card {
+  width: min(100%, 560px);
+  border: 1px solid color-mix(in srgb, var(--app-input-border) 92%, transparent);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--app-secondary-background) 92%, transparent), transparent),
+    var(--app-primary-background);
+  box-shadow: 0 1px 2px #00000014;
+  padding: 10px 12px;
+}
+
+.live-status-card-thinking {
+  border-color: color-mix(in srgb, var(--app-status-pending) 26%, var(--app-input-border));
+}
+
+.live-status-card-tool {
+  border-color: color-mix(in srgb, var(--app-status-busy) 24%, var(--app-input-border));
+}
+
+.live-status-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-status-heading {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--app-primary-foreground);
+}
+
+.live-status-body {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.live-status-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-primary-foreground);
+}
+
+.live-status-detail,
+.live-status-subline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--app-secondary-foreground);
+}
+
+.live-status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--app-primary-foreground);
+  background: color-mix(in srgb, var(--app-status-pending) 18%, transparent);
+}
+
+.tool-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  color: var(--app-secondary-foreground);
+  font-size: 11px;
+}
+
+.tool-progress-live {
+  color: var(--app-primary-foreground);
+}
+
+.tool-progress-complete {
+  opacity: 0.78;
+}
+
+.tool-progress-spinner {
+  flex-shrink: 0;
+  animation: spin 1s linear infinite;
+}
+
+.tool-progress-title {
+  font-weight: 600;
+}
+
+.tool-progress-copy {
+  margin-left: 4px;
+  opacity: 0.82;
+}
+
+.system-inline-card {
+  width: min(100%, 560px);
+  border: 1px solid color-mix(in srgb, var(--app-input-border) 92%, transparent);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--app-secondary-background) 94%, transparent), transparent),
+    var(--app-primary-background);
+  box-shadow: 0 1px 2px #00000010;
+  padding: 10px 12px;
+}
+
+.system-inline-card-info {
+  border-color: color-mix(in srgb, var(--app-status-pending) 18%, var(--app-input-border));
+}
+
+.system-inline-card-warning {
+  border-color: color-mix(in srgb, var(--app-warning-accent) 32%, var(--app-input-border));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--app-warning-accent) 10%, transparent), transparent),
+    var(--app-primary-background);
+}
+
+.system-inline-card-error {
+  border-color: color-mix(in srgb, var(--app-error-foreground) 28%, var(--app-input-border));
+}
+
+.system-inline-card-success {
+  border-color: color-mix(in srgb, var(--app-status-success) 26%, var(--app-input-border));
+}
+
+.system-inline-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.system-inline-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--app-primary-foreground);
+  background: color-mix(in srgb, var(--app-secondary-foreground) 14%, transparent);
+}
+
+.system-inline-card-warning .system-inline-badge {
+  background: color-mix(in srgb, var(--app-warning-accent) 24%, transparent);
+}
+
+.system-inline-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-primary-foreground);
+}
+
+.system-inline-detail {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--app-secondary-foreground);
+}
+
+.thinking-block-live {
+  width: min(100%, 560px);
+  border: 1px solid color-mix(in srgb, var(--app-status-pending) 26%, var(--app-input-border));
+  border-radius: 12px;
+  padding: 10px 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--app-status-pending) 8%, transparent), transparent),
+    var(--app-primary-background);
+}
+
+.thinking-summary-live {
+  gap: 8px;
+}
+
+.thinking-toggle-live {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.thinking-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-status-pending) 18%, transparent);
+  color: var(--app-primary-foreground);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.thinking-content-live {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.thinking-block-complete {
+  width: min(100%, 640px);
+}
+
+.thinking-summary-label {
+  font-style: italic;
+}
+
+.thinking-summary-meta {
+  opacity: 0.4;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+.thinking-content-complete {
+  font-size: 12px;
+  white-space: pre-wrap;
+  font-family: var(--app-monospace-font-family);
+}
+
+.tool-call-card,
+.tool-result-card {
+  width: min(100%, 620px);
+  margin: 8px 0;
+  border: 1px solid color-mix(in srgb, var(--app-input-border) 94%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--app-secondary-background);
+  box-shadow: 0 1px 2px #00000014;
+}
+
+.tool-call-card-live {
+  border-color: color-mix(in srgb, var(--app-status-busy) 24%, var(--app-input-border));
+}
+
+.tool-result-card-error {
+  border-color: color-mix(in srgb, var(--app-error-foreground) 28%, var(--app-input-border));
+}
+
+.tool-call-button,
+.tool-result-button {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  text-align: left;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--app-secondary-background) 92%, transparent), transparent),
+    var(--app-secondary-background);
+  transition: background-color 0.16s ease, filter 0.16s ease;
+}
+
+.tool-call-button:hover,
+.tool-result-button:hover {
+  background: color-mix(in srgb, var(--app-list-hover-background) 68%, var(--app-secondary-background));
+}
+
+.tool-call-chevron {
+  flex-shrink: 0;
+  opacity: 0.6;
+  margin-top: 2px;
+  transition: transform 0.16s ease;
+}
+
+.tool-call-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-call-topline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tool-call-title,
+.tool-result-title {
+  font-family: var(--app-monospace-font-family);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-secondary-foreground);
+}
+
+.tool-call-summary {
+  margin-top: 4px;
+  font-family: var(--app-monospace-font-family);
+  font-size: 12px;
+  color: var(--app-primary-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-call-detail {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--app-secondary-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-call-status,
+.tool-result-status {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--app-secondary-foreground);
+}
+
+.tool-call-status-live,
+.tool-result-status-live {
+  color: var(--app-primary-foreground);
+}
+
+.tool-result-status-error {
+  color: var(--app-error-foreground);
+}
+
+.tool-call-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--app-secondary-foreground);
+  opacity: 0.7;
+}
+
+.tool-call-status-live .tool-call-status-dot {
+  background: var(--app-status-busy);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.tool-call-expanded,
+.tool-result-expanded {
+  border-top: 1px solid color-mix(in srgb, var(--app-input-border) 88%, transparent);
+  padding: 12px;
+}
+
+.tool-result-structured {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tool-result-section {
+  border: 1px solid color-mix(in srgb, var(--app-input-border) 82%, transparent);
+  background: color-mix(in srgb, var(--vscode-editorWidget-background) 88%, transparent);
+  border-radius: 10px;
+  padding: 10px 11px;
+}
+
+.tool-result-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.68;
+  margin-bottom: 6px;
+}
+
+.tool-result-section-body {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tool-result-bullets {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 /* ============================================================

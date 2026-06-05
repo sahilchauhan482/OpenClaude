@@ -114,8 +114,10 @@ export class SessionTracker implements vscode.Disposable {
   private readonly _onSessionsChanged = new vscode.EventEmitter<SessionInfo[]>();
   public readonly onSessionsChanged = this._onSessionsChanged.event;
   private disposables: vscode.Disposable[] = [];
+  private readonly managedRootsOverride?: string[];
 
-  constructor() {
+  constructor(options?: { managedRoots?: string[] }) {
+    this.managedRootsOverride = options?.managedRoots?.map((root) => path.resolve(root));
     this.disposables.push(this._onSessionsChanged);
   }
 
@@ -146,6 +148,9 @@ export class SessionTracker implements vscode.Disposable {
 
   /** Managed session roots across providers. */
   private getManagedSessionRoots(): string[] {
+    if (this.managedRootsOverride && this.managedRootsOverride.length > 0) {
+      return this.managedRootsOverride;
+    }
     return [this.getProjectsDir(), this.getOpenClaudeProjectsDir(), this.getCodexSessionsDir()];
   }
 

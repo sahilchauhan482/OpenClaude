@@ -17,6 +17,7 @@ export type ToolFailureLoopGuardDecision =
   | {
       tripped: true
       message: string
+      recoveryHint: string
       threshold: number
       kind: 'signature' | 'category' | 'path'
       toolName?: string
@@ -124,6 +125,11 @@ export function updateToolFailureLoopGuard(params: {
           toolName: failure.toolName,
           errorCategory: failure.errorCategory,
         }),
+        recoveryHint: createRecoveryHint({
+          kind: 'signature',
+          toolName: failure.toolName,
+          errorCategory: failure.errorCategory,
+        }),
       }
     }
   }
@@ -143,6 +149,10 @@ export function updateToolFailureLoopGuard(params: {
         message: createTripMessage({
           kind: 'path',
           threshold,
+          path: failure.path,
+        }),
+        recoveryHint: createRecoveryHint({
+          kind: 'path',
           path: failure.path,
         }),
       }
@@ -176,6 +186,11 @@ export function updateToolFailureLoopGuard(params: {
           toolName: failure.toolName,
           errorCategory: failure.errorCategory,
         }),
+        recoveryHint: createRecoveryHint({
+          kind: 'signature',
+          toolName: failure.toolName,
+          errorCategory: failure.errorCategory,
+        }),
       }
     }
 
@@ -188,6 +203,10 @@ export function updateToolFailureLoopGuard(params: {
         message: createTripMessage({
           kind: 'category',
           threshold,
+          errorCategory: failure.errorCategory,
+        }),
+        recoveryHint: createRecoveryHint({
+          kind: 'category',
           errorCategory: failure.errorCategory,
         }),
       }
@@ -344,6 +363,30 @@ function normalizeErrorCategory(content: string): string {
   if (/\bENOENT\b/i.test(normalized) || /not found/i.test(normalized)) {
     return 'NotFound'
   }
+  if (/\bMODULE_NOT_FOUND\b/i.test(normalized)) {
+    return 'NotFound'
+  }
+  if (/Cannot find module/i.test(normalized)) {
+    return 'NotFound'
+  }
+  if (/\b(ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|ETIMEDOUT)\b/i.test(normalized)) {
+    return 'NetworkError'
+  }
+  if (/network error/i.test(normalized) || /connection reset/i.test(normalized)) {
+    return 'NetworkError'
+  }
+  if (/\b401\b/.test(normalized) || /\bunauthorized\b/i.test(normalized)) {
+    return 'AuthError'
+  }
+  if (/\b403\b/.test(normalized) || /\bforbidden\b/i.test(normalized)) {
+    return 'AuthError'
+  }
+  if (/\b429\b/.test(normalized) || /rate limit/i.test(normalized)) {
+    return 'RateLimitError'
+  }
+  if (/insufficient_quota/i.test(normalized) || /insufficient balance/i.test(normalized)) {
+    return 'RateLimitError'
+  }
   if (/Error writing file/i.test(normalized)) {
     return 'FileWriteError'
   }
@@ -422,4 +465,82 @@ function createTripMessage(
     '',
     `${reason} Please inspect permissions, path, or tool schema before retrying.`,
   ].join('\n')
+}
+
+function createRecoveryHint(
+  detail:
+    | { kind: 'path'; path: string }
+    | {
+        kind: 'signature'
+        toolName: string
+        errorCategory: string
+      }
+    | { kind: 'category'; errorCategory: string },
+): string {
+  if (detail.kind === 'path') {
+    return [
+      `The same path kept failing: \`${detail.path}\`.`,
+      'Do not retry the same write/edit blindly.',
+      'First inspect whether the file exists, whether the path is correct for the current workspace, and whether a read or search step is needed before editing.',
+    ].join(' ')
+  }
+
+  if (detail.kind === 'signature') {
+    const strategy = getRecoveryStrategy(detail.toolName, detail.errorCategory)
+    return [
+      `The same ${detail.toolName} failure repeated with ${detail.errorCategory}.`,
+      strategy,
+      'Change strategy before the next tool call instead of repeating the same command or tool input.',
+    ].join(' ')
+  }
+
+  return [
+    `Tool failures are repeating with ${detail.errorCategory}.`,
+    getCategoryRecoveryStrategy(detail.errorCategory),
+    'Use inspection and discovery steps first, then retry with a materially different approach.',
+  ].join(' ')
+}
+
+function getRecoveryStrategy(toolName: string, errorCategory: string): string {
+  if (toolName === 'Bash') {
+    switch (errorCategory) {
+      case 'NotFound':
+        return 'Inspect the workspace layout, current working directory, and executable/module path first. In JS/TS workspaces, check package.json scripts plus parent or sibling node_modules before rerunning.'
+      case 'PermissionError':
+        return 'Check whether the command needs approval, a different mode, or a non-mutating alternative before retrying.'
+      case 'InputValidationError':
+        return 'Re-check the command shape and arguments; the previous command form was invalid.'
+      case 'NetworkError':
+        return 'Check whether the failure is DNS, connectivity, or a wrong host/base URL issue before retrying the same command.'
+      case 'AuthError':
+        return 'Verify credentials, auth environment variables, and the selected provider/profile before retrying.'
+      case 'RateLimitError':
+        return 'Check quota, billing, provider limits, or a fallback provider/model before retrying immediately.'
+      default:
+        return 'Read the exact command output, identify the failing assumption, and pick a different command or path.'
+    }
+  }
+
+  return getCategoryRecoveryStrategy(errorCategory)
+}
+
+function getCategoryRecoveryStrategy(errorCategory: string): string {
+  switch (errorCategory) {
+    case 'NotFound':
+      return 'Verify the path, file existence, working directory, package layout, command location, and nearby scripts before retrying.'
+    case 'PermissionError':
+      return 'Verify permissions, sandbox constraints, and whether a safer read-only probe should come first.'
+    case 'InputValidationError':
+      return 'Correct the tool arguments or schema usage before retrying.'
+    case 'NetworkError':
+      return 'Verify host reachability, DNS, connectivity, and whether the previous request used the correct base URL.'
+    case 'AuthError':
+      return 'Verify API keys, login state, provider configuration, and whether the request is hitting the intended account.'
+    case 'RateLimitError':
+      return 'Verify quota, credit balance, rate-limit resets, and whether a fallback provider or smaller request is needed.'
+    case 'FileWriteError':
+      return 'Read the target file again, verify match context, and avoid repeating the same edit payload.'
+    default:
+      return 'Inspect the previous tool output carefully and avoid retrying the same failing action unchanged.'
+  }
 }

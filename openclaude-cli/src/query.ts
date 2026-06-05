@@ -108,6 +108,7 @@ import {
   createToolFailureLoopGuardState,
   updateToolFailureLoopGuard,
 } from './query/toolFailureLoopGuard.js'
+import { getVerificationCompletionGateDecision } from './query/verificationCompletionGate.js'
 import { buildQueryConfig } from './query/config.js'
 import { getGlobalConfig } from './utils/config.js'
 import { productionDeps, type QueryDeps } from './query/deps.js'
@@ -229,6 +230,7 @@ type State = {
   toolUseContext: ToolUseContext
   autoCompactTracking: AutoCompactTrackingState | undefined
   maxOutputTokensRecoveryCount: number
+  toolFailureRecoveryCount: number
   hasAttemptedReactiveCompact: boolean
   maxOutputTokensOverride: number | undefined
   pendingToolUseSummary: Promise<ToolUseSummaryMessage | null> | undefined
@@ -313,6 +315,7 @@ async function* queryLoop(
     autoCompactTracking: params.autoCompactTracking,
     stopHookActive: undefined,
     maxOutputTokensRecoveryCount: 0,
+    toolFailureRecoveryCount: 0,
     hasAttemptedReactiveCompact: false,
     hasAttemptedProviderFallback: false,
     turnCount: 1,
@@ -363,6 +366,7 @@ async function* queryLoop(
       messages,
       autoCompactTracking,
       maxOutputTokensRecoveryCount,
+      toolFailureRecoveryCount,
       hasAttemptedReactiveCompact,
       hasAttemptedProviderFallback,
       maxOutputTokensOverride,
@@ -1266,6 +1270,7 @@ async function* queryLoop(
               toolUseContext,
               autoCompactTracking: tracking,
               maxOutputTokensRecoveryCount,
+              toolFailureRecoveryCount,
               hasAttemptedReactiveCompact,
               hasAttemptedProviderFallback,
               maxOutputTokensOverride: undefined,
@@ -1322,6 +1327,7 @@ async function* queryLoop(
             toolUseContext,
             autoCompactTracking: undefined,
             maxOutputTokensRecoveryCount,
+            toolFailureRecoveryCount,
             hasAttemptedReactiveCompact: true,
             hasAttemptedProviderFallback,
             maxOutputTokensOverride: undefined,
@@ -1379,6 +1385,7 @@ async function* queryLoop(
             toolUseContext,
             autoCompactTracking: tracking,
             maxOutputTokensRecoveryCount,
+            toolFailureRecoveryCount,
             hasAttemptedReactiveCompact,
             hasAttemptedProviderFallback,
             maxOutputTokensOverride: ESCALATED_MAX_TOKENS,
@@ -1409,6 +1416,7 @@ async function* queryLoop(
             toolUseContext,
             autoCompactTracking: tracking,
             maxOutputTokensRecoveryCount: maxOutputTokensRecoveryCount + 1,
+            toolFailureRecoveryCount,
             hasAttemptedReactiveCompact,
             hasAttemptedProviderFallback,
             maxOutputTokensOverride: undefined,
@@ -1487,6 +1495,7 @@ async function* queryLoop(
               toolUseContext,
               autoCompactTracking: tracking,
               maxOutputTokensRecoveryCount,
+              toolFailureRecoveryCount,
               hasAttemptedReactiveCompact,
               hasAttemptedProviderFallback: true,
               maxOutputTokensOverride: undefined,
@@ -1542,6 +1551,7 @@ async function* queryLoop(
           toolUseContext,
           autoCompactTracking: tracking,
           maxOutputTokensRecoveryCount: 0,
+          toolFailureRecoveryCount,
           // Preserve the reactive compact guard — if compact already ran and
           // couldn't recover from prompt-too-long, retrying after a stop-hook
           // blocking error will produce the same result. Resetting to false
@@ -1588,6 +1598,7 @@ async function* queryLoop(
             toolUseContext,
             autoCompactTracking: tracking,
             maxOutputTokensRecoveryCount: 0,
+            toolFailureRecoveryCount: 0,
             hasAttemptedReactiveCompact: false,
             hasAttemptedProviderFallback: false,
             maxOutputTokensOverride: undefined,
@@ -1651,6 +1662,7 @@ async function* queryLoop(
               toolUseContext,
               autoCompactTracking: tracking,
               maxOutputTokensRecoveryCount: 0,
+              toolFailureRecoveryCount: 0,
               hasAttemptedReactiveCompact: false,
               hasAttemptedProviderFallback: false,
               maxOutputTokensOverride: undefined,
@@ -1663,6 +1675,52 @@ async function* queryLoop(
             state = next
             continue
           }
+        }
+      }
+
+      if (assistantMessages.length > 0) {
+        const lastAssistant = assistantMessages.at(-1)
+        const assistantText =
+          lastAssistant?.type === 'assistant'
+            ? lastAssistant.message.content
+                .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+                .map(b => b.text)
+                .join(' ')
+            : ''
+        const verificationGate = getVerificationCompletionGateDecision({
+          messages: [...messagesForQuery, ...assistantMessages],
+          assistantText,
+        })
+
+        if (verificationGate.shouldContinue) {
+          const next: State = {
+            messages: [
+              ...messagesForQuery,
+              ...assistantMessages,
+              createUserMessage({
+                content: verificationGate.instruction,
+                isMeta: true,
+              }),
+            ],
+            toolUseContext,
+            autoCompactTracking: tracking,
+            maxOutputTokensRecoveryCount: 0,
+            toolFailureRecoveryCount: 0,
+            hasAttemptedReactiveCompact: false,
+            hasAttemptedProviderFallback: false,
+            maxOutputTokensOverride: undefined,
+            pendingToolUseSummary: undefined,
+            stopHookActive: undefined,
+            turnCount,
+            continuationNudgeCount: state.continuationNudgeCount,
+            transition: { reason: 'verification_completion_gate' },
+          }
+          state = next
+          continue
+        }
+
+        if ('exhaustedMessage' in verificationGate) {
+          yield createSystemMessage(verificationGate.exhaustedMessage, 'warning')
         }
       }
 
@@ -1814,8 +1872,55 @@ async function* queryLoop(
         hasPath: toolFailureLoopDecision.path !== undefined,
         queryDepth: queryTracking.depth,
       })
+      if (toolFailureRecoveryCount < 1) {
+        yield createSystemMessage(
+          'Repeated tool failures detected. Retrying once with an alternate strategy instead of stopping.',
+          'warning',
+        )
+
+        const recoveryMessage = createUserMessage({
+          content: [
+            toolFailureLoopDecision.message,
+            '',
+            `Recovery guidance: ${toolFailureLoopDecision.recoveryHint}`,
+            '',
+            'Do not repeat the same failing tool call. Inspect the previous error output, verify workspace layout/path assumptions, and choose a materially different recovery strategy before using tools again.',
+          ].join('\n'),
+          isMeta: true,
+        })
+
+        state = {
+          messages: [
+            ...messagesForQuery,
+            ...assistantMessages,
+            ...toolResults,
+            recoveryMessage,
+          ],
+          toolUseContext: toolUseContextWithQueryTracking,
+          autoCompactTracking: tracking,
+          turnCount,
+          maxOutputTokensRecoveryCount: 0,
+          toolFailureRecoveryCount: toolFailureRecoveryCount + 1,
+          hasAttemptedReactiveCompact: false,
+          hasAttemptedProviderFallback: false,
+          continuationNudgeCount: 0,
+          pendingToolUseSummary: undefined,
+          maxOutputTokensOverride: undefined,
+          stopHookActive,
+          transition: {
+            reason: 'tool_failure_recovery',
+            attempt: toolFailureRecoveryCount + 1,
+          },
+        }
+        continue
+      }
+
       yield createAssistantAPIErrorMessage({
-        content: toolFailureLoopDecision.message,
+        content: [
+          toolFailureLoopDecision.message,
+          '',
+          `Recovery hint: ${toolFailureLoopDecision.recoveryHint}`,
+        ].join('\n'),
       })
       return { reason: 'tool_failure_loop' }
     }
@@ -2096,6 +2201,7 @@ async function* queryLoop(
       autoCompactTracking: tracking,
       turnCount: nextTurnCount,
       maxOutputTokensRecoveryCount: 0,
+      toolFailureRecoveryCount: 0,
       hasAttemptedReactiveCompact: false,
       hasAttemptedProviderFallback: false,
       continuationNudgeCount: 0,

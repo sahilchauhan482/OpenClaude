@@ -79,6 +79,7 @@ test('three identical tool failures trip the guard', () => {
   }
   expect(decision.message).toContain('`Edit` failed 3 times')
   expect(decision.message).toContain('`FileWriteError`')
+  expect(decision.recoveryHint).toContain('same Edit failure repeated')
 })
 
 test('multiple failures in the same batch each increment the counters', () => {
@@ -556,6 +557,40 @@ test('permission and not-found errors use specific categories before generic wri
     throw new Error('Expected repeated not-found failures to trip the guard')
   }
   expect(notFoundDecision.message).toContain('`NotFound`')
+})
+
+test('module resolution failures normalize to NotFound and include Bash recovery guidance', () => {
+  const state = createToolFailureLoopGuardState()
+
+  update(
+    state,
+    [toolUse('a', 'Bash')],
+    [
+      toolResult(
+        'a',
+        "Error: Cannot find module 'D:/repo/node_modules/vitest/vitest.mjs'",
+      ),
+    ],
+    2,
+  )
+  const decision = update(
+    state,
+    [toolUse('b', 'Bash')],
+    [
+      toolResult(
+        'b',
+        "Error: Cannot find module 'D:/repo/node_modules/vitest/vitest.mjs'",
+      ),
+    ],
+    2,
+  )
+
+  if (!decision.tripped) {
+    throw new Error('Expected repeated module resolution failures to trip')
+  }
+  expect(decision.errorCategory).toBe('NotFound')
+  expect(decision.recoveryHint).toContain('workspace layout')
+  expect(decision.recoveryHint).toContain('module path')
 })
 
 test('threshold override can be passed directly', () => {

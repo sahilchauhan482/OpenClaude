@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { collectJsonlFiles, workspacePathToClaudeProjectDir } from '../../src/session/sessionDiscovery';
+import {
+  collectJsonlFiles,
+  inferTranscriptSessionId,
+  workspacePathToClaudeProjectDir,
+} from '../../src/session/sessionDiscovery';
 
 describe('sessionDiscovery', () => {
   it('normalizes Windows workspace paths to Claude project directory names', () => {
@@ -22,5 +26,33 @@ describe('sessionDiscovery', () => {
       'deep.jsonl',
       'top.jsonl',
     ]);
+  });
+
+  it('only trusts payload.id from session_meta entries', () => {
+    expect(
+      inferTranscriptSessionId(
+        {
+          type: 'response_item',
+          payload: {
+            id: 'message-id-that-is-not-the-session',
+            type: 'message',
+            role: 'assistant',
+          },
+        },
+        'rollout-session-id',
+      ),
+    ).toBe('rollout-session-id');
+
+    expect(
+      inferTranscriptSessionId(
+        {
+          type: 'session_meta',
+          payload: {
+            id: 'actual-session-id',
+          },
+        },
+        'rollout-session-id',
+      ),
+    ).toBe('actual-session-id');
   });
 });

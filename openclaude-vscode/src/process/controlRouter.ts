@@ -7,6 +7,7 @@ import type {
   SDKControlCancelRequest,
   SDKControlRequest,
 } from '../types/messages';
+import { normalizeElicitationRequest } from '../utils/elicitationSchema';
 
 /** Handler function signature — receives the request inner, abort signal, and request ID */
 export type ControlRequestHandler = (
@@ -152,11 +153,22 @@ export function routeControlRequest(
     (message.request as Record<string, unknown> | undefined)?.subtype === 'elicitation'
   ) {
     const req = message.request as Record<string, unknown>;
+    const normalized = normalizeElicitationRequest({
+      requestedSchema:
+        req.requested_schema && typeof req.requested_schema === 'object'
+          ? req.requested_schema as Record<string, unknown>
+          : undefined,
+      legacyFields: Array.isArray(req.fields) ? req.fields as unknown[] : undefined,
+    });
     handlers.postMessage({
       type: 'show_elicitation',
       requestId: message.request_id,
       message: req.message,
-      fields: (req.fields as unknown[]) ?? [],
+      fields: normalized.fields,
+      title: normalized.title,
+      helperText: normalized.helperText,
+      submitLabel: normalized.submitLabel,
+      cancelLabel: normalized.cancelLabel,
     });
     return;
   }

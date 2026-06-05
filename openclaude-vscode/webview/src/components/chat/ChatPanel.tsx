@@ -23,15 +23,28 @@ import { SlashCommandMenu } from '../input/SlashCommandMenu';
 import { AttachmentBar } from '../input/AttachmentBar';
 import { McpServerManager } from '../dialogs/McpServerManager';
 import { PluginManager } from '../dialogs/PluginManager';
+import { PolicyPackManager } from '../dialogs/PolicyPackManager';
 import { OnboardingChecklist } from '../onboarding/OnboardingChecklist';
 import type { AtMentionResult } from '../../hooks/useAtMentions';
 import type { ToolActivity } from '../../hooks/useChat';
 import type { AttachmentItem } from '../../types/attachments';
+import type { AgentTeamBoardState } from '../../types/chat';
 import {
   fromHostPermissionMode,
   toHostPermissionMode,
   type UiPermissionMode,
 } from '../../utils/permissionMode';
+
+interface CapabilityRecommendationView {
+  id: string;
+  kind: 'plugin' | 'mcp';
+  title: string;
+  capabilityLabel: string;
+  rationale: string;
+  reasonDetail: string;
+  recommendedActionLabel: string;
+  secondaryActionLabel?: string;
+}
 
 export function ChatPanel() {
   const {
@@ -51,6 +64,7 @@ export function ChatPanel() {
     toolActivity,
     attachmentProcessing,
     activeFileEdit,
+    agentTeamBoard,
     sendMessage,
     interrupt,
   } = useChat();
@@ -79,6 +93,8 @@ export function ChatPanel() {
   const [announcements, setAnnouncements] = useState<Array<{ id: string; message: string; severity?: 'info' | 'warning' | 'error'; dismissible?: boolean }>>([]);
   const [showMcpManager, setShowMcpManager] = useState(false);
   const [showPluginManager, setShowPluginManager] = useState(false);
+  const [showPolicyPackManager, setShowPolicyPackManager] = useState(false);
+  const [recommendation, setRecommendation] = useState<CapabilityRecommendationView | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('openclaude.onboarding.dismissed');
   });
@@ -122,10 +138,17 @@ export function ChatPanel() {
     };
   }, []);
 
+  useEffect(() => {
+    return vscode.onMessage('extension_recommendation', (message) => {
+      setRecommendation((message.recommendation as CapabilityRecommendationView | null) ?? null);
+    });
+  }, []);
+
   // Listen for open_plugin_manager and hide_onboarding messages
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.data?.type === 'open_plugin_manager') setShowPluginManager(true);
+      if (e.data?.type === 'open_mcp_manager') setShowMcpManager(true);
       if (e.data?.type === 'hide_onboarding') {
         setShowOnboarding(false);
         localStorage.setItem('openclaude.onboarding.dismissed', '1');
@@ -210,6 +233,18 @@ export function ChatPanel() {
         announcements={announcements.filter((a) => !dismissedAnnouncementIds.has(a.id))}
         onDismiss={(id) => setDismissedAnnouncementIds((prev) => new Set(prev).add(id))}
       />
+
+      {recommendation && (
+        <div style={{ padding: '0 16px 8px' }}>
+          <CapabilityRecommendationCard recommendation={recommendation} />
+        </div>
+      )}
+
+      {agentTeamBoard && (
+        <div style={{ padding: '0 16px 10px' }}>
+          <AgentTeamBoardCard board={agentTeamBoard} />
+        </div>
+      )}
 
       {/* Spinner status during tool execution */}
       <SpinnerStatus
@@ -305,6 +340,18 @@ export function ChatPanel() {
               MCP
             </button>
             <button
+              onClick={() => setShowPolicyPackManager(true)}
+              title="Policy Packs"
+              style={{
+                fontSize: 10, padding: '1px 5px', cursor: 'pointer',
+                background: 'transparent', border: '1px solid var(--app-input-border)',
+                borderRadius: 'var(--corner-radius-small)',
+                color: 'var(--app-secondary-foreground)',
+              }}
+            >
+              Packs
+            </button>
+            <button
               onClick={() => setShowPluginManager(true)}
               title="Plugins"
               style={{
@@ -324,6 +371,357 @@ export function ChatPanel() {
       {/* Dialogs */}
       <McpServerManager isOpen={showMcpManager} onClose={() => setShowMcpManager(false)} />
       <PluginManager isOpen={showPluginManager} onClose={() => setShowPluginManager(false)} />
+      {showPolicyPackManager && <PolicyPackManager onClose={() => setShowPolicyPackManager(false)} />}
+    </div>
+  );
+}
+
+function AgentTeamBoardCard({ board }: { board: AgentTeamBoardState }) {
+  const [settings, setSettings] = useState(() => ({
+    mode: board.mode,
+    maxWorkers: board.maxWorkers,
+    useWorktrees: board.useWorktrees,
+  }));
+
+  useEffect(() => {
+    setSettings({
+      mode: board.mode,
+      maxWorkers: board.maxWorkers,
+      useWorktrees: board.useWorktrees,
+    });
+  }, [board.maxWorkers, board.mode, board.useWorktrees]);
+
+  const saveSettings = useCallback((next: typeof settings) => {
+    setSettings(next);
+    vscode.postMessage({
+      type: 'set_agent_team_settings',
+      mode: next.mode,
+      maxWorkers: next.maxWorkers,
+      useWorktrees: next.useWorktrees,
+    });
+  }, []);
+
+  return (
+    <div
+      style={{
+        border: '1px solid var(--app-input-border)',
+        borderRadius: 'var(--corner-radius-medium, 12px)',
+        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(14, 165, 233, 0.06))',
+        padding: '12px 14px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--app-secondary-foreground)' }}>
+            Agent team board
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--app-primary-foreground)', marginTop: 2 }}>
+            {board.runningTaskCount > 0 ? `${board.runningTaskCount} workers active` : 'Ready for delegated work'}
+          </div>
+          <div style={{ marginTop: 6, fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
+            {board.mode} mode · worker budget {board.maxWorkers} · {board.useWorktrees ? 'worktree-aware' : 'same-tree execution'}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <ModeChip
+            label="Off"
+            active={settings.mode === 'off'}
+            onClick={() => saveSettings({ ...settings, mode: 'off' })}
+          />
+          <ModeChip
+            label="Assist"
+            active={settings.mode === 'assist'}
+            onClick={() => saveSettings({ ...settings, mode: 'assist' })}
+          />
+          <ModeChip
+            label="Coordinate"
+            active={settings.mode === 'coordinate'}
+            onClick={() => saveSettings({ ...settings, mode: 'coordinate' })}
+          />
+        </div>
+      </div>
+
+      <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <label style={{ fontSize: 11, color: 'var(--app-secondary-foreground)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          Worker budget
+          <input
+            type="range"
+            min={1}
+            max={8}
+            step={1}
+            value={settings.maxWorkers}
+            onChange={(event) => {
+              const next = {
+                ...settings,
+                maxWorkers: Number(event.currentTarget.value),
+              };
+              saveSettings(next);
+            }}
+          />
+          <span style={{ color: 'var(--app-primary-foreground)', minWidth: 12 }}>{settings.maxWorkers}</span>
+        </label>
+        <label style={{ fontSize: 11, color: 'var(--app-secondary-foreground)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={settings.useWorktrees}
+            onChange={(event) => saveSettings({ ...settings, useWorktrees: event.currentTarget.checked })}
+          />
+          Prefer worktrees for parallel writes
+        </label>
+      </div>
+
+      {(board.currentWorktreeName || board.worktreeAvailable) && (
+        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
+          {board.currentWorktreeName
+            ? `Current worktree: ${board.currentWorktreeName}`
+            : 'Multiple git worktrees available for safer parallel editing'}
+        </div>
+      )}
+
+      {board.warnings.length > 0 && (
+        <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+          {board.warnings.map((warning, index) => (
+            <div
+              key={`${warning}-${index}`}
+              style={{
+                borderRadius: 10,
+                border: '1px solid rgba(245, 158, 11, 0.28)',
+                background: 'rgba(245, 158, 11, 0.08)',
+                color: 'var(--app-primary-foreground)',
+                padding: '8px 10px',
+                fontSize: 11,
+              }}
+            >
+              {warning}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {board.tasks.length > 0 && (
+        <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+          {board.tasks.slice(0, 6).map((task) => (
+            <div
+              key={task.id}
+              style={{
+                border: '1px solid var(--app-input-border)',
+                borderRadius: 10,
+                padding: '9px 10px',
+                background: 'rgba(255,255,255,0.02)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--app-primary-foreground)' }}>
+                  {task.description}
+                </div>
+                <TaskStatusBadge status={task.status} />
+              </div>
+              <div style={{ marginTop: 4, fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
+                {task.workflowName || task.taskType || 'worker'} · {task.toolUses} tools · {task.tokenCount} tokens
+              </div>
+              {(task.summary || task.lastToolName) && (
+                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--app-primary-foreground)' }}>
+                  {task.summary || `Last tool: ${task.lastToolName}`}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {board.summaries.length > 0 && (
+        <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+          {board.summaries.slice(0, 4).map((summary) => (
+            <div
+              key={summary.id}
+              style={{
+                border: '1px solid var(--app-input-border)',
+                borderRadius: 10,
+                padding: '9px 10px',
+                background: 'rgba(15, 23, 42, 0.14)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--app-primary-foreground)' }}>
+                  {summary.title}
+                </div>
+                <SummaryStatusBadge status={summary.statusCategory} />
+              </div>
+              <div style={{ marginTop: 5, fontSize: 11, color: 'var(--app-primary-foreground)' }}>
+                {summary.description}
+              </div>
+              <div style={{ marginTop: 5, fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
+                Recent: {summary.recentAction}
+              </div>
+              <div style={{ marginTop: 3, fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
+                Next: {summary.needsAction}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModeChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '5px 9px',
+        borderRadius: 999,
+        border: active ? '1px solid rgba(14, 165, 233, 0.5)' : '1px solid var(--app-input-border)',
+        background: active ? 'rgba(14, 165, 233, 0.14)' : 'transparent',
+        color: 'var(--app-primary-foreground)',
+        fontSize: 11,
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function TaskStatusBadge({ status }: { status: AgentTeamBoardState['tasks'][number]['status'] }) {
+  const palette = status === 'running'
+    ? { background: 'rgba(14, 165, 233, 0.16)', border: 'rgba(14, 165, 233, 0.35)' }
+    : status === 'completed'
+      ? { background: 'rgba(16, 185, 129, 0.16)', border: 'rgba(16, 185, 129, 0.35)' }
+      : { background: 'rgba(245, 158, 11, 0.16)', border: 'rgba(245, 158, 11, 0.35)' };
+
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        padding: '3px 8px',
+        borderRadius: 999,
+        border: `1px solid ${palette.border}`,
+        background: palette.background,
+        color: 'var(--app-primary-foreground)',
+        textTransform: 'capitalize',
+      }}
+    >
+      {status}
+    </span>
+  );
+}
+
+function SummaryStatusBadge({ status }: { status: AgentTeamBoardState['summaries'][number]['statusCategory'] }) {
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        padding: '3px 8px',
+        borderRadius: 999,
+        border: '1px solid var(--app-input-border)',
+        color: 'var(--app-secondary-foreground)',
+        textTransform: 'capitalize',
+      }}
+    >
+      {status.replace('_', ' ')}
+    </span>
+  );
+}
+
+function CapabilityRecommendationCard({
+  recommendation,
+}: {
+  recommendation: CapabilityRecommendationView;
+}) {
+  return (
+    <div
+      style={{
+        border: '1px solid var(--app-input-border)',
+        borderRadius: 'var(--corner-radius-medium, 12px)',
+        background: 'linear-gradient(135deg, rgba(66, 153, 225, 0.08), rgba(16, 185, 129, 0.05))',
+        padding: '12px 14px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--app-secondary-foreground)' }}>
+            Recommended capability
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--app-primary-foreground)', marginTop: 2 }}>
+            {recommendation.title}
+          </div>
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            padding: '3px 8px',
+            borderRadius: 999,
+            border: '1px solid var(--app-input-border)',
+            color: 'var(--app-secondary-foreground)',
+          }}
+        >
+          {recommendation.kind === 'mcp' ? 'MCP' : 'Plugin'}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 8, fontSize: 12, color: 'var(--app-primary-foreground)' }}>
+        {recommendation.rationale}
+      </div>
+      <div style={{ marginTop: 6, fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
+        {recommendation.reasonDetail}
+      </div>
+
+      <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          onClick={() => vscode.postMessage({ type: 'recommendation_primary_action', recommendationId: recommendation.id })}
+          style={{
+            padding: '6px 10px',
+            borderRadius: 'var(--corner-radius-small)',
+            border: 'none',
+            background: 'var(--vscode-button-background)',
+            color: 'var(--vscode-button-foreground)',
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          {recommendation.recommendedActionLabel}
+        </button>
+        {recommendation.secondaryActionLabel && (
+          <button
+            onClick={() => vscode.postMessage({ type: 'recommendation_secondary_action', recommendationId: recommendation.id })}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 'var(--corner-radius-small)',
+              border: '1px solid var(--app-input-border)',
+              background: 'transparent',
+              color: 'var(--app-primary-foreground)',
+              cursor: 'pointer',
+              fontSize: 12,
+            }}
+          >
+            {recommendation.secondaryActionLabel}
+          </button>
+        )}
+        <button
+          onClick={() => vscode.postMessage({ type: 'recommendation_dismiss', recommendationId: recommendation.id })}
+          style={{
+            padding: '6px 10px',
+            borderRadius: 'var(--corner-radius-small)',
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--app-secondary-foreground)',
+            cursor: 'pointer',
+            fontSize: 12,
+          }}
+        >
+          Dismiss for session
+        </button>
+      </div>
     </div>
   );
 }

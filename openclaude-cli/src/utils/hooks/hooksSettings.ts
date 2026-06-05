@@ -11,6 +11,7 @@ import {
 import type { HookCommand, HookMatcher } from '../settings/types.js'
 import { DEFAULT_HOOK_SHELL } from '../shell/shellProvider.js'
 import { getSessionHooks } from './sessionHooks.js'
+import { getHookPolicyPackMatchers } from './hookPolicyPacks.js'
 
 export type HookSource =
   | EditableSettingSource
@@ -18,6 +19,7 @@ export type HookSource =
   | 'pluginHook'
   | 'sessionHook'
   | 'builtinHook'
+  | 'policyPack'
 
 export interface IndividualHookConfig {
   event: HookEvent
@@ -141,6 +143,28 @@ export function getAllHooks(appState: AppState): IndividualHookConfig[] {
     }
   }
 
+  const policyPackSources = [
+    'userSettings',
+    'projectSettings',
+    'localSettings',
+    'policySettings',
+  ] as const
+
+  for (const source of policyPackSources) {
+    const sourceSettings = getSettingsForSource(source)
+    for (const matcher of getHookPolicyPackMatchers(sourceSettings)) {
+      for (const hookCommand of matcher.hooks) {
+        hooks.push({
+          event: matcher.event,
+          config: hookCommand,
+          matcher: matcher.matcher,
+          source: 'policyPack',
+          pluginName: matcher.packId,
+        })
+      }
+    }
+  }
+
   // Get session hooks
   const sessionId = getSessionId()
   const sessionHooks = getSessionHooks(appState, sessionId)
@@ -184,6 +208,8 @@ export function hookSourceDescriptionDisplayString(source: HookSource): string {
       return 'Session hooks (in-memory, temporary)'
     case 'builtinHook':
       return 'Built-in hooks (registered internally by Claude Code)'
+    case 'policyPack':
+      return 'Built-in policy packs (settings-enabled lifecycle hooks)'
     default:
       return source as string
   }
@@ -203,6 +229,8 @@ export function hookSourceHeaderDisplayString(source: HookSource): string {
       return 'Session Hooks'
     case 'builtinHook':
       return 'Built-in Hooks'
+    case 'policyPack':
+      return 'Policy Packs'
     default:
       return source as string
   }
@@ -222,6 +250,8 @@ export function hookSourceInlineDisplayString(source: HookSource): string {
       return 'Session'
     case 'builtinHook':
       return 'Built-in'
+    case 'policyPack':
+      return 'Policy Pack'
     default:
       return source as string
   }
@@ -255,6 +285,8 @@ export function sortMatchersByPriority(
     // Plugin hooks get lowest priority (highest number)
     const getSourcePriority = (source: HookSource) =>
       source === 'pluginHook' || source === 'builtinHook'
+        ? 999
+        : source === 'policyPack'
         ? 999
         : sourcePriority[source as EditableSettingSource]
 

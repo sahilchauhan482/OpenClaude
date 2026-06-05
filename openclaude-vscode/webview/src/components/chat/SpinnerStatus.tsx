@@ -56,22 +56,16 @@ export const SpinnerStatus: React.FC<SpinnerStatusProps> = ({
   if (!isActive) return null;
 
   return (
-    <div className="spinner-row" style={{ gap: 8, padding: '0 16px', fontSize: '0.85em', color: 'var(--app-secondary-foreground)' }}>
+    <div className="spinner-row spinner-row-elevated">
       <div
-        style={{
-          width: 12,
-          height: 12,
-          border: '2px solid var(--app-input-border)',
-          borderTopColor: 'var(--app-spinner-foreground)',
-          borderRadius: '50%',
-          animation: reducedMotion ? 'none' : 'spin 1s linear infinite',
-        }}
+        className="spinner-row-glyph"
+        style={{ animation: reducedMotion ? 'none' : 'spin 1s linear infinite' }}
         role="status"
         aria-label="Loading"
       />
-      <span>{message ?? `${verbs[verbIndex]}...`}</span>
+      <span className="spinner-row-copy">{message ?? `${verbs[verbIndex]}...`}</span>
       {tipsEnabled && (
-        <span style={{ marginLeft: 'auto', opacity: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
+        <span className="spinner-row-tip">
           {tips[tipIndex]}
         </span>
       )}

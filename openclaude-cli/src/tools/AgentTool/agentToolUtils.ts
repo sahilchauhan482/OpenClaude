@@ -57,8 +57,15 @@ import { emitTaskProgress as emitTaskProgressEvent } from '../../utils/task/sdkP
 import { isInProcessTeammate } from '../../utils/teammateContext.js'
 import { getTokenCountFromUsage } from '../../utils/tokens.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../ExitPlanModeTool/constants.js'
-import { AGENT_TOOL_NAME, LEGACY_AGENT_TOOL_NAME } from './constants.js'
+import {
+  AGENT_TOOL_NAME,
+  LEGACY_AGENT_TOOL_NAME,
+  REVIEWER_AGENT_TYPE,
+  VERIFICATION_AGENT_TYPE,
+} from './constants.js'
+import { parseReviewerResult } from './reviewerResult.js'
 import type { AgentDefinition } from './loadAgentsDir.js'
+import { parseVerificationResult } from './verificationResult.js'
 export type ResolvedAgentTools = {
   hasWildcard: boolean
   validTools: string[]
@@ -235,6 +242,30 @@ export const agentToolResultSchema = lazySchema(() =>
     totalToolUseCount: z.number(),
     totalDurationMs: z.number(),
     totalTokens: z.number(),
+    verification: z
+      .object({
+        verdict: z.enum(['PASS', 'FAIL', 'PARTIAL']),
+        checkCount: z.number(),
+        commandBlockCount: z.number(),
+        hasEvidence: z.boolean(),
+      })
+      .optional(),
+    reviewer: z
+      .object({
+        findings: z.array(
+          z.object({
+            severity: z.enum(['critical', 'high', 'medium', 'low']),
+            location: z.string().optional(),
+            problem: z.string(),
+            whyItMatters: z.string().optional(),
+            evidence: z.string().optional(),
+          }),
+        ),
+        hasFindings: z.boolean(),
+        openQuestions: z.array(z.string()).optional(),
+        residualRisks: z.array(z.string()).optional(),
+      })
+      .optional(),
     usage: z.object({
       input_tokens: z.number(),
       output_tokens: z.number(),
@@ -318,6 +349,15 @@ export function finalizeAgentTool(
 
   const totalTokens = getTokenCountFromUsage(lastAssistantMessage.message.usage)
   const totalToolUseCount = countToolUses(agentMessages)
+  const resultText = content.map(block => block.text).join('\n')
+  const verification =
+    agentType === VERIFICATION_AGENT_TYPE
+      ? parseVerificationResult(resultText)
+      : null
+  const reviewer =
+    agentType === REVIEWER_AGENT_TYPE
+      ? parseReviewerResult(resultText)
+      : null
 
   logEvent('tengu_agent_tool_completed', {
     agent_type:
@@ -352,6 +392,8 @@ export function finalizeAgentTool(
     totalDurationMs: Date.now() - startTime,
     totalTokens,
     totalToolUseCount,
+    verification: verification ?? undefined,
+    reviewer: reviewer ?? undefined,
     usage: lastAssistantMessage.message.usage,
   }
 }

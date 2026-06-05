@@ -8,8 +8,8 @@
 
 OpenAI · Anthropic · Google Gemini · DeepSeek · Ollama · AWS Bedrock · Vertex AI · GitHub Models · 200+ OpenAI-compatible endpoints.
 
-[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/HarshAgarwal1012.openclaude-vscode?label=marketplace&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=HarshAgarwal1012.openclaude-vscode)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/HarshAgarwal1012.openclaude-vscode)](https://marketplace.visualstudio.com/items?itemName=HarshAgarwal1012.openclaude-vscode)
+[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/OpenClaude.openclaude-vscode?label=marketplace&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=OpenClaude.openclaude-vscode)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/OpenClaude.openclaude-vscode)](https://marketplace.visualstudio.com/items?itemName=OpenClaude.openclaude-vscode)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code compatible](https://img.shields.io/badge/Claude%20Code-compatible-8a63d2.svg)](#multi-provider-support)
 
@@ -95,12 +95,12 @@ Switch between LLM providers on the fly via `/provider`, the provider badge, or 
 Search for **OpenClaude** in the Extensions panel (`Ctrl+Shift+X` / `Cmd+Shift+X`) and click **Install**, or:
 
 ```bash
-code --install-extension HarshAgarwal1012.openclaude-vscode
+code --install-extension OpenClaude.openclaude-vscode
 ```
 
 ### From a `.vsix` file (latest dev build)
 
-Download the latest `.vsix` from [Releases](https://github.com/Harsh1210/openclaude-vscode/releases), then:
+Download the latest `.vsix` from [Releases](https://github.com/sahilchauhan482/OpenClaude/releases), then:
 
 ```bash
 code --install-extension openclaude-vscode-0.2.5.vsix
@@ -262,7 +262,7 @@ The extension is deliberately thin. All provider logic, tool execution, MCP serv
 ## Contributing
 
 ```bash
-git clone https://github.com/Harsh1210/openclaude-vscode
+git clone https://github.com/sahilchauhan482/OpenClaude.git
 cd openclaude-vscode
 npm install
 cd webview && npm install && cd ..
@@ -285,7 +285,7 @@ npm test
 npx @vscode/vsce package --no-dependencies --allow-missing-repository
 ```
 
-Issues and PRs welcome — see the [issue tracker](https://github.com/Harsh1210/openclaude-vscode/issues).
+Issues and PRs welcome — see the [issue tracker](https://github.com/sahilchauhan482/OpenClaude/issues).
 
 ---
 

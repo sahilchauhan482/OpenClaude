@@ -17,6 +17,9 @@ interface AssistantMessageProps {
 
 export function AssistantMessage({ message, isLatest = false, isStreaming = false, onRetry, onStop }: AssistantMessageProps) {
   const blocks = message.blocks || [];
+  if (blocks.length === 0) {
+    return null;
+  }
 
   // Extract plain text content for copy
   const plainTextContent = blocks

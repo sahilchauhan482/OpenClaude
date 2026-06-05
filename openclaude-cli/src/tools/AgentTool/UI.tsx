@@ -370,10 +370,17 @@ export function renderToolResultMessage(data: Output, progressMessagesForMessage
     totalTokens,
     usage,
     content,
-    prompt
+    prompt,
+    verification,
   } = data;
-  const result = [totalToolUseCount === 1 ? '1 tool use' : `${totalToolUseCount} tool uses`, formatNumber(totalTokens) + ' tokens', formatDuration(totalDurationMs)];
-  const completionMessage = `Done (${result.join(' · ')})`;
+  const result = [
+    totalToolUseCount === 1 ? '1 tool use' : `${totalToolUseCount} tool uses`,
+    formatNumber(totalTokens) + ' tokens',
+    formatDuration(totalDurationMs)
+  ];
+  const completionMessage = verification
+    ? `Verification ${verification.verdict} (${verification.checkCount} checks · ${result.join(' · ')})`
+    : `Done (${result.join(' · ')})`;
   const finalAssistantMessage = createAssistantMessage({
     content: completionMessage,
     usage: {
