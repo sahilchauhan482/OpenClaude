@@ -11,17 +11,25 @@ interface SystemMessageProps {
  */
 export function SystemMessage({ text, system }: SystemMessageProps) {
   const tone = system?.tone ?? 'info';
+  const label = system?.label ?? badgeLabel(tone);
   const title = system?.title ?? text;
-  const detail = system?.detail;
+  const detailLines = (system?.detail ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 
   return (
     <div className={`system-inline-card system-inline-card-${tone}`}>
       <div className="system-inline-header">
-        <span className="system-inline-badge">{badgeLabel(tone)}</span>
+        <span className="system-inline-badge">{label}</span>
         <span className="system-inline-title">{title}</span>
       </div>
-      {detail && detail !== title ? (
-        <div className="system-inline-detail">{detail}</div>
+      {detailLines.length > 0 ? (
+        <div className="system-inline-detail">
+          {detailLines.map((line, index) => (
+            <div key={`${line}-${index}`}>{line}</div>
+          ))}
+        </div>
       ) : null}
     </div>
   );

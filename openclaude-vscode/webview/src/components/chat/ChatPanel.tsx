@@ -98,6 +98,9 @@ export function ChatPanel() {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('openclaude.onboarding.dismissed');
   });
+  const [showAgentTeamBoard, setShowAgentTeamBoard] = useState(() => {
+    return localStorage.getItem('openclaude.agentTeamBoard.visible') !== '0';
+  });
 
   // Track whether the user has explicitly changed the permission mode this session
   const userSetModeRef = useRef(false);
@@ -157,6 +160,10 @@ export function ChatPanel() {
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('openclaude.agentTeamBoard.visible', showAgentTeamBoard ? '1' : '0');
+  }, [showAgentTeamBoard]);
 
   // Rate limit countdown timer is now handled inside ErrorBanner component
 
@@ -241,7 +248,7 @@ export function ChatPanel() {
       )}
 
       {agentTeamBoard && (
-        <div style={{ padding: '0 16px 10px' }}>
+        <div style={{ padding: '0 16px 10px', display: showAgentTeamBoard ? 'block' : 'none' }}>
           <AgentTeamBoardCard board={agentTeamBoard} />
         </div>
       )}
@@ -327,6 +334,23 @@ export function ChatPanel() {
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {agentTeamBoard && (
+              <button
+                onClick={() => setShowAgentTeamBoard((prev) => !prev)}
+                title={showAgentTeamBoard ? 'Hide agent team board' : 'Show agent team board'}
+                style={{
+                  fontSize: 10,
+                  padding: '1px 5px',
+                  cursor: 'pointer',
+                  background: showAgentTeamBoard ? 'rgba(14, 165, 233, 0.14)' : 'transparent',
+                  border: showAgentTeamBoard ? '1px solid rgba(14, 165, 233, 0.45)' : '1px solid var(--app-input-border)',
+                  borderRadius: 'var(--corner-radius-small)',
+                  color: showAgentTeamBoard ? 'var(--app-primary-foreground)' : 'var(--app-secondary-foreground)',
+                }}
+              >
+                Agents
+              </button>
+            )}
             <button
               onClick={() => setShowMcpManager(true)}
               title="MCP Servers"
@@ -382,6 +406,11 @@ function AgentTeamBoardCard({ board }: { board: AgentTeamBoardState }) {
     maxWorkers: board.maxWorkers,
     useWorktrees: board.useWorktrees,
   }));
+  const lastActiveSettingsRef = useRef({
+    mode: board.mode === 'off' ? 'assist' as const : board.mode,
+    maxWorkers: board.maxWorkers,
+    useWorktrees: board.useWorktrees,
+  });
 
   useEffect(() => {
     setSettings({
@@ -389,9 +418,23 @@ function AgentTeamBoardCard({ board }: { board: AgentTeamBoardState }) {
       maxWorkers: board.maxWorkers,
       useWorktrees: board.useWorktrees,
     });
+    if (board.mode !== 'off') {
+      lastActiveSettingsRef.current = {
+        mode: board.mode,
+        maxWorkers: board.maxWorkers,
+        useWorktrees: board.useWorktrees,
+      };
+    }
   }, [board.maxWorkers, board.mode, board.useWorktrees]);
 
   const saveSettings = useCallback((next: typeof settings) => {
+    if (next.mode !== 'off') {
+      lastActiveSettingsRef.current = {
+        mode: next.mode,
+        maxWorkers: next.maxWorkers,
+        useWorktrees: next.useWorktrees,
+      };
+    }
     setSettings(next);
     vscode.postMessage({
       type: 'set_agent_team_settings',
@@ -400,6 +443,15 @@ function AgentTeamBoardCard({ board }: { board: AgentTeamBoardState }) {
       useWorktrees: next.useWorktrees,
     });
   }, []);
+
+  const restoreMode = useCallback((mode: 'assist' | 'coordinate') => {
+    const base = lastActiveSettingsRef.current;
+    saveSettings({
+      mode,
+      maxWorkers: settings.maxWorkers || base.maxWorkers,
+      useWorktrees: settings.useWorktrees,
+    });
+  }, [saveSettings, settings.maxWorkers, settings.useWorktrees]);
 
   return (
     <div
@@ -431,12 +483,12 @@ function AgentTeamBoardCard({ board }: { board: AgentTeamBoardState }) {
           <ModeChip
             label="Assist"
             active={settings.mode === 'assist'}
-            onClick={() => saveSettings({ ...settings, mode: 'assist' })}
+            onClick={() => restoreMode('assist')}
           />
           <ModeChip
             label="Coordinate"
             active={settings.mode === 'coordinate'}
-            onClick={() => saveSettings({ ...settings, mode: 'coordinate' })}
+            onClick={() => restoreMode('coordinate')}
           />
         </div>
       </div>
@@ -516,12 +568,18 @@ function AgentTeamBoardCard({ board }: { board: AgentTeamBoardState }) {
                 </div>
                 <TaskStatusBadge status={task.status} />
               </div>
-              <div style={{ marginTop: 4, fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
-                {task.workflowName || task.taskType || 'worker'} · {task.toolUses} tools · {task.tokenCount} tokens
+              <div
+                style={{ marginTop: 4, fontSize: 11, color: 'var(--app-secondary-foreground)' }}
+                title="Operations are background worker tool calls such as Read, Search, Bash, Edit, or Agent."
+              >
+                {task.workflowName || task.taskType || 'worker'}
+                {task.toolUses > 0 ? ` · ${task.toolUses} operations` : ''}
+                {task.tokenCount > 0 ? ` · ${task.tokenCount} tokens` : ' · token usage unavailable'}
+                {task.durationMs > 0 ? ` · ${Math.max(1, Math.round(task.durationMs / 1000))}s` : ''}
               </div>
-              {(task.summary || task.lastToolName) && (
+              {(task.progressNote || task.summary || task.lastToolName) && (
                 <div style={{ marginTop: 6, fontSize: 11, color: 'var(--app-primary-foreground)' }}>
-                  {task.summary || `Last tool: ${task.lastToolName}`}
+                  {task.progressNote || task.summary || `Last tool: ${task.lastToolName}`}
                 </div>
               )}
             </div>
@@ -893,7 +951,7 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
   const handleSlashSelect = useCallback((command: { name: string; argumentHint: string }) => {
     if (!command.argumentHint) {
       // No args needed — send directly as a user message
-      onSend('/' + command.name);
+      onSend('/' + command.name, []);
       setInputValue('');
       setSlashMenuVisible(false);
       setSlashQuery('');
@@ -1211,7 +1269,7 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
       </div>
 
       {/* Tool activity indicator */}
-      {toolActivity && isStreaming && (
+      {toolActivity && (
         <div style={{
           display: 'flex',
           alignItems: 'center',

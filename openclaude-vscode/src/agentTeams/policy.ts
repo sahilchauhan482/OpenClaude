@@ -26,6 +26,7 @@ export interface AgentTeamTaskState {
   workflowName?: string;
   prompt?: string;
   summary?: string;
+  progressNote?: string;
   lastToolName?: string;
   toolUses: number;
   tokenCount: number;
@@ -78,6 +79,24 @@ function isWriteHeavyTask(description: string, taskType?: string): boolean {
   return ['implement', 'edit', 'write', 'refactor', 'fix', 'patch', 'modify'].some((keyword) =>
     normalized.includes(keyword),
   );
+}
+
+function deriveProgressNote(summary?: string, lastToolName?: string): string | undefined {
+  if (summary?.trim()) {
+    return summary.trim();
+  }
+  if (!lastToolName) {
+    return undefined;
+  }
+
+  const normalized = lastToolName.toLowerCase();
+  if (normalized.includes('read')) return 'Reading relevant files';
+  if (normalized.includes('grep') || normalized.includes('search')) return 'Searching the workspace';
+  if (normalized.includes('glob')) return 'Mapping matching files';
+  if (normalized.includes('bash') || normalized.includes('command')) return 'Running a shell check';
+  if (normalized.includes('edit') || normalized.includes('write')) return 'Applying file changes';
+  if (normalized.includes('agent')) return 'Coordinating worker tasks';
+  return `Using ${lastToolName}`;
 }
 
 function recomputeTaskWarnings(state: AgentTeamBoardState): AgentTeamBoardState {
@@ -185,6 +204,7 @@ export function applyAgentTeamEvent(
       toolUses: 0,
       tokenCount: 0,
       durationMs: 0,
+      progressNote: 'Worker started',
       writeHeavy: isWriteHeavyTask(event.description, event.task_type),
     });
     return recomputeTaskWarnings({
@@ -206,6 +226,7 @@ export function applyAgentTeamEvent(
               durationMs: event.usage.duration_ms,
               lastToolName: event.last_tool_name,
               summary: event.summary,
+              progressNote: deriveProgressNote(event.summary, event.last_tool_name),
             }
           : task,
       ),
@@ -221,6 +242,7 @@ export function applyAgentTeamEvent(
               ...task,
               status: event.status === 'stopped' ? 'stopped' : event.status,
               summary: event.summary,
+              progressNote: deriveProgressNote(event.summary, task.lastToolName),
               toolUses: event.usage?.tool_uses ?? task.toolUses,
               tokenCount: event.usage?.total_tokens ?? task.tokenCount,
               durationMs: event.usage?.duration_ms ?? task.durationMs,
@@ -256,6 +278,36 @@ export function resetAgentTeamBoardState(state: AgentTeamBoardState): AgentTeamB
   };
 }
 
+export function settleRunningAgentTeamTasks(
+  state: AgentTeamBoardState,
+  options?: {
+    status?: 'completed' | 'failed' | 'stopped';
+    summary?: string;
+  },
+): AgentTeamBoardState {
+  const status = options?.status ?? 'stopped';
+  const summary =
+    options?.summary ??
+    (status === 'completed'
+      ? 'Worker completed.'
+      : status === 'failed'
+        ? 'Worker ended with an error before reporting completion.'
+        : 'Worker stopped before a completion event was received.');
+
+  return recomputeTaskWarnings({
+    ...state,
+    tasks: state.tasks.map((task) =>
+      task.status === 'running'
+        ? {
+            ...task,
+            status,
+            summary: task.summary || summary,
+          }
+        : task,
+    ),
+  });
+}
+
 export function buildAgentTeamEnv(settings: AgentTeamSettings): Record<string, string> {
   if (settings.mode === 'off') {
     return {};
@@ -282,6 +334,8 @@ export function buildAgentTeamPrompt(
     '- Do not delegate trivial single-step work that can be completed directly.',
     '- Avoid duplicate worker prompts covering the same investigation or file set.',
     '- Parent agent must synthesize worker findings before launching implementation or verification follow-up work.',
+    '- While work is in progress, emit concise milestone summaries so the UI can show live updates. Good examples: "Mapped old/new folders", "Found audit manager", "Comparing write path", "Running verifier", "Preparing final summary".',
+    '- On completion, provide a structured final summary with: Checked, Findings, Changes or No changes, Remaining risk, and Next action.',
   ];
 
   if (settings.useWorktrees && context.worktreeAvailable) {

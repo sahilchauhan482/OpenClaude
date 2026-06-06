@@ -44,7 +44,7 @@ const TEXT_EXTENSIONS = new Set([
 
 type OcrWorker = {
   recognize: (source: string) => Promise<{ data?: { text?: string } }>;
-  setParameters: (params: Record<string, string>) => Promise<void>;
+  setParameters: (params: Record<string, string>) => Promise<unknown>;
   terminate: () => Promise<void>;
 };
 
@@ -137,12 +137,13 @@ async function extractOcrText(
         const { createWorker } = await import('tesseract.js');
         const workerPath = options.ocrWorkerPath ?? require.resolve('tesseract.js/src/worker-script/node/index.js');
         const langPath = options.ocrLangPath ?? 'https://tessdata.projectnaptha.com/4.0.0_fast';
-        return createWorker('eng', 1, {
+        const worker = await createWorker('eng', 1, {
           workerPath,
           langPath,
           gzip: options.ocrGzip ?? !options.ocrLangPath,
           cacheMethod: options.ocrLangPath ? 'none' : undefined,
         });
+        return worker as unknown as OcrWorker;
       })();
     }
     const worker = await ocrWorkerPromise;

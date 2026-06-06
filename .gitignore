@@ -15,3 +15,6 @@ test_output.log
 fix_regex.js
 fix_packagejson.js
 *.patch
+
+/generated/prisma
+.env

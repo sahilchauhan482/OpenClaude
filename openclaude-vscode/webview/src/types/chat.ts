@@ -25,6 +25,7 @@ export interface FileEditMessageState {
 
 export interface SystemInlineMessageState {
   tone?: 'info' | 'warning' | 'error' | 'success';
+  label?: string;
   title?: string;
   detail?: string;
 }
@@ -37,6 +38,7 @@ export interface AgentTeamTaskState {
   workflowName?: string;
   prompt?: string;
   summary?: string;
+  progressNote?: string;
   lastToolName?: string;
   toolUses: number;
   tokenCount: number;

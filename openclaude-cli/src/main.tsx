@@ -72,6 +72,8 @@ import { isWorktreeModeEnabled } from './utils/worktreeModeEnabled.js';
 const getTeammateUtils = () => require('./utils/teammate.js') as typeof import('./utils/teammate.js');
 const getTeammatePromptAddendum = () => require('./utils/swarm/teammatePromptAddendum.js') as typeof import('./utils/swarm/teammatePromptAddendum.js');
 const getTeammateModeSnapshot = () => require('./utils/swarm/backends/teammateModeSnapshot.js') as typeof import('./utils/swarm/backends/teammateModeSnapshot.js');
+const getClaudeInChromeSetup = () => require('./utils/claudeInChrome/setup.js') as typeof import('./utils/claudeInChrome/setup.js');
+const getClaudeInChromePrompt = () => require('./utils/claudeInChrome/prompt.js') as typeof import('./utils/claudeInChrome/prompt.js');
 /* eslint-enable @typescript-eslint/no-require-imports */
 // Dead code elimination: conditional import for COORDINATOR_MODE
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -103,8 +105,6 @@ import { getActiveAgentsFromList, getAgentDefinitionsWithOverrides, isBuiltInAge
 import type { LogOption } from './types/logs.js';
 import type { Message as MessageType } from './types/message.js';
 import { assertMinVersion } from './utils/autoUpdater.js';
-import { CLAUDE_IN_CHROME_SKILL_HINT, CLAUDE_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER } from './utils/claudeInChrome/prompt.js';
-import { setupClaudeInChrome, shouldAutoEnableClaudeInChrome, shouldEnableClaudeInChrome } from './utils/claudeInChrome/setup.js';
 import { getContextWindowForModel } from './utils/context.js';
 import { loadConversationForResume } from './utils/conversationRecovery.js';
 import { buildDeepLinkBanner } from './utils/deepLink/banner.js';
@@ -1458,6 +1458,11 @@ async function run(): Promise<CommanderCommand> {
     };
     // Store the explicit CLI flag so teammates can inherit it
     setChromeFlagOverride(chromeOpts.chrome);
+    const {
+      setupClaudeInChrome,
+      shouldAutoEnableClaudeInChrome,
+      shouldEnableClaudeInChrome
+    } = getClaudeInChromeSetup();
     const enableClaudeInChrome = shouldEnableClaudeInChrome(chromeOpts.chrome) && ("external" === 'ant' || isClaudeAISubscriber());
     const autoEnableClaudeInChrome = !enableClaudeInChrome && shouldAutoEnableClaudeInChrome();
     if (enableClaudeInChrome) {
@@ -1498,6 +1503,10 @@ async function run(): Promise<CommanderCommand> {
           ...dynamicMcpConfig,
           ...chromeMcpConfig
         };
+        const {
+          CLAUDE_IN_CHROME_SKILL_HINT,
+          CLAUDE_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER
+        } = getClaudeInChromePrompt();
         const hint = feature('WEB_BROWSER_TOOL') && typeof Bun !== 'undefined' && 'WebView' in Bun ? CLAUDE_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER : CLAUDE_IN_CHROME_SKILL_HINT;
         appendSystemPrompt = appendSystemPrompt ? `${appendSystemPrompt}\n\n${hint}` : hint;
       } catch (error) {
@@ -4299,6 +4308,18 @@ async function run(): Promise<CommanderCommand> {
     }] = await Promise.all([import('./cli/handlers/util.js'), import('./ink.js')]);
     const root = await createRoot(getBaseRenderOptions(false));
     await doctorHandler(root);
+  });
+
+  // openclaude status - operator-grade readiness and health summary
+  program.command('status').description('Show operator-grade OpenClaude readiness including provider health, hooks/policy, specialist rails, and resumable session coverage').option('--json', 'Output as JSON').option('--text', 'Output as human-readable text (default)').option('--exit-code', 'Exit with code 1 when blocking issues are detected').action(async (opts: {
+    json?: boolean;
+    text?: boolean;
+    exitCode?: boolean;
+  }) => {
+    const {
+      operatorStatusHandler
+    } = await import('./cli/handlers/status.js');
+    await operatorStatusHandler(opts);
   });
 
   // claude update

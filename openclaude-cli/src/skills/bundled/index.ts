@@ -1,12 +1,18 @@
 import { feature } from 'bun:bundle'
-import { shouldAutoEnableClaudeInChrome } from 'src/utils/claudeInChrome/setup.js'
 import { registerBatchSkill } from './batch.js'
-import { registerClaudeInChromeSkill } from './claudeInChrome.js'
+import { registerCuratedPowerSkills } from './curatedPowerSkills.js'
 import { registerDebugSkill } from './debug.js'
 import { registerKeybindingsSkill } from './keybindings.js'
 import { registerLoopSkill } from './loop.js'
 import { registerSimplifySkill } from './simplify.js'
 import { registerUpdateConfigSkill } from './updateConfig.js'
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+const getClaudeInChromeSetup = () =>
+  require('src/utils/claudeInChrome/setup.js') as typeof import('src/utils/claudeInChrome/setup.js')
+const getClaudeInChromeSkill = () =>
+  require('./claudeInChrome.js') as typeof import('./claudeInChrome.js')
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 /**
  * Initialize all bundled skills.
@@ -23,6 +29,7 @@ export function initBundledSkills(): void {
   registerDebugSkill()
   registerSimplifySkill()
   registerBatchSkill()
+  registerCuratedPowerSkills()
   if (feature('KAIROS') || feature('KAIROS_DREAM')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const { registerDreamSkill } = require('./dream.js')
@@ -53,8 +60,8 @@ export function initBundledSkills(): void {
     /* eslint-enable @typescript-eslint/no-require-imports */
     registerClaudeApiSkill()
   }
-  if (shouldAutoEnableClaudeInChrome()) {
-    registerClaudeInChromeSkill()
+  if (getClaudeInChromeSetup().shouldAutoEnableClaudeInChrome()) {
+    getClaudeInChromeSkill().registerClaudeInChromeSkill()
   }
   if (feature('RUN_SKILL_GENERATOR')) {
     /* eslint-disable @typescript-eslint/no-require-imports */

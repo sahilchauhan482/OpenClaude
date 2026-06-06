@@ -20,6 +20,17 @@ import type {
   SlashCommand,
 } from './session';
 
+export type ContentBlock =
+  | { type: 'text'; text: string }
+  | {
+      type: 'image';
+      source: {
+        type: 'base64';
+        media_type: string;
+        data: string;
+      };
+    };
+
 // ============================================================================
 // SDK Core Messages (type field discriminates at top level)
 // ============================================================================

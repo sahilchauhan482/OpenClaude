@@ -64,7 +64,7 @@ export class BlackboxBridge implements vscode.Disposable {
       this.disposables.push(disposable);
       this.responseCommandRegistered = true;
     } catch (err) {
-      this.output.warn(`[Blackbox] Could not register response command: ${err instanceof Error ? err.message : String(err)}`);
+      this.output.appendLine(`[Blackbox][WARN] Could not register response command: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -86,7 +86,7 @@ export class BlackboxBridge implements vscode.Disposable {
     try {
       return (await vscode.commands.executeCommand<boolean>('blackbox.checkLLMCapability')) === true;
     } catch (err) {
-      this.output.warn(`[Blackbox] Capability check failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.output.appendLine(`[Blackbox][WARN] Capability check failed: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   }

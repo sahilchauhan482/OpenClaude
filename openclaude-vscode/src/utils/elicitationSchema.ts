@@ -200,7 +200,7 @@ function buildSelectOptions(
       label: labels[index],
       description: descriptions[index],
     }))
-    .filter((option): option is NormalizedElicitationOption => Boolean(option));
+    .filter(isNormalizedElicitationOption);
 }
 
 function buildMultiSelectOptions(
@@ -236,7 +236,7 @@ function buildMultiSelectOptions(
       label: labels[index],
       description: descriptions[index],
     }))
-    .filter((option): option is NormalizedElicitationOption => Boolean(option));
+    .filter(isNormalizedElicitationOption);
 }
 
 function buildObjectOptions(
@@ -244,7 +244,7 @@ function buildObjectOptions(
   parentSchema: Record<string, unknown>,
 ): NormalizedElicitationOption[] {
   return options
-    .map((rawOption) => {
+    .map((rawOption): NormalizedElicitationOption | undefined => {
       const option = asRecord(rawOption);
       if (!option || !isPrimitive(option.const)) {
         return undefined;
@@ -271,7 +271,13 @@ function buildObjectOptions(
         recommendationNote,
       } satisfies NormalizedElicitationOption;
     })
-    .filter((option): option is NormalizedElicitationOption => Boolean(option));
+    .filter(isNormalizedElicitationOption);
+}
+
+function isNormalizedElicitationOption(
+  option: NormalizedElicitationOption | undefined,
+): option is NormalizedElicitationOption {
+  return Boolean(option);
 }
 
 function buildPrimitiveOption(

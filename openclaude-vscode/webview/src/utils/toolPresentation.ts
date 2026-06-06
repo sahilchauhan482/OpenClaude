@@ -54,6 +54,8 @@ const FILE_EDIT_TOOL_NAMES = new Set([
 const COMMAND_TOOL_PATTERNS = ['bash', 'terminal', 'execute', 'command', 'shell'];
 const SEARCH_TOOL_PATTERNS = ['search', 'grep', 'glob', 'find', 'ripgrep'];
 const WEB_TOOL_PATTERNS = ['web', 'browser', 'fetch', 'http'];
+const DECISION_TOOL_PATTERNS = ['askuserquestion', 'requestuserinput', 'elicitation'];
+const PLAN_TOOL_PATTERNS = ['todowrite', 'updateplan'];
 const VERDICT_PATTERN = /VERDICT:\s*(PASS|FAIL|PARTIAL)\b/;
 const CHECK_HEADING_PATTERN = /^### Check:/gm;
 const COMMAND_BLOCK_PATTERN = /^\*\*Command run:\*\*/gm;
@@ -304,6 +306,8 @@ export function getToolPresentation(
   const fileName = filePath ? getFileName(filePath) : undefined;
   const rawInput = safeJsonStringify(input);
   const normalized = toolName.toLowerCase();
+  const decisionPrompt = extractDecisionPrompt(input);
+  const planItems = extractPlanItems(input);
 
   if (isCommandToolName(toolName)) {
     const command = extractToolCommand(input);
@@ -361,6 +365,40 @@ export function getToolPresentation(
     };
   }
 
+  if (DECISION_TOOL_PATTERNS.some((pattern) => normalized.includes(pattern))) {
+    const optionCount = countDecisionOptions(input);
+    return {
+      kind: 'generic',
+      title: 'Decision',
+      summary: decisionPrompt
+        ? truncateSingleLine(decisionPrompt, 96)
+        : 'Waiting for user decision',
+      detail:
+        optionCount > 0
+          ? `${optionCount} option${optionCount === 1 ? '' : 's'} prepared`
+          : 'Waiting for user decision',
+      code: rawInput === '{}' ? undefined : rawInput,
+      language: rawInput === '{}' ? undefined : 'json',
+      rawInput,
+    };
+  }
+
+  if (PLAN_TOOL_PATTERNS.some((pattern) => normalized.includes(pattern))) {
+    const firstItem = planItems[0];
+    return {
+      kind: 'generic',
+      title: 'Plan',
+      summary: firstItem ? truncateSingleLine(firstItem, 96) : 'Tracking work plan',
+      detail:
+        planItems.length > 0
+          ? `${planItems.length} plan step${planItems.length === 1 ? '' : 's'} tracked`
+          : 'No plan steps found',
+      code: rawInput === '{}' ? undefined : rawInput,
+      language: rawInput === '{}' ? undefined : 'json',
+      rawInput,
+    };
+  }
+
   const genericTitle = humanizeToolName(toolName);
   if (filePath && fileName) {
     return {
@@ -394,6 +432,99 @@ function firstString(input: Record<string, unknown>, keys: string[]): string | u
   }
 
   return undefined;
+}
+
+function firstNonEmptyString(values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function extractDecisionPrompt(input: Record<string, unknown>): string | undefined {
+  const direct = firstString(input, ['question', 'prompt', 'message', 'header']);
+  if (direct) {
+    return direct;
+  }
+
+  const questions = input.questions;
+  if (!Array.isArray(questions)) {
+    return undefined;
+  }
+
+  for (const question of questions) {
+    if (!question || typeof question !== 'object') {
+      continue;
+    }
+    const record = question as Record<string, unknown>;
+    const value = firstString(record, ['question', 'prompt', 'message', 'header']);
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function countDecisionOptions(input: Record<string, unknown>): number {
+  const directOptions = countOptions(input.options);
+  if (directOptions > 0) {
+    return directOptions;
+  }
+
+  const questions = input.questions;
+  if (!Array.isArray(questions)) {
+    return 0;
+  }
+
+  return questions.reduce((total, question) => {
+    if (!question || typeof question !== 'object') {
+      return total;
+    }
+    const record = question as Record<string, unknown>;
+    return total + countOptions(record.options);
+  }, 0);
+}
+
+function countOptions(value: unknown): number {
+  return Array.isArray(value) ? value.length : 0;
+}
+
+function extractPlanItems(input: Record<string, unknown>): string[] {
+  const items: string[] = [];
+
+  const todos = input.todos;
+  if (Array.isArray(todos)) {
+    for (const todo of todos) {
+      if (!todo || typeof todo !== 'object') {
+        continue;
+      }
+      const record = todo as Record<string, unknown>;
+      const label = firstNonEmptyString([record.activeForm, record.content]);
+      if (label) {
+        items.push(label);
+      }
+    }
+  }
+
+  const plan = input.plan;
+  if (Array.isArray(plan)) {
+    for (const step of plan) {
+      if (!step || typeof step !== 'object') {
+        continue;
+      }
+      const record = step as Record<string, unknown>;
+      const label = firstNonEmptyString([record.step, record.content, record.title]);
+      if (label) {
+        items.push(label);
+      }
+    }
+  }
+
+  return items;
 }
 
 function countLines(value: string): number {

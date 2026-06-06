@@ -15,9 +15,10 @@ interface UserMessageProps {
  */
 export function UserMessage({ message, onEdit }: UserMessageProps) {
   const attachments = message.attachments ?? [];
+  const messageText = message.text ?? '';
   const shouldShowTextBubble =
-    Boolean(message.text) &&
-    !/^\[(?:\d+\s+)?images?\s+attached\]$/i.test(message.text.trim());
+    Boolean(messageText) &&
+    !/^\[(?:\d+\s+)?images?\s+attached\]$/i.test(messageText.trim());
   return (
     <div style={{ textAlign: 'left', position: 'relative', width: '100%' }}>
       <div className="group" style={{ display: 'inline-block', position: 'relative', margin: '4px 0' }}>
@@ -28,13 +29,13 @@ export function UserMessage({ message, onEdit }: UserMessageProps) {
         )}
         {shouldShowTextBubble && (
           <div className="user-message-bubble">
-            {message.text}
+            {messageText}
           </div>
         )}
         <div className="flex justify-end mt-1">
           <MessageActions
             messageRole="user"
-            content={message.text || ''}
+            content={messageText}
             uuid={message.id}
             onEdit={onEdit}
           />

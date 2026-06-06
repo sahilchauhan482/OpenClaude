@@ -362,7 +362,7 @@ async function collectCandidateCodeFiles(root: string): Promise<string[]> {
 
     seen.add(current.dir)
 
-    let entries: Awaited<ReturnType<typeof readdir>>
+    let entries: import('node:fs').Dirent[]
     try {
       entries = await readdir(current.dir, { withFileTypes: true })
     } catch {

@@ -1,6 +1,8 @@
 // src/auth/authManager.ts
 // Provider definitions and env-var assembly for supported LLM backends.
 
+import * as os from 'node:os';
+import * as path from 'node:path';
 import type { SettingsSync } from '../settings/settingsSync';
 import type { ProviderProfile } from '../settings/settingsSync';
 
@@ -48,6 +50,15 @@ export interface ProviderUpdateInput {
 export interface ProviderValidationResult {
   valid: boolean;
   errors: string[];
+}
+
+function isNvidiaNimBaseUrl(baseUrl: string | undefined): boolean {
+  const normalized = baseUrl?.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return normalized.startsWith('https://integrate.api.nvidia.com/');
 }
 
 // ============================================================================
@@ -144,6 +155,14 @@ const PROVIDER_DEFINITIONS: ProviderDefinition[] = [
     defaultBaseUrl: 'https://api.freemodel.dev',
   },
   {
+    id: 'nvidia-nim',
+    label: 'NVIDIA NIM',
+    requiresApiKey: true,
+    requiresBaseUrl: false,
+    supportsModel: true,
+    defaultBaseUrl: 'https://integrate.api.nvidia.com/v1',
+  },
+  {
     id: 'blackbox',
     label: 'Blackbox (free via extension)',
     requiresApiKey: false,
@@ -235,6 +254,10 @@ export class AuthManager {
     // Merge provider-specific env vars (provider takes precedence for its own keys)
     const providerEnv = this._buildEnvForProvider(def, apiKey, baseUrl, providerOptions);
     Object.assign(env, providerEnv);
+
+    // Keep the VS Code extension isolated to OpenClaude-owned storage so
+    // transcript history and resumes never bleed into legacy/shared tools.
+    env.CLAUDE_CONFIG_DIR = path.join(os.homedir(), '.openclaude');
 
     return env;
   }
@@ -357,6 +380,16 @@ export class AuthManager {
         env['CLAUDE_CODE_USE_OPENAI'] = '1';
         break;
 
+      case 'nvidia-nim':
+        if (apiKey) {
+          env['NVIDIA_API_KEY'] = apiKey;
+          env['OPENAI_API_KEY'] = apiKey;
+        }
+        env['OPENAI_BASE_URL'] = baseUrl || def.defaultBaseUrl!;
+        env['CLAUDE_CODE_USE_OPENAI'] = '1';
+        env['NVIDIA_NIM'] = '1';
+        break;
+
       case 'blackbox':
         break;
 
@@ -381,6 +414,10 @@ export class AuthManager {
       case 'custom':
         if (apiKey) env['OPENAI_API_KEY'] = apiKey;
         if (baseUrl) env['OPENAI_BASE_URL'] = baseUrl;
+        if (apiKey && isNvidiaNimBaseUrl(baseUrl)) {
+          env['NVIDIA_API_KEY'] = apiKey;
+          env['NVIDIA_NIM'] = '1';
+        }
         env['CLAUDE_CODE_USE_OPENAI'] = '1';
         break;
     }
@@ -393,6 +430,7 @@ export class AuthManager {
       case 'freemodel':
       case 'custom-anthropic':
         return 'anthropic';
+      case 'nvidia-nim':
       case 'codex-freemodel':
       case 'custom':
         return 'openai';

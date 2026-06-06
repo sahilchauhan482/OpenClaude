@@ -29,6 +29,7 @@ import {
   buildAgentTeamPrompt,
   createAgentTeamBoardState,
   resetAgentTeamBoardState,
+  settleRunningAgentTeamTasks,
   updateAgentTeamBoardContext,
   type AgentTeamBoardState,
   type AgentTeamContext,
@@ -79,6 +80,7 @@ import { buildToolPlaybackFixtures } from './observability/uiPlaybackFixtures';
 let webviewManager: WebviewManager | undefined;
 let diffManagerInstance: DiffManager | undefined;
 let permissionHandlerInstance: PermissionHandler | undefined;
+let processManager: ProcessManager | undefined;
 
 function normalizeModelCatalogEntry(
   raw: unknown,
@@ -386,14 +388,13 @@ export function activate(context: vscode.ExtensionContext) {
   const atMentionProvider = new AtMentionProvider();
   context.subscriptions.push(atMentionProvider);
 
-  if (preferredLocation === 'sidebar' && supportsSecondarySidebar) {
+  if ((preferredLocation as 'sidebar' | 'panel') === 'sidebar' && supportsSecondarySidebar) {
     statusBarManager.show();
   }
 
   // ==========================================
   // ProcessManager — spawned on first user message
   // ==========================================
-  let processManager: ProcessManager | undefined;
   let isSpawning = false;
   let crashRestartCount = 0;
   let lastCrashTime = 0;
@@ -583,6 +584,23 @@ export function activate(context: vscode.ExtensionContext) {
     webviewManager!.broadcast(payload as never);
   }
 
+  function settleAgentTeamBoardFromLifecycle(
+    status: 'completed' | 'failed' | 'stopped',
+    summary: string,
+  ): void {
+    const nextBoard = settleRunningAgentTeamTasks(agentTeamBoardState, {
+      status,
+      summary,
+    });
+
+    if (nextBoard.runningTaskCount === agentTeamBoardState.runningTaskCount) {
+      return;
+    }
+
+    agentTeamBoardState = nextBoard;
+    broadcastAgentTeamBoard();
+  }
+
   function handleAgentTeamCliMessage(msg: Record<string, unknown>): void {
     if (msg.type !== 'system') {
       return;
@@ -600,7 +618,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     agentTeamBoardState = applyAgentTeamEvent(
       agentTeamBoardState,
-      msg as Parameters<typeof applyAgentTeamEvent>[1],
+      msg as unknown as Parameters<typeof applyAgentTeamEvent>[1],
     );
     broadcastAgentTeamBoard();
   }
@@ -629,7 +647,7 @@ export function activate(context: vscode.ExtensionContext) {
     pm.registerControlHandler(
       'elicitation',
       async (request, signal, requestId) => {
-        const req = request as Record<string, unknown>;
+        const req = request as unknown as Record<string, unknown>;
         const normalized = normalizeElicitationRequest({
           requestedSchema:
             req.requested_schema && typeof req.requested_schema === 'object'
@@ -660,7 +678,7 @@ export function activate(context: vscode.ExtensionContext) {
       output.info(`[CLI→Webview] ${JSON.stringify(msg).substring(0, 300)}`);
       webviewManager!.broadcast({ type: 'cli_output', data: msg });
 
-      const msgObj = msg as Record<string, unknown>;
+      const msgObj = msg as unknown as Record<string, unknown>;
       void recordCliObservabilityMessage(msgObj);
       handleAgentTeamCliMessage(msgObj);
 
@@ -672,6 +690,12 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       if (msgObj.type === 'result' || msgObj.subtype === 'result') {
+        settleAgentTeamBoardFromLifecycle(
+          msgObj.is_error ? 'failed' : 'completed',
+          msgObj.is_error
+            ? 'Worker result ended in an error before a completion notification reached the board.'
+            : 'Worker completed and the board was reconciled from the final result.',
+        );
         if (!webviewManager!.hasVisibleWebview()) {
           statusBarManager.setCompletedWhileHidden(true);
         }
@@ -713,6 +737,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     pm.onError((err) => {
       output.error(`[OpenClaude] Error: ${err.message}`);
+      settleAgentTeamBoardFromLifecycle(
+        'failed',
+        'Worker stopped because the CLI process reported an error.',
+      );
       emitProcessState('crashed', { error: err.message });
     });
 
@@ -742,6 +770,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage('OpenClaude: CLI crashed repeatedly. Check the Output panel for logs.');
       }
 
+      settleAgentTeamBoardFromLifecycle(
+        code === 0 ? 'stopped' : 'failed',
+        code === 0
+          ? 'Worker process stopped before a completion notification reached the board.'
+          : 'Worker process exited before a completion notification reached the board.',
+      );
       emitProcessState('stopped', { code, signal });
     });
 
@@ -762,7 +796,7 @@ export function activate(context: vscode.ExtensionContext) {
       output.info(`[CLI→Webview] ${JSON.stringify(msg).substring(0, 300)}`);
       webviewManager!.broadcast({ type: 'cli_output', data: msg });
 
-      const msgObj = msg as Record<string, unknown>;
+      const msgObj = msg as unknown as Record<string, unknown>;
       void recordCliObservabilityMessage(msgObj);
       handleAgentTeamCliMessage(msgObj);
 
@@ -774,6 +808,12 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       if (msgObj.type === 'result' || msgObj.subtype === 'result') {
+        settleAgentTeamBoardFromLifecycle(
+          msgObj.is_error ? 'failed' : 'completed',
+          msgObj.is_error
+            ? 'Worker result ended in an error before a completion notification reached the board.'
+            : 'Worker completed and the board was reconciled from the final result.',
+        );
         if (!webviewManager!.hasVisibleWebview()) {
           statusBarManager.setCompletedWhileHidden(true);
         }
@@ -782,11 +822,21 @@ export function activate(context: vscode.ExtensionContext) {
 
     pm.onError((err) => {
       output.error(`[OpenClaude] Error: ${err.message}`);
+      settleAgentTeamBoardFromLifecycle(
+        'failed',
+        'Worker stopped because the resumed CLI process reported an error.',
+      );
       emitProcessState('crashed', { error: err.message });
     });
 
     pm.onExit((code, signal) => {
       output.info(`[OpenClaude] CLI exited: code=${code}, signal=${signal}`);
+      settleAgentTeamBoardFromLifecycle(
+        code === 0 ? 'stopped' : 'failed',
+        code === 0
+          ? 'Worker process stopped before a completion notification reached the board.'
+          : 'Worker process exited before a completion notification reached the board.',
+      );
       emitProcessState('stopped', { code, signal });
       isSpawning = false;
     });
@@ -1096,7 +1146,7 @@ export function activate(context: vscode.ExtensionContext) {
       isSpawning = false;
       if (response) {
         // The response might be the InitializeResponse directly, or nested under .response
-        const resp = response as Record<string, unknown>;
+        const resp = response as unknown as Record<string, unknown>;
         const initData = (resp.response && typeof resp.response === 'object')
           ? resp.response as Record<string, unknown>  // double-nested: response.response
           : resp;                                      // direct: response itself
@@ -1123,7 +1173,7 @@ export function activate(context: vscode.ExtensionContext) {
         const fastModeState = initData.fast_mode_state ?? { enabled: false, canToggle: true };
         const account = initData.account as Record<string, unknown> | undefined;
         const allowDangerouslySkipPermissions = config.get<boolean>('allowDangerouslySkipPermissions', false);
-        const permMode = initData.permission_mode ?? initData.permissionMode ?? permissionHandler.currentMode;
+        const permMode = initData.permission_mode ?? initData.permissionMode ?? permissionHandler.getMode();
         webviewManager!.broadcast({
           type: 'cli_output',
           data: {
@@ -1302,7 +1352,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   // Handle set_model from webview
-  webviewManager.onMessage('set_model', async (message) => {
+  webviewManager.onMessage('set_model', async (message, panelId) => {
     const msg = message as unknown as { model: string };
     output.info(`[Webview→CLI] set_model: ${msg.model}`);
     if (isBlackboxProvider()) {
@@ -1319,13 +1369,36 @@ export function activate(context: vscode.ExtensionContext) {
       model: msg.model,
       providerOptions: settingsSync.providerOptions,
     });
+    broadcastProviderState(panelId, undefined, {
+      providerId: settingsSync.selectedProvider,
+      apiKey: settingsSync.apiKey,
+      baseUrl: settingsSync.baseUrl,
+      model: msg.model,
+      providerOptions: settingsSync.providerOptions,
+    });
 
     if (processManager) {
-      const channelId = resolveOutgoingSessionId(currentSessionId, processManager.sessionId);
-      await processManager.sendControlRequest(
-        { subtype: 'set_model', model: msg.model },
-        channelId,
+      const sessionId = resolveOutgoingSessionId(currentSessionId, processManager.sessionId);
+      if (sessionId) {
+        currentSessionId = sessionId;
+      }
+      output.info(
+        `[OpenClaude] Restarting process for model change using session=${sessionId ?? 'new'} model=${msg.model}`,
       );
+      emitProcessState('restarting', { reason: 'model_changed', model: msg.model, sessionId: sessionId ?? null });
+      await ensureProcess({ forceRestart: true, sessionId, modelOverride: msg.model });
+      webviewManager!.sendToPanel(panelId, {
+        type: 'cli_output',
+        data: {
+          type: 'system',
+          subtype: 'model_changed',
+          session_id: sessionId,
+          model: msg.model,
+          message: sessionId
+            ? `Model switched to ${msg.model}. Continuing the same conversation.`
+            : `Model switched to ${msg.model}. New prompts will use this model.`,
+        },
+      } as never);
     }
   });
 
@@ -1352,6 +1425,13 @@ export function activate(context: vscode.ExtensionContext) {
         request_id: `fast-mode-${Date.now()}`,
         request: { subtype: 'apply_flag_settings', settings: { fastMode: msg.enabled } },
       });
+      if (msg.enabled) {
+        processManager.write({
+          type: 'control_request',
+          request_id: `fast-mode-effort-${Date.now()}`,
+          request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: 1000 },
+        });
+      }
     }
   });
 
@@ -1825,19 +1905,31 @@ export function activate(context: vscode.ExtensionContext) {
     output.info(`[Provider] Saved: ${settingsSync.selectedProvider}`);
     vscode.window.showInformationMessage(`OpenClaude provider saved: ${currentProviderLabel(msg.providerId)}`);
 
+    const activeSessionBeforeProviderChange = resolveOutgoingSessionId(
+      currentSessionId,
+      processManager?.sessionId,
+    );
+
+    if (activeSessionBeforeProviderChange) {
+      currentSessionId = activeSessionBeforeProviderChange;
+    }
+
     if (processManager) {
       output.info('[Provider] Provider changed; refreshing CLI process with updated settings');
       processManager.dispose();
       processManager = undefined;
       isSpawning = false;
       currentModelCatalog = [];
-      currentSessionId = undefined;
       emitProcessState('stopped', { reason: 'provider_changed' });
 
       if (settingsSync.selectedProvider !== 'blackbox') {
         // Recreate the backend immediately so the next prompt uses the
         // provider/model that was just saved in the UI.
-        void ensureProcess({ forceRestart: true });
+        void ensureProcess({
+          forceRestart: true,
+          sessionId: activeSessionBeforeProviderChange,
+          modelOverride: savedModel,
+        });
       }
     }
 

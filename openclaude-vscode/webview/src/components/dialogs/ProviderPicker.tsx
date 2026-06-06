@@ -287,7 +287,7 @@ export function ProviderPicker({
         {/* Actions */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button
-            onClick={onClose}
+            onClick={() => onClose()}
             style={{
               padding: '4px 12px',
               fontSize: 12,

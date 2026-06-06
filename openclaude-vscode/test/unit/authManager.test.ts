@@ -1,3 +1,5 @@
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuthManager, type ProviderUpdateInput } from '../../src/auth/authManager';
 import type { ProviderProfile, SettingsSync } from '../../src/settings/settingsSync';
@@ -177,6 +179,15 @@ describe('AuthManager', () => {
       expect(env['MY_VAR']).toBe('hello');
       expect(env['ANTHROPIC_API_KEY']).toBe('sk-ant-test');
     });
+  });
+
+  it('pins the CLI child process to the OpenClaude config home', () => {
+    const manager = new AuthManager(makeSettings({
+      selectedProvider: 'anthropic',
+      apiKey: 'sk-ant-test',
+    }));
+    const env = manager.buildProcessEnv();
+    expect(env['CLAUDE_CONFIG_DIR']).toBe(path.join(os.homedir(), '.openclaude'));
   });
 
   describe('buildProcessEnv freemodel', () => {

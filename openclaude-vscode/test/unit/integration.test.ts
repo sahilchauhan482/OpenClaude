@@ -113,6 +113,41 @@ function parseSystemInlineMessage(text: string) {
   };
 }
 
+function formatApiRetryMessage(msg: {
+  attempt?: number;
+  max_attempts?: number;
+  delay_ms?: number;
+  reason?: string;
+}) {
+  const attempt = typeof msg.attempt === 'number' ? msg.attempt : undefined;
+  const maxAttempts = typeof msg.max_attempts === 'number' ? msg.max_attempts : undefined;
+  const delayMs = typeof msg.delay_ms === 'number' ? msg.delay_ms : undefined;
+  const reason = typeof msg.reason === 'string' && msg.reason.trim() ? msg.reason.trim() : undefined;
+
+  const detailParts: string[] = [];
+  if (attempt !== undefined && maxAttempts !== undefined) {
+    detailParts.push(`Attempt ${attempt} of ${maxAttempts}.`);
+  } else if (attempt !== undefined) {
+    detailParts.push(`Retry attempt ${attempt}.`);
+  } else {
+    detailParts.push('The provider request is being retried automatically.');
+  }
+
+  if (delayMs !== undefined && delayMs > 0) {
+    detailParts.push(`Waiting ${Math.ceil(delayMs / 1000)}s before the next try.`);
+  }
+
+  if (reason) {
+    detailParts.push(reason);
+  }
+
+  return {
+    tone: 'info' as const,
+    title: 'Retrying request',
+    detail: detailParts.join(' '),
+  };
+}
+
 function routeCliMessage(state: ChatState, msg: Record<string, unknown>): ChatState {
   const next = { ...state, messages: [...state.messages] };
 
@@ -176,6 +211,12 @@ function routeCliMessage(state: ChatState, msg: Record<string, unknown>): ChatSt
           system: parseSystemInlineMessage(content),
         });
       } else if (subtype === 'api_retry') {
+        next.messages.push({
+          id: `api-retry-${Date.now()}`,
+          role: 'system',
+          text: 'Retrying provider request.',
+          system: formatApiRetryMessage(msg),
+        });
       } else if (subtype === 'compact_boundary') {
         next.messages.push({
           id: `compact-${Date.now()}`,
@@ -352,10 +393,20 @@ describe('Integration: CLI message → webview routing', () => {
     expect(state.promptSuggestions.length).toBeLessThanOrEqual(5);
   });
 
-  it('keeps system/api_retry out of the visible transcript', () => {
+  it('surfaces system/api_retry as a visible retry status card', () => {
     let state = createChatState();
-    state = routeCliMessage(state, { type: 'system', subtype: 'api_retry', attempt: 2 });
-    expect(state.messages).toHaveLength(0);
+    state = routeCliMessage(state, {
+      type: 'system',
+      subtype: 'api_retry',
+      attempt: 2,
+      max_attempts: 5,
+      delay_ms: 1500,
+      reason: '429 from upstream provider',
+    });
+    expect(state.messages).toHaveLength(1);
+    expect(state.messages[0].system?.title).toBe('Retrying request');
+    expect(state.messages[0].system?.detail).toContain('Attempt 2 of 5.');
+    expect(state.messages[0].system?.detail).toContain('Waiting 2s');
   });
 
   it('routes system/compact_boundary as system message', () => {

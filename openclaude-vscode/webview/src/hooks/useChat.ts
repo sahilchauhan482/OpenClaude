@@ -66,6 +66,27 @@ interface AvailableModel {
   };
 }
 
+interface ApiRetryMessage {
+  type: 'system';
+  subtype: 'api_retry';
+  attempt?: number;
+  max_attempts?: number;
+  delay_ms?: number;
+  reason?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function getMessageRecord(message: SDKMessage): Record<string, unknown> | null {
+  return isRecord(message) ? message : null;
+}
+
+function isApiRetryMessage(message: SDKMessage): message is ApiRetryMessage {
+  return message.type === 'system' && message.subtype === 'api_retry';
+}
+
 function getAttachmentPreview(text: string, attachments: AttachmentItem[]): string {
   const parts: string[] = [];
   const trimmed = text.trim();
@@ -168,6 +189,7 @@ function parseSystemInlineMessage(text: string): SystemInlineMessageState {
   if (normalized.includes('retrying once with an alternate strategy')) {
     return {
       tone: 'warning',
+      label: 'Recovery',
       title: 'Agent adapted strategy',
       detail: 'Repeated tool failures were detected, so OpenClaude is retrying once with a different recovery path instead of stopping.',
     };
@@ -176,6 +198,7 @@ function parseSystemInlineMessage(text: string): SystemInlineMessageState {
   if (normalized.startsWith('provider ') && normalized.includes('rate-limited')) {
     return {
       tone: 'warning',
+      label: 'Fallback',
       title: 'Provider fallback',
       detail: trimmed,
     };
@@ -184,6 +207,7 @@ function parseSystemInlineMessage(text: string): SystemInlineMessageState {
   if (normalized.includes('compacted')) {
     return {
       tone: 'info',
+      label: 'Context',
       title: 'Context compacted',
       detail: trimmed,
     };
@@ -192,6 +216,7 @@ function parseSystemInlineMessage(text: string): SystemInlineMessageState {
   if (normalized.includes('retrying api call')) {
     return {
       tone: 'info',
+      label: 'Retry',
       title: 'Retrying request',
       detail: trimmed,
     };
@@ -199,8 +224,40 @@ function parseSystemInlineMessage(text: string): SystemInlineMessageState {
 
   return {
     tone: normalized.includes('warning') ? 'warning' : 'info',
+    label: normalized.includes('warning') ? 'Warning' : 'Update',
     title: first,
     detail: rest || undefined,
+  };
+}
+
+function formatApiRetryMessage(msg: ApiRetryMessage): SystemInlineMessageState {
+  const attempt = typeof msg.attempt === 'number' ? msg.attempt : undefined;
+  const maxAttempts = typeof msg.max_attempts === 'number' ? msg.max_attempts : undefined;
+  const delayMs = typeof msg.delay_ms === 'number' ? msg.delay_ms : undefined;
+  const reason = typeof msg.reason === 'string' && msg.reason.trim() ? msg.reason.trim() : undefined;
+
+  const detailParts: string[] = [];
+  if (attempt !== undefined && maxAttempts !== undefined) {
+    detailParts.push(`Attempt ${attempt} of ${maxAttempts}.`);
+  } else if (attempt !== undefined) {
+    detailParts.push(`Retry attempt ${attempt}.`);
+  } else {
+    detailParts.push('The provider request is being retried automatically.');
+  }
+
+  if (delayMs !== undefined && delayMs > 0) {
+    detailParts.push(`Waiting ${Math.ceil(delayMs / 1000)}s before the next try.`);
+  }
+
+  if (reason) {
+    detailParts.push(reason);
+  }
+
+  return {
+    tone: 'info',
+    label: 'Retry',
+    title: 'Retrying request',
+    detail: detailParts.join(' '),
   };
 }
 
@@ -385,7 +442,7 @@ export function useChat() {
 
     if (msg.is_error) {
       // Parse rate limit from result text e.g. "You've hit your limit · resets 3am (America/New_York)"
-      const resultText = (msg as unknown as Record<string, unknown>).result as string | undefined;
+      const resultText = typeof msg.result === 'string' ? msg.result : undefined;
       if (resultText) {
         setError(resultText);
       } else if (msg.errors && msg.errors.length > 0) {
@@ -420,6 +477,27 @@ export function useChat() {
         parentToolUseId: null,
       },
     ]);
+  }, []);
+
+  const upsertSystemMessage = useCallback((id: string, text: string, system?: SystemInlineMessageState) => {
+    setMessages((prev) => {
+      const existingIdx = prev.findIndex((message) => message.id === id);
+      const nextMessage: ChatMessage = {
+        id,
+        role: 'system',
+        text,
+        system,
+        isStreaming: false,
+        timestamp: Date.now(),
+        parentToolUseId: null,
+      };
+
+      if (existingIdx >= 0) {
+        return prev.map((message, index) => (index === existingIdx ? nextMessage : message));
+      }
+
+      return [...prev, nextMessage];
+    });
   }, []);
 
   const addFileEditMessage = useCallback((fileEdit: FileEditMessageState, id?: string) => {
@@ -513,7 +591,10 @@ export function useChat() {
       if (!msg || typeof msg !== 'object') return;
 
       try {
-        const msgAny = msg as Record<string, unknown>;
+        const msgAny = getMessageRecord(msg);
+        if (!msgAny) {
+          return;
+        }
 
         switch (msgAny.type) {
           case 'stream_event':
@@ -531,7 +612,10 @@ export function useChat() {
           case 'result':
             handleResultMessage(msg as ResultMessage);
             {
-              const resultAny = msg as Record<string, unknown>;
+              const resultAny = getMessageRecord(msg);
+              if (!resultAny) {
+                break;
+              }
               if (resultAny.fast_mode_state) {
                 const fms = resultAny.fast_mode_state as Record<string, unknown>;
                 setFastModeState({
@@ -564,24 +648,20 @@ export function useChat() {
           }
 
           case 'tool_progress': {
-            // Show tool progress inline — update last assistant message or add system msg
             const toolName = msgAny.tool_name as string ?? 'tool';
-            const progress = msgAny.progress as string ?? '';
-            // Update tool activity indicator
-            if (toolName || progress) {
-              setToolActivity({
-                toolName,
-                description: formatToolActivity(toolName, progress, undefined),
-              });
-            }
-            // Don't add a message for every progress tick — just update streaming state
-            if (progress) {
-              setMessages((prev) => {
-                const last = prev[prev.length - 1];
-                if (last?.role === 'assistant' && last.isStreaming) {
-                  return prev; // already showing streaming indicator
-                }
-                return prev;
+            const elapsed = typeof msgAny.elapsed_time_seconds === 'number' ? msgAny.elapsed_time_seconds : 0;
+            const description = elapsed > 2
+              ? `${formatToolActivity(toolName, undefined, undefined)} (${Math.round(elapsed)}s)`
+              : formatToolActivity(toolName, undefined, undefined);
+            setToolActivity({ toolName, description });
+            // For long-running tools (>5s), show an inline progress message
+            if (elapsed > 5) {
+              const progressId = `tool-progress-${String(msgAny.tool_use_id ?? 'active')}`;
+              upsertSystemMessage(progressId, description, {
+                tone: 'info',
+                label: 'Tool',
+                title: `Running ${toolName}`,
+                detail: `Active for ${Math.round(elapsed)}s.`,
               });
             }
             break;
@@ -590,16 +670,14 @@ export function useChat() {
           case 'tool_use_summary': {
             const toolName = msgAny.tool_name as string ?? 'tool';
             const summary = msgAny.summary as string ?? '';
+            const progressId = `tool-progress-${String(msgAny.tool_use_id ?? Date.now())}`;
             if (summary) {
-              addSystemMessage(
-                `${toolName}: ${summary}`,
-                `tool-summary-${Date.now()}`,
-                {
-                  tone: 'info',
-                  title: toolName,
-                  detail: summary,
-                },
-              );
+              upsertSystemMessage(progressId, `${toolName}: ${summary}`, {
+                tone: 'success',
+                label: 'Tool',
+                title: `${toolName} finished`,
+                detail: summary,
+              });
             }
             // Clear tool activity after summary
             setToolActivity(null);
@@ -622,7 +700,10 @@ export function useChat() {
               case 'init':
                 handleSystemInit(msg as SystemInitMessage);
                 {
-                  const initAny = msg as Record<string, unknown>;
+                  const initAny = getMessageRecord(msg);
+                  if (!initAny) {
+                    break;
+                  }
                   if (initAny.fast_mode_state) {
                     const fms = initAny.fast_mode_state as Record<string, unknown>;
                     setFastModeState({
@@ -699,6 +780,14 @@ export function useChat() {
                 break;
               }
               case 'api_retry': {
+                if (!isApiRetryMessage(msg)) {
+                  break;
+                }
+                addSystemMessage(
+                  'Retrying provider request.',
+                  `api-retry-${Date.now()}`,
+                  formatApiRetryMessage(msg),
+                );
                 break;
               }
               case 'compact_boundary':
@@ -707,19 +796,22 @@ export function useChat() {
                   `compact-${Date.now()}`,
                   {
                     tone: 'info',
+                    label: 'Context',
                     title: 'Context compacted',
                     detail: 'Older context was compressed to keep the session moving.',
                   },
                 );
                 break;
               case 'task_started': {
+                const taskId = String(msgAny.task_id ?? Date.now());
                 const taskDescription = typeof msgAny.description === 'string' ? msgAny.description.trim() : '';
                 if (taskDescription) {
-                  addSystemMessage(
+                  upsertSystemMessage(
+                    `task-progress-${taskId}`,
                     `Delegated: ${taskDescription}`,
-                    `task-started-${String(msgAny.task_id ?? Date.now())}`,
                     {
                       tone: 'info',
+                      label: 'Worker',
                       title: 'Worker started',
                       detail: taskDescription,
                     },
@@ -727,9 +819,31 @@ export function useChat() {
                 }
                 break;
               }
-              case 'task_progress':
+              case 'task_progress': {
+                const taskId = typeof msgAny.task_id === 'string' ? msgAny.task_id : `task-${Date.now()}`;
+                const taskDescription = typeof msgAny.description === 'string' ? msgAny.description.trim() : '';
+                const lastTool = typeof msgAny.last_tool_name === 'string' ? msgAny.last_tool_name : '';
+                const taskSummary = typeof msgAny.summary === 'string' ? msgAny.summary.trim() : '';
+                const taskUsage = msgAny.usage as Record<string, unknown> | undefined;
+                const toolUses = typeof taskUsage?.tool_uses === 'number' ? taskUsage.tool_uses : 0;
+
+                const progressTitle = taskSummary || taskDescription || (lastTool ? `Using ${lastTool}` : 'Working...');
+                const detailParts: string[] = [];
+                if (lastTool) detailParts.push(`Last tool: ${lastTool}`);
+                if (toolUses > 0) detailParts.push(`${toolUses} operation${toolUses !== 1 ? 's' : ''}`);
+                if (taskDescription && taskSummary) detailParts.push(taskDescription);
+
+                const progressId = `task-progress-${taskId}`;
+                upsertSystemMessage(progressId, progressTitle, {
+                  tone: 'info',
+                  label: 'Worker',
+                  title: progressTitle,
+                  detail: detailParts.join('\n') || undefined,
+                });
                 break;
+              }
               case 'task_notification': {
+                const taskId = String(msgAny.task_id ?? Date.now());
                 const status = typeof msgAny.status === 'string' ? msgAny.status : 'completed';
                 const summary = typeof msgAny.summary === 'string' ? msgAny.summary.trim() : '';
                 const title =
@@ -738,21 +852,70 @@ export function useChat() {
                     : status === 'stopped'
                       ? 'Worker stopped'
                       : 'Worker completed';
-                if (summary) {
-                  addSystemMessage(
-                    summary,
-                    `task-notification-${String(msgAny.task_id ?? Date.now())}`,
-                    {
-                      tone: status === 'failed' ? 'warning' : 'success',
-                      title,
-                      detail: summary,
-                    },
-                  );
-                }
+                upsertSystemMessage(
+                  `task-progress-${taskId}`,
+                  summary || title,
+                  {
+                    tone: status === 'failed' ? 'warning' : 'success',
+                    label: 'Worker',
+                    title,
+                    detail: summary || undefined,
+                  },
+                );
                 break;
               }
-              case 'post_turn_summary':
+              case 'post_turn_summary': {
+                const summaryTitle = typeof msgAny.title === 'string' ? msgAny.title.trim() : '';
+                const summaryDescription = typeof msgAny.description === 'string' ? msgAny.description.trim() : '';
+                const recentAction = typeof msgAny.recent_action === 'string' ? msgAny.recent_action.trim() : '';
+                const needsAction = typeof msgAny.needs_action === 'string' ? msgAny.needs_action.trim() : '';
+                const statusCategory = typeof msgAny.status_category === 'string' ? msgAny.status_category : 'completed';
+
+                if (!summaryTitle && !summaryDescription) break;
+
+                const summaryTone: 'info' | 'warning' | 'success' =
+                  statusCategory === 'failed' ? 'warning'
+                  : statusCategory === 'completed' || statusCategory === 'review_ready' ? 'success'
+                  : 'info';
+
+                const summaryParts: string[] = [];
+                if (summaryDescription) summaryParts.push(summaryDescription);
+                if (recentAction) summaryParts.push(`Recent: ${recentAction}`);
+                if (needsAction) summaryParts.push(`Next: ${needsAction}`);
+
+                addSystemMessage(
+                  summaryTitle || summaryDescription,
+                  `post-summary-${String(msgAny.summarizes_uuid ?? Date.now())}`,
+                  {
+                    tone: summaryTone,
+                    label: 'Summary',
+                    title: summaryTitle || 'Agent update',
+                    detail: summaryParts.join('\n') || undefined,
+                  },
+                );
                 break;
+              }
+              case 'model_changed': {
+                const nextModel = typeof msgAny.model === 'string' ? msgAny.model : '';
+                if (nextModel) {
+                  setModel(nextModel);
+                }
+                addSystemMessage(
+                  typeof msgAny.message === 'string'
+                    ? msgAny.message
+                    : `Model switched to ${nextModel || 'the selected model'}. Continuing the same conversation.`,
+                  `model-changed-${Date.now()}`,
+                  {
+                    tone: 'info',
+                    label: 'Model',
+                    title: 'Model switched',
+                    detail: nextModel
+                      ? `Continuing this thread with ${nextModel}.`
+                      : 'Continuing this thread with the selected model.',
+                  },
+                );
+                break;
+              }
               // hook_started, hook_response, session_state_changed, files_persisted
               // — handled by extension host, ignore in webview
               default:
@@ -860,6 +1023,7 @@ export function useChat() {
     handleSystemInit,
     handleSessionTitle,
     addSystemMessage,
+    upsertSystemMessage,
     addFileEditMessage,
     resetStream,
   ]);

@@ -84,7 +84,9 @@ export type ContentBlock =
   | RedactedThinkingBlock
   | ImageBlock
   | DocumentBlock
-  | ServerToolUseBlock;
+  | ServerToolUseBlock
+  | SearchResultBlock
+  | WebSearchToolResultBlock;
 
 export interface TextBlock {
   type: 'text';
@@ -137,6 +139,27 @@ export interface ServerToolUseBlock {
   id: string;
   name: string;
   input: Record<string, unknown>;
+}
+
+export interface SearchResultBlock {
+  type: 'search_result';
+  source: string;
+  title: string;
+  content: string;
+  url: string | null;
+}
+
+export interface WebSearchToolResultBlock {
+  type: 'web_search_tool_result';
+  query: string;
+  results: WebSearchResult[];
+}
+
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  page_age?: string;
 }
 
 // ============================================================================
@@ -270,6 +293,17 @@ export interface SystemInformationalMessage {
   session_id: string;
 }
 
+export interface SystemApiRetryMessage {
+  type: 'system';
+  subtype: 'api_retry';
+  attempt?: number;
+  max_attempts?: number;
+  delay_ms?: number;
+  reason?: string;
+  uuid?: string;
+  session_id?: string;
+}
+
 /** All messages that can arrive from the extension host via postMessage */
 export type SDKMessage =
   | StreamEvent
@@ -278,4 +312,5 @@ export type SDKMessage =
   | ResultMessage
   | SystemInitMessage
   | SystemStatusMessage
-  | SystemInformationalMessage;
+  | SystemInformationalMessage
+  | SystemApiRetryMessage;

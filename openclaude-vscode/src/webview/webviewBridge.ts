@@ -26,7 +26,10 @@ type MessageHandler<T extends WebviewToHostMessage['type']> = (
  */
 export class WebviewBridge implements vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
-  private readonly handlers = new Map<string, MessageHandler<never>[]>();
+  private readonly handlers = new Map<
+    WebviewToHostMessage['type'],
+    Set<MessageHandler<WebviewToHostMessage['type']>>
+  >();
   private isReady = false;
   private pendingMessages: HostToWebviewMessage[] = [];
 
@@ -51,17 +54,17 @@ export class WebviewBridge implements vscode.Disposable {
     type: T,
     handler: MessageHandler<T>,
   ): vscode.Disposable {
-    const handlers = this.handlers.get(type) || [];
-    handlers.push(handler as MessageHandler<never>);
+    const handlers = this.handlers.get(type) ?? new Set<MessageHandler<WebviewToHostMessage['type']>>();
+    handlers.add(handler as unknown as MessageHandler<WebviewToHostMessage['type']>);
     this.handlers.set(type, handlers);
 
     return {
       dispose: () => {
         const current = this.handlers.get(type);
         if (current) {
-          const index = current.indexOf(handler as MessageHandler<never>);
-          if (index >= 0) {
-            current.splice(index, 1);
+          current.delete(handler as unknown as MessageHandler<WebviewToHostMessage['type']>);
+          if (current.size === 0) {
+            this.handlers.delete(type);
           }
         }
       },
@@ -104,10 +107,10 @@ export class WebviewBridge implements vscode.Disposable {
 
     // Dispatch to registered handlers
     const handlers = this.handlers.get(message.type);
-    if (handlers && handlers.length > 0) {
+    if (handlers && handlers.size > 0) {
       for (const handler of handlers) {
         try {
-          handler(message as never, this.panelId);
+          void (handler as MessageHandler<typeof message.type>)(message, this.panelId);
         } catch (err) {
           console.error(`Error in webview message handler for '${message.type}':`, err);
         }

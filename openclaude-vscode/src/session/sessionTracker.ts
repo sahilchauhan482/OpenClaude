@@ -115,9 +115,11 @@ export class SessionTracker implements vscode.Disposable {
   public readonly onSessionsChanged = this._onSessionsChanged.event;
   private disposables: vscode.Disposable[] = [];
   private readonly managedRootsOverride?: string[];
+  private readonly includeExternalSessionRoots: boolean;
 
-  constructor(options?: { managedRoots?: string[] }) {
+  constructor(options?: { managedRoots?: string[]; includeExternalSessionRoots?: boolean }) {
     this.managedRootsOverride = options?.managedRoots?.map((root) => path.resolve(root));
+    this.includeExternalSessionRoots = options?.includeExternalSessionRoots ?? false;
     this.disposables.push(this._onSessionsChanged);
   }
 
@@ -125,11 +127,6 @@ export class SessionTracker implements vscode.Disposable {
   async initialize(): Promise<void> {
     await this.scanAllSessions();
     this.startWatching();
-  }
-
-  /** ~/.claude/projects/ */
-  private getProjectsDir(): string {
-    return path.join(os.homedir(), '.claude', 'projects');
   }
 
   /** ~/.openclaude/projects/ */
@@ -146,12 +143,17 @@ export class SessionTracker implements vscode.Disposable {
     return path.join(os.homedir(), '.codex', 'session_index.jsonl');
   }
 
-  /** Managed session roots across providers. */
+  /** Managed session roots used by OpenClaude itself. */
   private getManagedSessionRoots(): string[] {
     if (this.managedRootsOverride && this.managedRootsOverride.length > 0) {
       return this.managedRootsOverride;
     }
-    return [this.getProjectsDir(), this.getOpenClaudeProjectsDir(), this.getCodexSessionsDir()];
+
+    const roots = [this.getOpenClaudeProjectsDir()];
+    if (this.includeExternalSessionRoots) {
+      roots.push(this.getCodexSessionsDir());
+    }
+    return roots;
   }
 
   private isManagedSessionFile(filePath: string): boolean {

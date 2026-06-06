@@ -5,7 +5,60 @@ import { TeleportDialog } from './components/dialogs/TeleportDialog';
 import { ElicitationDialog } from './components/dialogs/ElicitationDialog';
 import { usePermissions } from './hooks/usePermissions';
 import { vscode } from './vscode';
-import type { TeleportState, ElicitationState } from './types/interactions';
+import type {
+  TeleportState,
+  ElicitationField,
+  ElicitationState,
+} from './types/interactions';
+
+function isElicitationFieldType(value: unknown): value is ElicitationField['type'] {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  switch (candidate.type) {
+    case 'text':
+      return candidate.placeholder === undefined || typeof candidate.placeholder === 'string';
+    case 'confirm':
+      return candidate.default === undefined || typeof candidate.default === 'boolean';
+    case 'select':
+    case 'multiselect':
+      return Array.isArray(candidate.options) && candidate.options.every((option) => {
+        if (!option || typeof option !== 'object') {
+          return false;
+        }
+        const item = option as Record<string, unknown>;
+        return (
+          typeof item.value === 'string' &&
+          typeof item.label === 'string' &&
+          (item.description === undefined || typeof item.description === 'string') &&
+          (item.recommended === undefined || typeof item.recommended === 'boolean') &&
+          (item.recommendationNote === undefined || typeof item.recommendationNote === 'string')
+        );
+      });
+    default:
+      return false;
+  }
+}
+
+function isElicitationField(value: unknown): value is ElicitationField {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.name === 'string' &&
+    typeof candidate.label === 'string' &&
+    typeof candidate.required === 'boolean' &&
+    isElicitationFieldType(candidate.type)
+  );
+}
+
+function getElicitationFields(value: unknown): ElicitationField[] {
+  return Array.isArray(value) ? value.filter(isElicitationField) : [];
+}
 
 function App() {
   const { currentRequest, pendingCount, respond } = usePermissions();
@@ -48,7 +101,7 @@ function App() {
             helperText: data.helperText as string | undefined,
             submitLabel: data.submitLabel as string | undefined,
             cancelLabel: data.cancelLabel as string | undefined,
-            fields: (data.fields as unknown[]) ?? [],
+            fields: getElicitationFields(data.fields),
           },
         });
         return;

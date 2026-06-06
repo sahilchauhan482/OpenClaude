@@ -655,6 +655,7 @@ export interface AgentTeamTaskView {
   workflowName?: string;
   prompt?: string;
   summary?: string;
+  progressNote?: string;
   lastToolName?: string;
   toolUses: number;
   tokenCount: number;

@@ -76,7 +76,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({
         className={`flex-shrink-0 p-1 rounded transition-all ${
           confirmDelete
             ? 'opacity-100 text-[var(--vscode-errorForeground)]'
-            : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'
+            : 'opacity-60 hover:!opacity-100'
         } hover:bg-[var(--vscode-toolbar-hoverBackground)]`}
         onClick={handleDeleteClick}
         title={confirmDelete ? 'Click again to confirm' : 'Delete session'}

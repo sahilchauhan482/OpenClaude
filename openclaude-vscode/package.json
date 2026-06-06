@@ -2,7 +2,7 @@
 	"name": "openclaude-vscode",
 	"displayName": "OpenClaude VS Code",
 	"description": "OpenClaude VS Code: AI coding assistant powered by any LLM",
-	"version": "0.2.16",
+	"version": "0.2.25",
 	"publisher": "OpenClaude",
 	"license": "MIT",
 	"repository": {
@@ -160,6 +160,28 @@
 					"type": "object",
 					"default": {},
 					"description": "Internal per-provider memory of the last-used API key, base URL, model, and provider options."
+				},
+				"openclaudeCode.agentTeamMode": {
+					"type": "string",
+					"enum": [
+						"off",
+						"assist",
+						"coordinate"
+					],
+					"default": "off",
+					"description": "Controls the VS Code multi-agent board. Off disables delegation hints, Assist suggests worker usage, and Coordinate enables stronger worker orchestration."
+				},
+				"openclaudeCode.agentTeamMaxWorkers": {
+					"type": "number",
+					"minimum": 1,
+					"maximum": 8,
+					"default": 3,
+					"description": "Maximum number of concurrent agent-team worker tasks OpenClaude should allow."
+				},
+				"openclaudeCode.agentTeamUseWorktrees": {
+					"type": "boolean",
+					"default": true,
+					"description": "Prefer separate git worktrees for parallel write-heavy agent-team work when available."
 				}
 			}
 		},
@@ -497,9 +519,10 @@
 		}
 	},
 	"scripts": {
-		"build": "npm run build:extension && npm run build:webview",
+		"build": "npm run build:extension && npm run webview:typecheck && npm run build:webview",
 		"build:extension": "node esbuild.config.mjs",
 		"build:webview": "cd webview && npx vite build",
+		"webview:typecheck": "node ../node_modules/typescript/bin/tsc -p webview/tsconfig.json --noEmit",
 		"watch": "node esbuild.config.mjs --watch",
 		"package": "npx @vscode/vsce package --no-dependencies",
 		"lint": "eslint src/ webview/src/",

@@ -28,7 +28,7 @@ export const FastModeToggle: React.FC<FastModeToggleProps> = ({ isEnabled, canTo
           ? 'Fast mode is controlled by managed settings'
           : isEnabled
             ? 'Disable fast mode'
-            : 'Enable fast mode'
+            : 'Enable fast mode. Uses a lower reasoning budget for quicker responses.'
       }
       aria-pressed={isEnabled}
       aria-label="Fast mode toggle"

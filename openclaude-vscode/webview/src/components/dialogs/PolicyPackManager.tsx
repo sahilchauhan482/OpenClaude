@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { vscode } from '../../vscode';
+import type { PolicyPackStateMessage } from '../../../../src/webview/types';
 
 type PolicyPackId =
   | 'safe-default'
@@ -17,6 +18,15 @@ interface PolicyPackManagerProps {
   onClose: () => void;
 }
 
+function isPolicyPackStateMessage(message: unknown): message is PolicyPackStateMessage {
+  if (!message || typeof message !== 'object') {
+    return false;
+  }
+
+  const candidate = message as Record<string, unknown>;
+  return candidate.type === 'policy_pack_state';
+}
+
 export function PolicyPackManager({ onClose }: PolicyPackManagerProps) {
   const [availablePacks, setAvailablePacks] = useState<PolicyPackInfo[]>([]);
   const [enabledPacks, setEnabledPacks] = useState<PolicyPackId[]>([]);
@@ -25,16 +35,12 @@ export function PolicyPackManager({ onClose }: PolicyPackManagerProps) {
 
   useEffect(() => {
     const unsubscribe = vscode.onMessage('policy_pack_state', (message) => {
-      setAvailablePacks(
-        Array.isArray((message as { availablePacks?: unknown[] }).availablePacks)
-          ? ((message as { availablePacks: PolicyPackInfo[] }).availablePacks)
-          : [],
-      );
-      setEnabledPacks(
-        Array.isArray((message as { enabledPacks?: unknown[] }).enabledPacks)
-          ? ((message as { enabledPacks: PolicyPackId[] }).enabledPacks)
-          : [],
-      );
+      if (!isPolicyPackStateMessage(message)) {
+        return;
+      }
+
+      setAvailablePacks(message.availablePacks);
+      setEnabledPacks(message.enabledPacks);
     });
 
     vscode.postMessage({ type: 'get_policy_packs' });

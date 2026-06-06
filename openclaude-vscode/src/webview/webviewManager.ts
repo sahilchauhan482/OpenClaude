@@ -36,7 +36,10 @@ export class WebviewManager implements vscode.Disposable {
   private readonly panelMap = new Map<string, vscode.WebviewPanel>();
   private readonly sessionPanels = new Map<string, string>(); // sessionId -> panelId
   private readonly disposables: vscode.Disposable[] = [];
-  private readonly globalHandlers = new Map<string, MessageHandler<never>[]>();
+  private readonly globalHandlers = new Map<
+    WebviewToHostMessage['type'],
+    Set<MessageHandler<WebviewToHostMessage['type']>>
+  >();
 
   /** Track session states for badge updates and cross-panel sync */
   private sessionStates = new Map<string, SessionInfo>();
@@ -80,8 +83,8 @@ export class WebviewManager implements vscode.Disposable {
     type: T,
     handler: MessageHandler<T>,
   ): vscode.Disposable {
-    const handlers = this.globalHandlers.get(type) || [];
-    handlers.push(handler as MessageHandler<never>);
+    const handlers = this.globalHandlers.get(type) ?? new Set<MessageHandler<WebviewToHostMessage['type']>>();
+    handlers.add(handler as unknown as MessageHandler<WebviewToHostMessage['type']>);
     this.globalHandlers.set(type, handlers);
 
     // Also register on all existing bridges
@@ -94,9 +97,9 @@ export class WebviewManager implements vscode.Disposable {
       dispose: () => {
         const current = this.globalHandlers.get(type);
         if (current) {
-          const index = current.indexOf(handler as MessageHandler<never>);
-          if (index >= 0) {
-            current.splice(index, 1);
+          current.delete(handler as unknown as MessageHandler<WebviewToHostMessage['type']>);
+          if (current.size === 0) {
+            this.globalHandlers.delete(type);
           }
         }
         for (const d of bridgeDisposables) {

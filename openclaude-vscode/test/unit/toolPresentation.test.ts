@@ -130,4 +130,36 @@ describe('toolPresentation', () => {
     expect(presentation.title).toBe('Skill');
     expect(presentation.summary).toBe('Loading skill instructions');
   });
+
+  it('summarizes decision tools using the user-facing prompt and option count', () => {
+    const presentation = getToolPresentation('ASKUSERQUESTION', {
+      questions: [
+        {
+          header: 'Location',
+          question: 'Where should we create the app?',
+          options: [
+            { label: '../todo-app (Recommended)', description: 'Create it next to the repo' },
+            { label: 'Custom path', description: 'Choose another folder' },
+          ],
+        },
+      ],
+    });
+
+    expect(presentation.title).toBe('Decision');
+    expect(presentation.summary).toBe('Where should we create the app?');
+    expect(presentation.detail).toBe('2 options prepared');
+  });
+
+  it('summarizes plan tools using the first tracked item', () => {
+    const presentation = getToolPresentation('TodoWrite', {
+      todos: [
+        { content: 'Add repo intelligence', activeForm: 'Adding repo intelligence', status: 'in_progress' },
+        { content: 'Run tests', activeForm: 'Running tests', status: 'pending' },
+      ],
+    });
+
+    expect(presentation.title).toBe('Plan');
+    expect(presentation.summary).toBe('Adding repo intelligence');
+    expect(presentation.detail).toBe('2 plan steps tracked');
+  });
 });

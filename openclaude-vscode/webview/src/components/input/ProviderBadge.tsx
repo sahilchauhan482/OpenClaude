@@ -6,8 +6,28 @@ import { useState, useEffect } from 'react';
 import { vscode } from '../../vscode';
 import { ProviderPicker } from '../dialogs/ProviderPicker';
 
+interface ProviderField {
+  id: string;
+  label: string;
+  required: boolean;
+  secret?: boolean;
+  defaultValue?: string;
+  placeholder?: string;
+  description?: string;
+}
+
+interface ProviderDef {
+  id: string;
+  label: string;
+  requiresApiKey: boolean;
+  requiresBaseUrl: boolean;
+  supportsModel: boolean;
+  defaultBaseUrl?: string;
+  fields?: ProviderField[];
+}
+
 // All providers OpenClaude supports (from openclaude/src/utils/model/providers.ts)
-const BUILTIN_PROVIDERS = [
+const BUILTIN_PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', requiresApiKey: true, requiresBaseUrl: false, supportsModel: true },
   { id: 'openai', label: 'OpenAI', requiresApiKey: true, requiresBaseUrl: false, supportsModel: true, defaultBaseUrl: 'https://api.openai.com/v1' },
   { id: 'gemini', label: 'Google Gemini', requiresApiKey: true, requiresBaseUrl: false, supportsModel: true },
@@ -48,7 +68,7 @@ export function ProviderBadge() {
     providerOptions?: Record<string, string>;
   }>>({});
   const [isPickerOpen, setPickerOpen] = useState(false);
-  const [providers, setProviders] = useState(BUILTIN_PROVIDERS);
+  const [providers, setProviders] = useState<ProviderDef[]>(BUILTIN_PROVIDERS);
 
   const displayModel =
     currentModel?.trim() ||
@@ -75,7 +95,7 @@ export function ProviderBadge() {
   useEffect(() => {
     return vscode.onMessage('provider_state', (msg) => {
       const data = msg as unknown as {
-        providers?: Array<{ id: string; label: string; requiresApiKey?: boolean; requiresBaseUrl?: boolean; supportsModel?: boolean; defaultBaseUrl?: string; fields?: Array<{ id: string; label: string; required: boolean; secret?: boolean; defaultValue?: string; placeholder?: string; description?: string }> }>;
+        providers?: ProviderDef[];
         currentProviderId: string;
         currentApiKey?: string;
         currentModel?: string;
