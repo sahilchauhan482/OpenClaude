@@ -5,26 +5,28 @@ import {
   releaseSharedMutationLock,
 } from '../test/sharedMutationLock.js'
 
-import {
-  getProviderValidationError,
-  shouldExitForStartupProviderValidationError,
-} from './providerValidation.js'
-
 const ENV_KEYS = [
   'CLAUDE_CODE_USE_OPENAI',
+  'OPENAI_API_BASE',
   'OPENAI_API_KEY',
   'OPENAI_BASE_URL',
   'OPENAI_MODEL',
   'CODEX_API_KEY',
   'CHATGPT_ACCOUNT_ID',
   'CODEX_ACCOUNT_ID',
+  'CLAUDE_CODE_PROVIDER_PROFILE_ENV_APPLIED',
+  'CLAUDE_CODE_PROVIDER_PROFILE_ENV_APPLIED_ID',
   'CLAUDE_CODE_USE_GITHUB',
   'GITHUB_TOKEN',
   'GH_TOKEN',
   'CLAUDE_CODE_USE_GEMINI',
   'CLAUDE_CODE_USE_MISTRAL',
+  'CLAUDE_CODE_USE_BEDROCK',
+  'CLAUDE_CODE_USE_VERTEX',
+  'CLAUDE_CODE_USE_FOUNDRY',
   'MISTRAL_API_KEY',
   'MINIMAX_API_KEY',
+  'VENICE_API_KEY',
   'NVIDIA_API_KEY',
   'NVIDIA_NIM',
   'BNKR_API_KEY',
@@ -32,6 +34,7 @@ const ENV_KEYS = [
   'DEEPSEEK_API_KEY',
   'MOONSHOT_API_KEY',
   'MIMO_API_KEY',
+  'OPENGATEWAY_API_KEY',
   'GEMINI_API_KEY',
   'GOOGLE_API_KEY',
   'GEMINI_ACCESS_TOKEN',
@@ -42,6 +45,13 @@ const ENV_KEYS = [
 ] as const
 
 const originalEnv: Record<string, string | undefined> = {}
+
+async function importFreshProviderValidationModule() {
+  const nonce = `${Date.now()}-${Math.random()}`
+  return import(`./providerValidation.js?pv=${nonce}`) as Promise<
+    typeof import('./providerValidation.js')
+  >
+}
 
 beforeAll(() => {
   ensureIntegrationsLoaded()
@@ -70,6 +80,8 @@ afterEach(() => {
 })
 
 test('accepts GEMINI_ACCESS_TOKEN as valid Gemini auth', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_GEMINI = '1'
   process.env.GEMINI_AUTH_MODE = 'access-token'
   delete process.env.GEMINI_API_KEY
@@ -80,6 +92,8 @@ test('accepts GEMINI_ACCESS_TOKEN as valid Gemini auth', async () => {
 })
 
 test('accepts ADC credentials for Gemini auth', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_GEMINI = '1'
   process.env.GEMINI_AUTH_MODE = 'adc'
   delete process.env.GEMINI_API_KEY
@@ -98,6 +112,8 @@ test('accepts ADC credentials for Gemini auth', async () => {
 })
 
 test('still errors when no Gemini credential source is available', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_GEMINI = '1'
   process.env.GEMINI_AUTH_MODE = 'access-token'
   delete process.env.GEMINI_API_KEY
@@ -111,6 +127,8 @@ test('still errors when no Gemini credential source is available', async () => {
 })
 
 test('openai missing key error includes recovery guidance and config locations', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.openai.com/v1'
   delete process.env.OPENAI_API_KEY
@@ -132,6 +150,8 @@ test('openai missing key error includes recovery guidance and config locations',
 })
 
 test('mistral validation is descriptor-backed and requires MISTRAL_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_MISTRAL = '1'
   delete process.env.MISTRAL_API_KEY
 
@@ -141,6 +161,8 @@ test('mistral validation is descriptor-backed and requires MISTRAL_API_KEY', asy
 })
 
 test('mistral validation still wins when stale openai mode is also set', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_MISTRAL = '1'
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   delete process.env.MISTRAL_API_KEY
@@ -152,6 +174,8 @@ test('mistral validation still wins when stale openai mode is also set', async (
 })
 
 test('minimax validation accepts MINIMAX_API_KEY without OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.minimax.io/v1'
   process.env.MINIMAX_API_KEY = 'minimax-live-key'
@@ -161,6 +185,8 @@ test('minimax validation accepts MINIMAX_API_KEY without OPENAI_API_KEY', async 
 })
 
 test('minimax validation accepts MINIMAX_API_KEY on minimax chat host alias', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.minimax.chat/v1'
   process.env.MINIMAX_API_KEY = 'minimax-live-key'
@@ -170,6 +196,8 @@ test('minimax validation accepts MINIMAX_API_KEY on minimax chat host alias', as
 })
 
 test('nvidia nim validation accepts NVIDIA_API_KEY without OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://integrate.api.nvidia.com/v1'
   process.env.NVIDIA_API_KEY = 'nvidia-live-key'
@@ -179,6 +207,8 @@ test('nvidia nim validation accepts NVIDIA_API_KEY without OPENAI_API_KEY', asyn
 })
 
 test('nvidia nim validation accepts NVIDIA_API_KEY for custom NIM endpoints when NVIDIA_NIM is set', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.NVIDIA_NIM = '1'
   process.env.OPENAI_BASE_URL = 'https://nim.example.com/v1'
@@ -189,6 +219,8 @@ test('nvidia nim validation accepts NVIDIA_API_KEY for custom NIM endpoints when
 })
 
 test('bankr validation accepts BNKR_API_KEY without OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://llm.bankr.bot/v1'
   process.env.BNKR_API_KEY = 'bankr-live-key'
@@ -202,6 +234,8 @@ test('bankr validation accepts BNKR_API_KEY without OPENAI_API_KEY', async () =>
 // XAI_CREDENTIAL_SOURCE=oauth in process.env, so validation must not
 // require XAI_API_KEY when that marker is present.
 test('xai validation accepts XAI_API_KEY without OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.x.ai/v1'
   process.env.OPENAI_MODEL = 'grok-4.3'
@@ -212,6 +246,8 @@ test('xai validation accepts XAI_API_KEY without OPENAI_API_KEY', async () => {
 })
 
 test('xai validation accepts XAI_CREDENTIAL_SOURCE=oauth without an API key', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.x.ai/v1'
   process.env.OPENAI_MODEL = 'grok-4.3'
@@ -223,6 +259,8 @@ test('xai validation accepts XAI_CREDENTIAL_SOURCE=oauth without an API key', as
 })
 
 test('xai validation surfaces sign-in guidance when no credential source is set', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.x.ai/v1'
   process.env.OPENAI_MODEL = 'grok-4.3'
@@ -241,6 +279,8 @@ test('xai validation surfaces sign-in guidance when no credential source is set'
 })
 
 test('xai validation accepts stored OAuth credentials even without an env marker', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.x.ai/v1'
   process.env.OPENAI_MODEL = 'grok-4.3'
@@ -256,6 +296,8 @@ test('xai validation accepts stored OAuth credentials even without an env marker
 })
 
 test('xai validation ignores unrelated XAI_CREDENTIAL_SOURCE values', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.x.ai/v1'
   process.env.OPENAI_MODEL = 'grok-4.3'
@@ -270,6 +312,8 @@ test('xai validation ignores unrelated XAI_CREDENTIAL_SOURCE values', async () =
 })
 
 test('openai validation does not accept unrelated minimax credentials', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.openai.com/v1'
   process.env.MINIMAX_API_KEY = 'minimax-live-key'
@@ -283,6 +327,8 @@ test('openai validation does not accept unrelated minimax credentials', async ()
 })
 
 test('openrouter validation accepts OPENROUTER_API_KEY without OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://openrouter.ai/api/v1'
   process.env.OPENROUTER_API_KEY = 'or-live-key'
@@ -292,6 +338,8 @@ test('openrouter validation accepts OPENROUTER_API_KEY without OPENAI_API_KEY', 
 })
 
 test('deepseek validation accepts DEEPSEEK_API_KEY without OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.deepseek.com/v1'
   process.env.DEEPSEEK_API_KEY = 'deepseek-live-key'
@@ -301,6 +349,8 @@ test('deepseek validation accepts DEEPSEEK_API_KEY without OPENAI_API_KEY', asyn
 })
 
 test('moonshot validation accepts MOONSHOT_API_KEY without OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.moonshot.ai/v1'
   process.env.MOONSHOT_API_KEY = 'moonshot-live-key'
@@ -310,6 +360,8 @@ test('moonshot validation accepts MOONSHOT_API_KEY without OPENAI_API_KEY', asyn
 })
 
 test('xiaomi mimo validation accepts MIMO_API_KEY without OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.xiaomimimo.com/v1'
   process.env.MIMO_API_KEY = 'mimo-live-key'
@@ -319,6 +371,8 @@ test('xiaomi mimo validation accepts MIMO_API_KEY without OPENAI_API_KEY', async
 })
 
 test('opengateway validation fails without OPENGATEWAY_API_KEY or OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://opengateway.gitlawb.com/v1'
   delete process.env.OPENAI_API_KEY
@@ -330,6 +384,8 @@ test('opengateway validation fails without OPENGATEWAY_API_KEY or OPENAI_API_KEY
 })
 
 test('opengateway validation passes when OPENGATEWAY_API_KEY is set', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://opengateway.gitlawb.com/v1'
   process.env.OPENGATEWAY_API_KEY = 'ogw_live_test_0000000000000000'
@@ -339,6 +395,8 @@ test('opengateway validation passes when OPENGATEWAY_API_KEY is set', async () =
 })
 
 test('opengateway validation accepts OPENAI_API_KEY as fallback', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://opengateway.gitlawb.com/v1'
   process.env.OPENAI_API_KEY = 'ogw_live_test_0000000000000000'
@@ -348,6 +406,8 @@ test('opengateway validation accepts OPENAI_API_KEY as fallback', async () => {
 })
 
 test('opengateway validation still requires a key on the model-specific path', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://opengateway.gitlawb.com/v1/xiaomi-mimo'
   delete process.env.OPENAI_API_KEY
@@ -359,6 +419,8 @@ test('opengateway validation still requires a key on the model-specific path', a
 })
 
 test('github validation stays descriptor-selected and reports missing auth', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_GITHUB = '1'
   delete process.env.CLAUDE_CODE_USE_OPENAI
   delete process.env.GITHUB_TOKEN
@@ -372,6 +434,8 @@ test('github validation stays descriptor-selected and reports missing auth', asy
 })
 
 test('github validation is skipped when openai mode is also active', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_GITHUB = '1'
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.openai.com/v1'
@@ -387,6 +451,8 @@ test('github validation is skipped when openai mode is also active', async () =>
 })
 
 test('remote Ollama by hostname does not require OPENAI_API_KEY (#369)', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'http://my-ollama-server.example.com:11434/v1'
   delete process.env.OPENAI_API_KEY
@@ -395,6 +461,8 @@ test('remote Ollama by hostname does not require OPENAI_API_KEY (#369)', async (
 })
 
 test('remote Ollama on default port without API key is allowed (#369)', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'http://203.0.113.5:11434/v1'
   delete process.env.OPENAI_API_KEY
@@ -403,6 +471,8 @@ test('remote Ollama on default port without API key is allowed (#369)', async ()
 })
 
 test('remote Ollama identified by "ollama" in hostname is allowed without key (#369)', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://ollama.corp.example.com/v1'
   delete process.env.OPENAI_API_KEY
@@ -411,6 +481,8 @@ test('remote Ollama identified by "ollama" in hostname is allowed without key (#
 })
 
 test('non-Ollama remote provider still requires OPENAI_API_KEY', async () => {
+  const { getProviderValidationError } =
+    await importFreshProviderValidationModule()
   process.env.CLAUDE_CODE_USE_OPENAI = '1'
   process.env.OPENAI_BASE_URL = 'https://api.openai.com/v1'
   delete process.env.OPENAI_API_KEY
@@ -422,15 +494,21 @@ test('non-Ollama remote provider still requires OPENAI_API_KEY', async () => {
 })
 
 test('startup provider validation allows interactive recovery', () => {
+  return importFreshProviderValidationModule().then(
+    ({ shouldExitForStartupProviderValidationError }) => {
   expect(
     shouldExitForStartupProviderValidationError({
       args: [],
       stdoutIsTTY: true,
     }),
   ).toBe(false)
+    },
+  )
 })
 
 test('startup provider validation stays strict for non-interactive launches', () => {
+  return importFreshProviderValidationModule().then(
+    ({ shouldExitForStartupProviderValidationError }) => {
   expect(
     shouldExitForStartupProviderValidationError({
       args: ['-p', 'hello'],
@@ -461,4 +539,6 @@ test('startup provider validation stays strict for non-interactive launches', ()
       stdoutIsTTY: true,
     }),
   ).toBe(true)
+    },
+  )
 })

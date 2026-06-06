@@ -23,6 +23,18 @@ export interface FileEditMessageState {
   preview?: FileEditPreview;
 }
 
+export interface WorkPlanItemState {
+  id: string;
+  text: string;
+  status: 'completed' | 'in_progress' | 'pending';
+}
+
+export interface WorkPlanState {
+  items: WorkPlanItemState[];
+  source: 'tool' | 'assistant';
+  updatedAt: number;
+}
+
 export interface SystemInlineMessageState {
   tone?: 'info' | 'warning' | 'error' | 'success';
   label?: string;

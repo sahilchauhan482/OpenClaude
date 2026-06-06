@@ -173,6 +173,7 @@ function* yieldMissingToolResultBlocks(
  */
 const MAX_OUTPUT_TOKENS_RECOVERY_LIMIT = 3
 const MAX_CONTINUATION_NUDGES = 3
+const MAX_TOOL_FAILURE_RECOVERY_ATTEMPTS = 3
 
 function formatAutoCompactRetryDelay(delayMs: number): string {
   const totalSeconds = Math.max(1, Math.ceil(delayMs / 1000))
@@ -1872,9 +1873,10 @@ async function* queryLoop(
         hasPath: toolFailureLoopDecision.path !== undefined,
         queryDepth: queryTracking.depth,
       })
-      if (toolFailureRecoveryCount < 1) {
+      if (toolFailureRecoveryCount < MAX_TOOL_FAILURE_RECOVERY_ATTEMPTS) {
+        const nextRecoveryAttempt = toolFailureRecoveryCount + 1
         yield createSystemMessage(
-          'Repeated tool failures detected. Retrying once with an alternate strategy instead of stopping.',
+          `Repeated tool failures detected. Retrying with an alternate strategy (${nextRecoveryAttempt}/${MAX_TOOL_FAILURE_RECOVERY_ATTEMPTS}) instead of stopping.`,
           'warning',
         )
 
@@ -1884,7 +1886,10 @@ async function* queryLoop(
             '',
             `Recovery guidance: ${toolFailureLoopDecision.recoveryHint}`,
             '',
+            `Recovery attempt ${nextRecoveryAttempt} of ${MAX_TOOL_FAILURE_RECOVERY_ATTEMPTS}.`,
             'Do not repeat the same failing tool call. Inspect the previous error output, verify workspace layout/path assumptions, and choose a materially different recovery strategy before using tools again.',
+            'Prefer recovery steps that change the failure surface first: read files before editing, search for the correct path before writing, validate commands against workspace scripts, or switch to a different compatible tool when available.',
+            'Keep moving toward task completion. If one path is blocked, find another viable path instead of stopping.',
           ].join('\n'),
           isMeta: true,
         })
@@ -1900,7 +1905,7 @@ async function* queryLoop(
           autoCompactTracking: tracking,
           turnCount,
           maxOutputTokensRecoveryCount: 0,
-          toolFailureRecoveryCount: toolFailureRecoveryCount + 1,
+          toolFailureRecoveryCount: nextRecoveryAttempt,
           hasAttemptedReactiveCompact: false,
           hasAttemptedProviderFallback: false,
           continuationNudgeCount: 0,
@@ -1909,7 +1914,7 @@ async function* queryLoop(
           stopHookActive,
           transition: {
             reason: 'tool_failure_recovery',
-            attempt: toolFailureRecoveryCount + 1,
+            attempt: nextRecoveryAttempt,
           },
         }
         continue

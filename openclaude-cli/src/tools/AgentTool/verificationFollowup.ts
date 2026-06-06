@@ -1,4 +1,4 @@
-import type { AgentToolResult } from './agentToolUtils.js'
+import type { AgentToolResult } from './agentToolResult.js'
 
 export function getVerificationFollowupInstruction(
   verification: AgentToolResult['verification'],

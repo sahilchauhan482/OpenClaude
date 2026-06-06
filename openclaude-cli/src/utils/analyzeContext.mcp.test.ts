@@ -1,9 +1,39 @@
-import { describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import type { Tool } from '../Tool.js'
 import { TOOL_SEARCH_TOOL_NAME } from '../tools/ToolSearchTool/constants.js'
 import { countMcpToolTokens } from './analyzeContext.js'
 import { createRequestSizeReport } from './requestSizeBreakdown.js'
 import type { ContextData } from './analyzeContext.js'
+
+const TOOL_SEARCH_ENV_KEYS = [
+  'ENABLE_TOOL_SEARCH',
+  'CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS',
+  'ANTHROPIC_BASE_URL',
+  'USER_TYPE',
+] as const
+
+const originalToolSearchEnv: Record<string, string | undefined> = {}
+
+beforeEach(() => {
+  for (const key of TOOL_SEARCH_ENV_KEYS) {
+    originalToolSearchEnv[key] = process.env[key]
+  }
+  process.env.ENABLE_TOOL_SEARCH = 'true'
+  delete process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS
+  delete process.env.ANTHROPIC_BASE_URL
+  delete process.env.USER_TYPE
+})
+
+afterEach(() => {
+  for (const key of TOOL_SEARCH_ENV_KEYS) {
+    const value = originalToolSearchEnv[key]
+    if (value === undefined) {
+      delete process.env[key]
+    } else {
+      process.env[key] = value
+    }
+  }
+})
 
 function makeMcpTool(name: string): Tool {
   return {

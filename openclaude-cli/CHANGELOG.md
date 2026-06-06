@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.16.8](https://github.com/Gitlawb/openclaude/compare/v0.16.7...v0.16.8) (2026-06-06)
+
+### Features
+
+* **agents:** retry repeated tool-failure loops with bounded self-heal recovery
+* **review:** parse reviewer open questions and residual risk sections correctly
+* **verification:** require evidence-backed verification before claiming completion
+* **vertex:** add Claude Sonnet Vertex catalog entry to match default model
+* **ui:** surface live agent activity, task plan progress, approvals, and file edits in VS Code
+
 ## [0.16.1](https://github.com/Gitlawb/openclaude/compare/v0.16.0...v0.16.1) (2026-06-01)
 
 

@@ -92,7 +92,7 @@ function parseSectionList(text: string, heading: string): string[] | undefined {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const section = text.match(
     new RegExp(
-      `## ${escapedHeading}([\s\S]*?)(?:\n## [^\n]+|$)`,
+      `## ${escapedHeading}([\\s\\S]*?)(?:\\n## [^\\n]+|$)`,
       'i',
     ),
   )

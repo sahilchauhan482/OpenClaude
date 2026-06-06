@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FileEditMessageState } from '../../types/chat';
+import { vscode } from '../../vscode';
 
 interface FileEditCardProps {
   fileEdit: FileEditMessageState;
@@ -104,6 +105,35 @@ export function FileEditCard({ fileEdit, live = false }: FileEditCardProps) {
           {expanded ? 'Hide' : 'Review'}
         </span>
       </button>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          borderTop: expanded && hasPreview ? '1px solid var(--app-border)' : 'none',
+          padding: expanded && hasPreview ? '0 12px 8px' : '0 12px 10px',
+        }}
+      >
+        <button
+          onClick={() => vscode.postMessage({ type: 'open_file', filePath: fileEdit.filePath })}
+          title="Open edited file"
+          style={{
+            border: '1px solid var(--app-input-border)',
+            borderRadius: 'var(--corner-radius-small)',
+            background: 'transparent',
+            color: 'var(--app-primary-foreground)',
+            cursor: 'pointer',
+            fontSize: 11,
+            padding: '2px 8px',
+          }}
+        >
+          Open file
+        </button>
+        <span style={{ fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
+          {fileEdit.additions} added, {fileEdit.deletions} removed
+        </span>
+      </div>
 
       {expanded && hasPreview && preview && (
         <div

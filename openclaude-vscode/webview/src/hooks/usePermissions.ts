@@ -79,6 +79,7 @@ export function usePermissions() {
 
   return {
     currentRequest,
+    queue,
     pendingCount,
     respond,
     dismissRequest,

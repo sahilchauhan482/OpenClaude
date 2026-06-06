@@ -61,7 +61,7 @@ function getElicitationFields(value: unknown): ElicitationField[] {
 }
 
 function App() {
-  const { currentRequest, pendingCount, respond } = usePermissions();
+  const { currentRequest, queue, pendingCount, respond } = usePermissions();
   const [teleportState, setTeleportState] = useState<TeleportState>({
     isVisible: false,
     info: null,
@@ -121,7 +121,14 @@ function App() {
 
   return (
     <>
-      <ChatPanel />
+      <ChatPanel
+        permissionRequest={currentRequest}
+        permissionQueue={queue}
+        pendingPermissionCount={pendingCount}
+        onPermissionAllow={(id) => respond(id, true)}
+        onPermissionAlwaysAllow={(id) => respond(id, true, true)}
+        onPermissionDeny={(id) => respond(id, false)}
+      />
 
       {/* Permission dialog overlay */}
       {currentRequest && (

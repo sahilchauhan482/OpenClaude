@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { finalizeAgentTool } from './agentToolUtils.js'
+import { finalizeAgentTool } from './agentToolResult.js'
 import { REVIEWER_AGENT_TYPE } from './constants.js'
 
 describe('finalizeAgentTool reviewer metadata', () => {

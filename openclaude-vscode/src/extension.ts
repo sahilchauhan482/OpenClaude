@@ -152,6 +152,28 @@ function resolveRuntimeWorkspaceContext(
   };
 }
 
+function resolveEditorFileUri(filePath: string): vscode.Uri {
+  const trimmed = filePath.trim();
+  if (!trimmed) {
+    throw new Error('Missing file path');
+  }
+
+  if (/^\/[a-zA-Z]\//.test(trimmed)) {
+    return vscode.Uri.file(`${trimmed[1]}:${trimmed.slice(2)}`);
+  }
+
+  if (path.isAbsolute(trimmed)) {
+    return vscode.Uri.file(trimmed);
+  }
+
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (workspaceRoot) {
+    return vscode.Uri.file(path.resolve(workspaceRoot, trimmed));
+  }
+
+  return vscode.Uri.file(path.resolve(trimmed));
+}
+
 /** Get the active DiffManager instance (available after activation). */
 export function getDiffManager(): DiffManager | undefined {
   return diffManagerInstance;
@@ -2919,7 +2941,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Handle open_file — open a file in the editor at a specific line
   webviewManager.onMessage('open_file', async (message) => {
     try {
-      const uri = vscode.Uri.file(message.filePath);
+      const uri = resolveEditorFileUri(message.filePath);
       const doc = await vscode.workspace.openTextDocument(uri);
       const editor = await vscode.window.showTextDocument(doc, { preview: false });
       if (message.line !== undefined) {

@@ -7,6 +7,8 @@ import type {
   FileEditMessageState,
   SessionCost,
   SystemInlineMessageState,
+  WorkPlanItemState,
+  WorkPlanState,
 } from '../types/chat';
 import type { AttachmentItem } from '../types/attachments';
 import { describeUserMessageContent } from '../utils/messageContent';
@@ -46,6 +48,8 @@ export interface ToolActivity {
   toolName: string;
   description: string;  // e.g. "Editing src/App.tsx" or "Running: npm test"
 }
+
+export type { WorkPlanState };
 
 interface AvailableModel {
   value: string;
@@ -148,6 +152,93 @@ function formatLineDelta(additions: number, deletions: number): string {
 function formatFileEditProgress(fileName: string, additions: number, deletions: number): string {
   const delta = formatLineDelta(additions, deletions);
   return delta ? `${fileName} ${delta}` : fileName;
+}
+
+function normalizePlanStatus(value: unknown): WorkPlanItemState['status'] {
+  const normalized = String(value ?? '').toLowerCase();
+  if (normalized === 'completed' || normalized === 'done' || normalized === 'complete') {
+    return 'completed';
+  }
+  if (normalized === 'in_progress' || normalized === 'in-progress' || normalized === 'running' || normalized === 'active') {
+    return 'in_progress';
+  }
+  return 'pending';
+}
+
+function parsePlanFromToolInput(toolName: string, input?: Record<string, unknown>): WorkPlanState | null {
+  if (!input) {
+    return null;
+  }
+
+  const normalizedName = toolName.toLowerCase();
+  if (!normalizedName.includes('todowrite') && !normalizedName.includes('updateplan')) {
+    return null;
+  }
+
+  const rawItems = Array.isArray(input.todos)
+    ? input.todos
+    : Array.isArray(input.plan)
+      ? input.plan
+      : [];
+
+  const items = rawItems.flatMap((item, index): WorkPlanItemState[] => {
+    if (!item || typeof item !== 'object') {
+      return [];
+    }
+
+    const record = item as Record<string, unknown>;
+    const text =
+      typeof record.content === 'string' ? record.content
+      : typeof record.step === 'string' ? record.step
+      : typeof record.title === 'string' ? record.title
+      : '';
+
+    if (!text.trim()) {
+      return [];
+    }
+
+    return [{
+      id: typeof record.id === 'string' ? record.id : `plan-${index}`,
+      text: text.trim(),
+      status: normalizePlanStatus(record.status),
+    }];
+  });
+
+  return items.length > 0
+    ? { items, source: 'tool', updatedAt: Date.now() }
+    : null;
+}
+
+function parsePlanFromText(text: string): WorkPlanState | null {
+  if (!/\btasks?\s*\(/i.test(text)) {
+    return null;
+  }
+
+  const lines = text.split(/\r?\n/);
+  const items: WorkPlanItemState[] = [];
+  for (const line of lines) {
+    const match = line.match(/^\s*(?:[\u2713\u221a]\s+|[-*]\s*\[[xX]\]\s+|\u25a0\s+|\u25a1\s+|[-*]\s*\[\s\]\s+)(.+?)\s*$/);
+    if (!match?.[1]) {
+      continue;
+    }
+
+    const marker = line.trimStart().slice(0, 2);
+    const status = marker.includes('\u2713') || marker.includes('\u221a') || /\[[xX]\]/.test(line)
+      ? 'completed'
+      : marker.includes('\u25a0')
+        ? 'in_progress'
+        : 'pending';
+
+    items.push({
+      id: `text-plan-${items.length}`,
+      text: match[1].trim(),
+      status,
+    });
+  }
+
+  return items.length > 0
+    ? { items, source: 'assistant', updatedAt: Date.now() }
+    : null;
 }
 
 function parseFileEditMessage(data: Record<string, unknown>): FileEditMessageState {
@@ -281,6 +372,7 @@ export function useChat() {
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
   const [attachmentProcessing, setAttachmentProcessing] = useState<string | null>(null);
   const [activeFileEdit, setActiveFileEdit] = useState<FileEditMessageState | null>(null);
+  const [workPlan, setWorkPlan] = useState<WorkPlanState | null>(null);
   const [agentTeamBoard, setAgentTeamBoard] = useState<AgentTeamBoardState | null>(null);
 
   const { processStreamEvent, resetStream } = useStream();
@@ -346,7 +438,7 @@ export function useChat() {
             ),
           );
           // Extract tool activity from tool_use blocks
-          if (update.type === 'block_start' && update.blocks) {
+          if ((update.type === 'block_start' || update.type === 'block_delta' || update.type === 'block_stop') && update.blocks) {
             const latestBlock = update.blocks[update.blocks.length - 1];
             if (latestBlock) {
               const block = latestBlock.block;
@@ -356,6 +448,10 @@ export function useChat() {
                   toolName: block.name,
                   description: formatToolActivity(block.name, undefined, toolInput),
                 });
+                const parsedPlan = parsePlanFromToolInput(block.name, toolInput);
+                if (parsedPlan) {
+                  setWorkPlan(parsedPlan);
+                }
               }
             }
           }
@@ -421,6 +517,16 @@ export function useChat() {
       if (msg.uuid && prev.some((m) => m.id === msg.uuid)) return prev;
       return [...prev, chatMsg];
     });
+
+    for (const block of msg.message.content || []) {
+      if (block.type !== 'text') {
+        continue;
+      }
+      const parsedPlan = parsePlanFromText(block.text);
+      if (parsedPlan) {
+        setWorkPlan(parsedPlan);
+      }
+    }
   }, []);
 
   const handleResultMessage = useCallback((msg: ResultMessage) => {
@@ -561,6 +667,7 @@ export function useChat() {
 
         if (fileEdit.stage === 'reviewing') {
           setActiveFileEdit(fileEdit);
+          vscode.postMessage({ type: 'open_file', filePath: fileEdit.filePath });
           setToolActivity({
             toolName: 'Editing',
             description: formatFileEditProgress(
@@ -941,14 +1048,15 @@ export function useChat() {
           setIsStreaming(false);
           setError(null);
           setRateLimitInfo(null);
-          setPromptSuggestions([]);
-          setToolActivity(null);
-          setAttachmentProcessing(null);
-          setActiveFileEdit(null);
-          setAgentTeamBoard(null);
-          streamingUuidRef.current = null;
-          resetStream();
-        }
+        setPromptSuggestions([]);
+        setToolActivity(null);
+        setAttachmentProcessing(null);
+        setActiveFileEdit(null);
+        setAgentTeamBoard(null);
+        setWorkPlan(null);
+        streamingUuidRef.current = null;
+        resetStream();
+      }
 
         // Bulk load session history on resume
         if (data.type === 'session_history' && Array.isArray(data.messages)) {
@@ -1092,6 +1200,7 @@ export function useChat() {
     setToolActivity(null);
     setActiveFileEdit(null);
     setAgentTeamBoard(null);
+    setWorkPlan(null);
     streamingUuidRef.current = null;
     resetStream();
   }, [resetStream]);
@@ -1123,6 +1232,7 @@ export function useChat() {
     toolActivity,
     attachmentProcessing,
     activeFileEdit,
+    workPlan,
     agentTeamBoard,
     sendMessage,
     clearMessages,

@@ -825,6 +825,225 @@ details[open] .thinking-toggle {
   border-color: color-mix(in srgb, var(--app-status-busy) 24%, var(--app-input-border));
 }
 
+.agent-activity-strip {
+  flex-shrink: 0;
+  margin: 8px 16px 0;
+  border: 1px solid color-mix(in srgb, var(--app-input-border) 88%, transparent);
+  border-radius: var(--corner-radius-large);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--app-secondary-background) 94%, transparent), transparent),
+    var(--app-primary-background);
+  box-shadow: 0 1px 2px #00000012;
+  padding: 9px 11px;
+}
+
+.agent-activity-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+}
+
+.agent-activity-pulse {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: var(--app-status-busy);
+  animation: pulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.agent-activity-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-activity-title {
+  color: var(--app-primary-foreground);
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-activity-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 3px;
+  color: var(--app-secondary-foreground);
+  font-size: 11px;
+}
+
+.agent-activity-open {
+  flex-shrink: 0;
+  border: 1px solid var(--app-input-border);
+  border-radius: var(--corner-radius-small);
+  background: transparent;
+  color: var(--app-primary-foreground);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.agent-activity-open:hover {
+  background: var(--app-ghost-button-hover-background);
+}
+
+.agent-plan-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--app-input-border) 76%, transparent);
+}
+
+.agent-plan-item {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--app-secondary-foreground);
+  font-size: 11px;
+}
+
+.agent-plan-marker {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  opacity: 0.8;
+}
+
+.agent-plan-item-completed .agent-plan-marker {
+  border-radius: 999px;
+  border-color: var(--app-success-foreground);
+  background: var(--app-success-foreground);
+}
+
+.agent-plan-item-in_progress {
+  color: var(--app-primary-foreground);
+}
+
+.agent-plan-item-in_progress .agent-plan-marker {
+  border-color: var(--app-status-busy);
+  background: var(--app-status-busy);
+}
+
+.agent-plan-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.permission-rail {
+  flex-shrink: 0;
+  margin: 8px 16px 0;
+  border: 1px solid color-mix(in srgb, var(--app-input-border) 84%, transparent);
+  border-radius: var(--corner-radius-large);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--app-secondary-background) 95%, transparent), transparent),
+    var(--app-primary-background);
+  box-shadow: 0 1px 2px #00000014;
+  padding: 10px 12px;
+}
+
+.permission-rail-high {
+  border-color: color-mix(in srgb, var(--app-error-foreground) 34%, var(--app-input-border));
+}
+
+.permission-rail-medium {
+  border-color: color-mix(in srgb, var(--app-warning-accent) 42%, var(--app-input-border));
+}
+
+.permission-rail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.permission-rail-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.permission-rail-title {
+  color: var(--app-primary-foreground);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.permission-rail-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 4px;
+  color: var(--app-secondary-foreground);
+  font-size: 11px;
+}
+
+.permission-rail-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.permission-rail-button {
+  border-radius: var(--corner-radius-small);
+  padding: 3px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.permission-rail-button-muted {
+  border: 1px solid var(--app-input-border);
+  background: transparent;
+  color: var(--app-primary-foreground);
+}
+
+.permission-rail-button-primary {
+  border: 1px solid transparent;
+  background: var(--app-button-background);
+  color: var(--app-button-foreground);
+}
+
+.permission-rail-button:hover {
+  filter: brightness(1.06);
+}
+
+.permission-rail-reason {
+  margin-top: 8px;
+  color: var(--app-secondary-foreground);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.permission-rail-preview {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--app-input-border) 84%, transparent);
+  background: var(--app-secondary-background);
+  color: var(--app-primary-foreground);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 148px;
+  overflow: auto;
+  font-family: var(--app-monospace-font-family);
+}
+
+.permission-rail-queue {
+  margin-top: 8px;
+  color: var(--app-secondary-foreground);
+  font-size: 11px;
+}
+
 .live-status-header {
   display: flex;
   align-items: center;
@@ -923,6 +1142,7 @@ details[open] .thinking-toggle {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--app-warning-accent) 10%, transparent), transparent),
     var(--app-primary-background);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-warning-accent) 18%, transparent);
 }
 
 .system-inline-card-error {

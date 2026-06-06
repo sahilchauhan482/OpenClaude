@@ -26,9 +26,10 @@ import { PluginManager } from '../dialogs/PluginManager';
 import { PolicyPackManager } from '../dialogs/PolicyPackManager';
 import { OnboardingChecklist } from '../onboarding/OnboardingChecklist';
 import type { AtMentionResult } from '../../hooks/useAtMentions';
-import type { ToolActivity } from '../../hooks/useChat';
+import type { ToolActivity, WorkPlanState } from '../../hooks/useChat';
+import type { PermissionRequest } from '../../hooks/usePermissions';
 import type { AttachmentItem } from '../../types/attachments';
-import type { AgentTeamBoardState } from '../../types/chat';
+import type { AgentTeamBoardState, FileEditMessageState } from '../../types/chat';
 import {
   fromHostPermissionMode,
   toHostPermissionMode,
@@ -46,7 +47,23 @@ interface CapabilityRecommendationView {
   secondaryActionLabel?: string;
 }
 
-export function ChatPanel() {
+interface ChatPanelProps {
+  permissionRequest?: PermissionRequest | null;
+  permissionQueue?: PermissionRequest[];
+  pendingPermissionCount?: number;
+  onPermissionAllow?: (requestId: string) => void;
+  onPermissionAlwaysAllow?: (requestId: string) => void;
+  onPermissionDeny?: (requestId: string) => void;
+}
+
+export function ChatPanel({
+  permissionRequest = null,
+  permissionQueue = [],
+  pendingPermissionCount = 0,
+  onPermissionAllow,
+  onPermissionAlwaysAllow,
+  onPermissionDeny,
+}: ChatPanelProps) {
   const {
     messages,
     cost,
@@ -64,6 +81,7 @@ export function ChatPanel() {
     toolActivity,
     attachmentProcessing,
     activeFileEdit,
+    workPlan,
     agentTeamBoard,
     sendMessage,
     interrupt,
@@ -211,6 +229,27 @@ export function ChatPanel() {
           />
         )}
       </div>
+
+      {(workPlan || toolActivity || activeFileEdit || isStreaming) && (
+        <AgentActivityStrip
+          workPlan={workPlan}
+          toolActivity={toolActivity}
+          activeFileEdit={activeFileEdit}
+          isStreaming={isStreaming}
+          permissionMode={permissionMode}
+        />
+      )}
+
+      {permissionRequest && (
+        <PermissionRail
+          request={permissionRequest}
+          queue={permissionQueue}
+          pendingCount={pendingPermissionCount}
+          onAllow={onPermissionAllow}
+          onAlwaysAllow={onPermissionAlwaysAllow}
+          onDeny={onPermissionDeny}
+        />
+      )}
 
       {/* Message list */}
       <MessageList
@@ -398,6 +437,179 @@ export function ChatPanel() {
       {showPolicyPackManager && <PolicyPackManager onClose={() => setShowPolicyPackManager(false)} />}
     </div>
   );
+}
+
+function AgentActivityStrip({
+  workPlan,
+  toolActivity,
+  activeFileEdit,
+  isStreaming,
+  permissionMode,
+}: {
+  workPlan: WorkPlanState | null;
+  toolActivity: ToolActivity | null;
+  activeFileEdit: FileEditMessageState | null;
+  isStreaming: boolean;
+  permissionMode: UiPermissionMode;
+}) {
+  const done = workPlan?.items.filter((item) => item.status === 'completed').length ?? 0;
+  const running = workPlan?.items.filter((item) => item.status === 'in_progress').length ?? 0;
+  const open = workPlan?.items.filter((item) => item.status === 'pending').length ?? 0;
+  const activeStep = workPlan?.items.find((item) => item.status === 'in_progress')
+    ?? workPlan?.items.find((item) => item.status === 'pending');
+
+  return (
+    <div className="agent-activity-strip">
+      <div className="agent-activity-top">
+        <div className="agent-activity-pulse" aria-hidden="true" />
+        <div className="agent-activity-copy">
+          <div className="agent-activity-title">
+            {toolActivity?.description
+              ?? activeStep?.text
+              ?? (isStreaming ? 'OpenClaude is working' : 'OpenClaude is ready')}
+          </div>
+          <div className="agent-activity-detail">
+            <span>{permissionModeLabel(permissionMode)}</span>
+            {workPlan ? <span>{workPlan.items.length} tasks ({done} done, {running} in progress, {open} open)</span> : null}
+            {activeFileEdit ? <span>{activeFileEdit.fileName}: +{activeFileEdit.additions} -{activeFileEdit.deletions}</span> : null}
+          </div>
+        </div>
+        {activeFileEdit ? (
+          <button
+            className="agent-activity-open"
+            onClick={() => vscode.postMessage({ type: 'open_file', filePath: activeFileEdit.filePath })}
+            title="Open active edit"
+          >
+            Open file
+          </button>
+        ) : null}
+      </div>
+
+      {workPlan && workPlan.items.length > 0 ? (
+        <div className="agent-plan-list">
+          {workPlan.items.map((item) => (
+            <div key={item.id} className={`agent-plan-item agent-plan-item-${item.status}`}>
+              <span className="agent-plan-marker" aria-hidden="true" />
+              <span className="agent-plan-text">{item.text}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function permissionModeLabel(mode: UiPermissionMode): string {
+  switch (mode) {
+    case 'fullAccess':
+      return 'Full access on';
+    case 'plan':
+      return 'Plan mode';
+    default:
+      return 'Default approvals';
+  }
+}
+
+function PermissionRail({
+  request,
+  queue,
+  pendingCount,
+  onAllow,
+  onAlwaysAllow,
+  onDeny,
+}: {
+  request: PermissionRequest;
+  queue: PermissionRequest[];
+  pendingCount: number;
+  onAllow?: (requestId: string) => void;
+  onAlwaysAllow?: (requestId: string) => void;
+  onDeny?: (requestId: string) => void;
+}) {
+  const preview = formatPermissionPreview(request);
+  const queuedTools = queue.slice(1, 4).map((item) => item.toolName);
+
+  return (
+    <div className={`permission-rail permission-rail-${request.riskLevel ?? 'low'}`}>
+      <div className="permission-rail-header">
+        <div className="permission-rail-copy">
+          <div className="permission-rail-title">
+            Approval needed: {request.title || request.toolName}
+          </div>
+          <div className="permission-rail-detail">
+            <span>{request.riskLevel ?? 'low'} risk</span>
+            {pendingCount > 1 ? <span>{pendingCount} requests waiting</span> : <span>1 request waiting</span>}
+            {request.agentId ? <span>Agent {request.agentId}</span> : null}
+          </div>
+        </div>
+        <div className="permission-rail-actions">
+          <button
+            className="permission-rail-button permission-rail-button-muted"
+            onClick={() => onDeny?.(request.requestId)}
+          >
+            Deny
+          </button>
+          <button
+            className="permission-rail-button permission-rail-button-muted"
+            onClick={() => onAlwaysAllow?.(request.requestId)}
+          >
+            Always allow
+          </button>
+          <button
+            className="permission-rail-button permission-rail-button-primary"
+            onClick={() => onAllow?.(request.requestId)}
+          >
+            Allow
+          </button>
+        </div>
+      </div>
+
+      {request.decisionReason ? (
+        <div className="permission-rail-reason">{request.decisionReason}</div>
+      ) : null}
+
+      <pre className="permission-rail-preview">{preview}</pre>
+
+      {queuedTools.length > 0 ? (
+        <div className="permission-rail-queue">
+          Next: {queuedTools.join(', ')}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function formatPermissionPreview(request: PermissionRequest): string {
+  const input = request.toolInput ?? {};
+
+  const command = typeof input.command === 'string'
+    ? input.command
+    : typeof input.cmd === 'string'
+      ? input.cmd
+      : typeof input.script === 'string'
+        ? input.script
+        : null;
+
+  if (command) {
+    return command;
+  }
+
+  const filePath = typeof input.file_path === 'string'
+    ? input.file_path
+    : typeof input.path === 'string'
+      ? input.path
+      : typeof input.file === 'string'
+        ? input.file
+        : null;
+
+  if (filePath) {
+    return filePath;
+  }
+
+  try {
+    return JSON.stringify(input, null, 2);
+  } catch {
+    return String(input);
+  }
 }
 
 function AgentTeamBoardCard({ board }: { board: AgentTeamBoardState }) {

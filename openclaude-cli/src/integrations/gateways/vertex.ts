@@ -34,6 +34,7 @@ export default defineGateway({
   catalog: {
     source: 'static',
     models: [
+      { id: 'vertex-claude-sonnet', apiName: 'claude-sonnet-4-6', label: 'Claude Sonnet (Vertex)', modelDescriptorId: 'claude-sonnet-4-6' },
       { id: 'vertex-claude-opus', apiName: 'claude-opus-4-6', label: 'Claude Opus (Vertex)', modelDescriptorId: 'claude-opus-4-6' },
     ],
   },
