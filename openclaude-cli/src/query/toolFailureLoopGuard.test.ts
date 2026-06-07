@@ -593,6 +593,30 @@ test('module resolution failures normalize to NotFound and include Bash recovery
   expect(decision.recoveryHint).toContain('module path')
 })
 
+test('edit-tool mismatch errors normalize to FileWriteError and demand exact reinspection', () => {
+  const state = createToolFailureLoopGuardState()
+
+  update(
+    state,
+    [toolUse('a', 'Edit', { file_path: 'src/App.tsx' })],
+    [toolResult('a', 'Error editing file: String not found in file')],
+    2,
+  )
+  const decision = update(
+    state,
+    [toolUse('b', 'Edit', { file_path: 'src/App.tsx' })],
+    [toolResult('b', 'Error editing file: String not found in file')],
+    2,
+  )
+
+  if (!decision.tripped) {
+    throw new Error('Expected repeated edit mismatch failures to trip')
+  }
+  expect(decision.errorCategory).toBe('FileWriteError')
+  expect(decision.recoveryHint).toContain('exact current text/whitespace')
+  expect(decision.recoveryHint).toContain('smaller exact match')
+})
+
 test('threshold override can be passed directly', () => {
   const state = createToolFailureLoopGuardState()
 

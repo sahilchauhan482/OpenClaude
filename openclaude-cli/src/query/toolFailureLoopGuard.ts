@@ -345,6 +345,22 @@ function isIgnoredSyntheticToolResult(content: string): boolean {
 function normalizeErrorCategory(content: string): string {
   const normalized = normalizeToolResultText(content)
 
+  if (/Error (writing|editing) file/i.test(normalized)) {
+    if (/\b(EACCES|EPERM)\b/i.test(normalized)) {
+      return 'PermissionError'
+    }
+    if (/permission denied/i.test(normalized)) {
+      return 'PermissionError'
+    }
+    if (/\bENOENT\b/i.test(normalized) || /no such file or directory/i.test(normalized)) {
+      return 'NotFound'
+    }
+    if (/Cannot find module/i.test(normalized)) {
+      return 'NotFound'
+    }
+    return 'FileWriteError'
+  }
+
   if (/\bInputValidationError\b/i.test(normalized)) {
     return 'InputValidationError'
   }
@@ -387,10 +403,6 @@ function normalizeErrorCategory(content: string): string {
   if (/insufficient_quota/i.test(normalized) || /insufficient balance/i.test(normalized)) {
     return 'RateLimitError'
   }
-  if (/Error writing file/i.test(normalized)) {
-    return 'FileWriteError'
-  }
-
   return (
     normalized.toLowerCase().slice(0, MAX_FALLBACK_CATEGORY_LENGTH) ||
     'unknown error'
@@ -539,7 +551,7 @@ function getCategoryRecoveryStrategy(errorCategory: string): string {
     case 'RateLimitError':
       return 'Verify quota, credit balance, rate-limit resets, and whether a fallback provider or smaller request is needed.'
     case 'FileWriteError':
-      return 'Read the target file again, verify match context, and avoid repeating the same edit payload.'
+      return 'Read the target file again, capture the exact current text/whitespace, and avoid repeating the same edit payload. If an Edit failed on a large block, retry with a smaller exact match or a verified full-file rewrite only after inspection.'
     default:
       return 'Inspect the previous tool output carefully and avoid retrying the same failing action unchanged.'
   }
