@@ -79,6 +79,109 @@ interface ApiRetryMessage {
   reason?: string;
 }
 
+type SystemTimelineEntry = NonNullable<SystemInlineMessageState['timeline']>[number];
+
+function appendSystemTimelineEntry(
+  existing: SystemInlineMessageState | undefined,
+  entry: SystemTimelineEntry,
+): SystemTimelineEntry[] {
+  const timeline = [...(existing?.timeline ?? [])];
+  const lastEntry = timeline[timeline.length - 1];
+
+  if (
+    lastEntry &&
+    lastEntry.label === entry.label &&
+    (lastEntry.detail ?? '') === (entry.detail ?? '') &&
+    lastEntry.tone === entry.tone
+  ) {
+    timeline[timeline.length - 1] = entry;
+    return timeline;
+  }
+
+  timeline.push(entry);
+  return timeline.slice(-12);
+}
+
+function createSystemTimelineEntry(
+  label: string,
+  detail?: string,
+  tone: NonNullable<SystemTimelineEntry['tone']> = 'info',
+): SystemTimelineEntry {
+  const timestamp = Date.now();
+  return {
+    id: `${label}-${timestamp}`,
+    label,
+    detail,
+    timestamp,
+    tone,
+  };
+}
+
+function formatElapsedSeconds(durationMs?: number): string | null {
+  if (typeof durationMs !== 'number' || durationMs <= 0) {
+    return null;
+  }
+  return `${Math.max(1, Math.round(durationMs / 1000))}s`;
+}
+
+function buildWorkerCardDetail(params: {
+  summary?: string;
+  lastTool?: string;
+  toolUses?: number;
+  tokenCount?: number;
+  durationMs?: number;
+  fallback?: string;
+}): string | undefined {
+  const lines: string[] = [];
+
+  if (params.summary?.trim()) {
+    lines.push(params.summary.trim());
+  }
+
+  const statParts: string[] = [];
+  if (params.lastTool?.trim()) statParts.push(`Last tool: ${params.lastTool.trim()}`);
+  if (typeof params.toolUses === 'number' && params.toolUses > 0) {
+    statParts.push(`${params.toolUses} operation${params.toolUses !== 1 ? 's' : ''}`);
+  }
+  if (typeof params.tokenCount === 'number' && params.tokenCount > 0) {
+    statParts.push(`${params.tokenCount} tokens`);
+  }
+  const elapsed = formatElapsedSeconds(params.durationMs);
+  if (elapsed) statParts.push(elapsed);
+  if (statParts.length > 0) lines.push(statParts.join(' · '));
+
+  if (lines.length === 0 && params.fallback?.trim()) {
+    lines.push(params.fallback.trim());
+  }
+
+  return lines.length > 0 ? lines.join('\n') : undefined;
+}
+
+function buildWorkerCardMeta(params: {
+  lastTool?: string;
+  toolUses?: number;
+  tokenCount?: number;
+  durationMs?: number;
+}): NonNullable<SystemInlineMessageState['meta']> {
+  const meta: NonNullable<SystemInlineMessageState['meta']> = [];
+
+  if (params.lastTool?.trim()) {
+    meta.push({ label: 'Last tool', value: params.lastTool.trim() });
+  }
+  if (typeof params.toolUses === 'number' && params.toolUses > 0) {
+    meta.push({ label: 'Operations', value: String(params.toolUses) });
+  }
+  if (typeof params.tokenCount === 'number' && params.tokenCount > 0) {
+    meta.push({ label: 'Tokens', value: String(params.tokenCount) });
+  }
+  const elapsed = formatElapsedSeconds(params.durationMs);
+  if (elapsed) {
+    meta.push({ label: 'Elapsed', value: elapsed });
+  }
+
+  return meta;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
 }
@@ -349,6 +452,18 @@ function formatApiRetryMessage(msg: ApiRetryMessage): SystemInlineMessageState {
     label: 'Retry',
     title: 'Retrying request',
     detail: detailParts.join(' '),
+    collapsible: true,
+    meta: [
+      ...(attempt !== undefined ? [{ label: 'Attempt', value: maxAttempts !== undefined ? `${attempt}/${maxAttempts}` : String(attempt) }] : []),
+      ...(delayMs !== undefined && delayMs > 0 ? [{ label: 'Delay', value: `${Math.ceil(delayMs / 1000)}s` }] : []),
+    ],
+    timeline: [
+      createSystemTimelineEntry(
+        attempt !== undefined ? `Retry attempt ${attempt}` : 'Retry scheduled',
+        detailParts.join(' '),
+        'info',
+      ),
+    ],
   };
 }
 
@@ -585,14 +700,20 @@ export function useChat() {
     ]);
   }, []);
 
-  const upsertSystemMessage = useCallback((id: string, text: string, system?: SystemInlineMessageState) => {
+  const upsertSystemMessage = useCallback((
+    id: string,
+    text: string,
+    system?: SystemInlineMessageState | ((previous?: SystemInlineMessageState) => SystemInlineMessageState | undefined),
+  ) => {
     setMessages((prev) => {
       const existingIdx = prev.findIndex((message) => message.id === id);
+      const previousSystem = existingIdx >= 0 ? prev[existingIdx]?.system : undefined;
+      const resolvedSystem = typeof system === 'function' ? system(previousSystem) : system;
       const nextMessage: ChatMessage = {
         id,
         role: 'system',
         text,
-        system,
+        system: resolvedSystem,
         isStreaming: false,
         timestamp: Date.now(),
         parentToolUseId: null,
@@ -890,10 +1011,22 @@ export function useChat() {
                 if (!isApiRetryMessage(msg)) {
                   break;
                 }
-                addSystemMessage(
+                const retryId = `api-retry-${typeof msg.attempt === 'number' ? msg.attempt : Date.now()}`;
+                const formatted = formatApiRetryMessage(msg);
+                upsertSystemMessage(
+                  retryId,
                   'Retrying provider request.',
-                  `api-retry-${Date.now()}`,
-                  formatApiRetryMessage(msg),
+                  (previous) => ({
+                    ...(formatted ?? {}),
+                    timeline: appendSystemTimelineEntry(
+                      previous,
+                      createSystemTimelineEntry(
+                        typeof msg.attempt === 'number' ? `Retry attempt ${msg.attempt}` : 'Retry scheduled',
+                        formatted.detail,
+                        'info',
+                      ),
+                    ),
+                  }),
                 );
                 break;
               }
@@ -912,16 +1045,30 @@ export function useChat() {
               case 'task_started': {
                 const taskId = String(msgAny.task_id ?? Date.now());
                 const taskDescription = typeof msgAny.description === 'string' ? msgAny.description.trim() : '';
+                const taskPrompt = typeof msgAny.prompt === 'string' ? msgAny.prompt.trim() : '';
+                const workflowName = typeof msgAny.workflow_name === 'string' ? msgAny.workflow_name.trim() : '';
+                const taskType = typeof msgAny.task_type === 'string' ? msgAny.task_type.trim() : '';
                 if (taskDescription) {
                   upsertSystemMessage(
                     `task-progress-${taskId}`,
                     `Delegated: ${taskDescription}`,
-                    {
+                    (previous) => ({
                       tone: 'info',
                       label: 'Worker',
-                      title: 'Worker started',
-                      detail: taskDescription,
-                    },
+                      title: taskDescription,
+                      detail: buildWorkerCardDetail({
+                        fallback: taskPrompt || taskDescription,
+                      }),
+                      collapsible: true,
+                      meta: [
+                        ...(workflowName ? [{ label: 'Workflow', value: workflowName }] : []),
+                        ...(taskType ? [{ label: 'Type', value: taskType }] : []),
+                      ],
+                      timeline: appendSystemTimelineEntry(
+                        previous,
+                        createSystemTimelineEntry('Started', taskPrompt || taskDescription, 'info'),
+                      ),
+                    }),
                   );
                 }
                 break;
@@ -933,19 +1080,41 @@ export function useChat() {
                 const taskSummary = typeof msgAny.summary === 'string' ? msgAny.summary.trim() : '';
                 const taskUsage = msgAny.usage as Record<string, unknown> | undefined;
                 const toolUses = typeof taskUsage?.tool_uses === 'number' ? taskUsage.tool_uses : 0;
+                const tokenCount = typeof taskUsage?.total_tokens === 'number' ? taskUsage.total_tokens : 0;
+                const durationMs = typeof taskUsage?.duration_ms === 'number' ? taskUsage.duration_ms : 0;
 
                 const progressTitle = taskSummary || taskDescription || (lastTool ? `Using ${lastTool}` : 'Working...');
-                const detailParts: string[] = [];
-                if (lastTool) detailParts.push(`Last tool: ${lastTool}`);
-                if (toolUses > 0) detailParts.push(`${toolUses} operation${toolUses !== 1 ? 's' : ''}`);
-                if (taskDescription && taskSummary) detailParts.push(taskDescription);
-
                 const progressId = `task-progress-${taskId}`;
-                upsertSystemMessage(progressId, progressTitle, {
-                  tone: 'info',
-                  label: 'Worker',
-                  title: progressTitle,
-                  detail: detailParts.join('\n') || undefined,
+                upsertSystemMessage(progressId, progressTitle, (previous) => {
+                  const detail = buildWorkerCardDetail({
+                    summary: taskSummary,
+                    lastTool,
+                    toolUses,
+                    tokenCount,
+                    durationMs,
+                    fallback: taskDescription,
+                  });
+                  return {
+                    tone: 'info',
+                    label: 'Worker',
+                    title: taskDescription || progressTitle,
+                    detail,
+                    collapsible: true,
+                    meta: buildWorkerCardMeta({
+                      lastTool,
+                      toolUses,
+                      tokenCount,
+                      durationMs,
+                    }),
+                    timeline: appendSystemTimelineEntry(
+                      previous,
+                      createSystemTimelineEntry(
+                        taskSummary || (lastTool ? `Used ${lastTool}` : 'Progress update'),
+                        detail,
+                        'info',
+                      ),
+                    ),
+                  };
                 });
                 break;
               }
@@ -953,22 +1122,42 @@ export function useChat() {
                 const taskId = String(msgAny.task_id ?? Date.now());
                 const status = typeof msgAny.status === 'string' ? msgAny.status : 'completed';
                 const summary = typeof msgAny.summary === 'string' ? msgAny.summary.trim() : '';
+                const taskUsage = msgAny.usage as Record<string, unknown> | undefined;
+                const toolUses = typeof taskUsage?.tool_uses === 'number' ? taskUsage.tool_uses : 0;
+                const tokenCount = typeof taskUsage?.total_tokens === 'number' ? taskUsage.total_tokens : 0;
+                const durationMs = typeof taskUsage?.duration_ms === 'number' ? taskUsage.duration_ms : 0;
                 const title =
                   status === 'failed'
                     ? 'Worker failed'
                     : status === 'stopped'
                       ? 'Worker stopped'
                       : 'Worker completed';
-                upsertSystemMessage(
-                  `task-progress-${taskId}`,
-                  summary || title,
-                  {
-                    tone: status === 'failed' ? 'warning' : 'success',
+                upsertSystemMessage(`task-progress-${taskId}`, summary || title, (previous) => {
+                  const tone = status === 'failed' ? 'warning' : status === 'stopped' ? 'error' : 'success';
+                  const detail = buildWorkerCardDetail({
+                    summary,
+                    toolUses,
+                    tokenCount,
+                    durationMs,
+                    fallback: title,
+                  });
+                  return {
+                    tone,
                     label: 'Worker',
-                    title,
-                    detail: summary || undefined,
-                  },
-                );
+                    title: previous?.title || title,
+                    detail,
+                    collapsible: true,
+                    meta: buildWorkerCardMeta({
+                      toolUses,
+                      tokenCount,
+                      durationMs,
+                    }),
+                    timeline: appendSystemTimelineEntry(
+                      previous,
+                      createSystemTimelineEntry(title, detail, tone),
+                    ),
+                  };
+                });
                 break;
               }
               case 'post_turn_summary': {

@@ -18,6 +18,7 @@ import { EffortSelector } from '../input/EffortSelector';
 import { CompanyAnnouncement } from './CompanyAnnouncement';
 import { SpinnerStatus } from './SpinnerStatus';
 import { ErrorBanner } from './ErrorBanner';
+import { PromptSuggestions } from './PromptSuggestions';
 import { AtMentionPicker } from '../input/AtMentionPicker';
 import { SlashCommandMenu } from '../input/SlashCommandMenu';
 import { AttachmentBar } from '../input/AttachmentBar';
@@ -191,6 +192,17 @@ export function ChatPanel({
   }, []);
 
   const isStarting = processState === 'starting';
+  const latestAssistantText = [...messages]
+    .reverse()
+    .find((message) => message.role === 'assistant')
+    ?.blocks
+    ?.filter((block) => block.block.type === 'text')
+    .map((block) => ('text' in block.block ? block.block.text : ''))
+    .join('\n')
+    .trim() ?? '';
+  const promptSuggestionVariant = looksLikeChoicePrompt(latestAssistantText, promptSuggestions)
+    ? 'choices'
+    : 'chips';
 
   return (
     <div
@@ -304,25 +316,13 @@ export function ChatPanel({
 
       {/* Prompt suggestions */}
       {promptSuggestions.length > 0 && !isStreaming && (
-        <div style={{ padding: '4px 16px 0', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {promptSuggestions.map((s, i) => (
-            <button
-              key={i}
-              onClick={() => sendMessage(s)}
-              style={{
-                padding: '2px 10px',
-                fontSize: 11,
-                borderRadius: 'var(--corner-radius-small)',
-                border: '1px solid var(--app-input-border)',
-                background: 'transparent',
-                color: 'var(--app-secondary-foreground)',
-                cursor: 'pointer',
-              }}
-            >
-              {s.length > 60 ? s.slice(0, 57) + '...' : s}
-            </button>
-          ))}
-        </div>
+        <PromptSuggestions
+          suggestions={promptSuggestions}
+          onSelect={sendMessage}
+          isVisible={!isStreaming}
+          variant={promptSuggestionVariant}
+          title={promptSuggestionVariant === 'choices' ? 'Choose a response' : 'Suggested prompts:'}
+        />
       )}
 
       {/* Error / rate limit banner */}
@@ -436,6 +436,36 @@ export function ChatPanel({
       <PluginManager isOpen={showPluginManager} onClose={() => setShowPluginManager(false)} />
       {showPolicyPackManager && <PolicyPackManager onClose={() => setShowPolicyPackManager(false)} />}
     </div>
+  );
+}
+
+function looksLikeChoicePrompt(latestAssistantText: string, suggestions: string[]): boolean {
+  if (suggestions.length === 0) {
+    return false;
+  }
+
+  const normalized = latestAssistantText.toLowerCase();
+  if (
+    normalized.includes('would you like me to') ||
+    normalized.includes('do you authorize me to') ||
+    normalized.includes('do you want me to') ||
+    normalized.includes('which option') ||
+    normalized.includes('choose one') ||
+    normalized.includes('select one')
+  ) {
+    return true;
+  }
+
+  if (suggestions.length >= 2) {
+    return true;
+  }
+
+  const suggestion = suggestions[0]?.toLowerCase() ?? '';
+  return (
+    suggestion.startsWith('yes') ||
+    suggestion.startsWith('no') ||
+    suggestion.includes('proceed') ||
+    suggestion.includes('skip')
   );
 }
 
@@ -765,36 +795,7 @@ function AgentTeamBoardCard({ board }: { board: AgentTeamBoardState }) {
       {board.tasks.length > 0 && (
         <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
           {board.tasks.slice(0, 6).map((task) => (
-            <div
-              key={task.id}
-              style={{
-                border: '1px solid var(--app-input-border)',
-                borderRadius: 10,
-                padding: '9px 10px',
-                background: 'rgba(255,255,255,0.02)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--app-primary-foreground)' }}>
-                  {task.description}
-                </div>
-                <TaskStatusBadge status={task.status} />
-              </div>
-              <div
-                style={{ marginTop: 4, fontSize: 11, color: 'var(--app-secondary-foreground)' }}
-                title="Operations are background worker tool calls such as Read, Search, Bash, Edit, or Agent."
-              >
-                {task.workflowName || task.taskType || 'worker'}
-                {task.toolUses > 0 ? ` · ${task.toolUses} operations` : ''}
-                {task.tokenCount > 0 ? ` · ${task.tokenCount} tokens` : ' · token usage unavailable'}
-                {task.durationMs > 0 ? ` · ${Math.max(1, Math.round(task.durationMs / 1000))}s` : ''}
-              </div>
-              {(task.progressNote || task.summary || task.lastToolName) && (
-                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--app-primary-foreground)' }}>
-                  {task.progressNote || task.summary || `Last tool: ${task.lastToolName}`}
-                </div>
-              )}
-            </div>
+            <TaskActivityCard key={task.id} task={task} />
           ))}
         </div>
       )}
@@ -830,6 +831,93 @@ function AgentTeamBoardCard({ board }: { board: AgentTeamBoardState }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function TaskActivityCard({ task }: { task: AgentTeamBoardState['tasks'][number] }) {
+  const [expanded, setExpanded] = useState(false);
+  const runtime = task.durationMs > 0 ? `${Math.max(1, Math.round(task.durationMs / 1000))}s` : null;
+  const summary = task.progressNote || task.summary || (task.lastToolName ? `Last tool: ${task.lastToolName}` : '');
+  const hasDetails = task.events.length > 0;
+
+  return (
+    <div
+      style={{
+        border: '1px solid var(--app-input-border)',
+        borderRadius: 10,
+        padding: '9px 10px',
+        background: 'rgba(255,255,255,0.02)',
+        cursor: hasDetails ? 'pointer' : 'default',
+      }}
+      onClick={hasDetails ? () => setExpanded((prev) => !prev) : undefined}
+      role={hasDetails ? 'button' : undefined}
+      aria-expanded={hasDetails ? expanded : undefined}
+      tabIndex={hasDetails ? 0 : undefined}
+      onKeyDown={hasDetails ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          setExpanded((prev) => !prev);
+        }
+      } : undefined}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--app-primary-foreground)' }}>
+          {task.description}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {hasDetails ? (
+            <span style={{ fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
+              {expanded ? 'Hide details' : 'Show details'}
+            </span>
+          ) : null}
+          <TaskStatusBadge status={task.status} />
+        </div>
+      </div>
+      <div
+        style={{ marginTop: 4, fontSize: 11, color: 'var(--app-secondary-foreground)' }}
+        title="Operations are background worker tool calls such as Read, Search, Bash, Edit, or Agent."
+      >
+        {task.workflowName || task.taskType || 'worker'}
+        {task.toolUses > 0 ? ` · ${task.toolUses} operations` : ''}
+        {task.tokenCount > 0 ? ` · ${task.tokenCount} tokens` : ' · token usage unavailable'}
+        {runtime ? ` · ${runtime}` : ''}
+      </div>
+      {summary ? (
+        <div style={{ marginTop: 6, fontSize: 11, color: 'var(--app-primary-foreground)' }}>
+          {summary}
+        </div>
+      ) : null}
+      {expanded && task.events.length > 0 ? (
+        <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+          {task.events
+            .slice()
+            .reverse()
+            .map((event) => (
+              <div
+                key={event.id}
+                style={{
+                  borderLeft: `2px solid ${taskEventAccent(event.tone)}`,
+                  paddingLeft: 10,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ fontSize: 12, color: 'var(--app-primary-foreground)', fontWeight: 500 }}>
+                    {event.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--app-secondary-foreground)', whiteSpace: 'nowrap' }}>
+                    {formatTaskEventTime(event.timestamp)}
+                  </div>
+                </div>
+                {event.detail ? (
+                  <div style={{ marginTop: 4, fontSize: 11, color: 'var(--app-secondary-foreground)' }}>
+                    {event.detail}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -900,6 +988,28 @@ function SummaryStatusBadge({ status }: { status: AgentTeamBoardState['summaries
       {status.replace('_', ' ')}
     </span>
   );
+}
+
+function formatTaskEventTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function taskEventAccent(tone: 'info' | 'warning' | 'error' | 'success' | undefined): string {
+  switch (tone) {
+    case 'success':
+      return 'rgba(16, 185, 129, 0.7)';
+    case 'warning':
+      return 'rgba(245, 158, 11, 0.7)';
+    case 'error':
+      return 'rgba(239, 68, 68, 0.7)';
+    case 'info':
+    default:
+      return 'rgba(14, 165, 233, 0.7)';
+  }
 }
 
 function CapabilityRecommendationCard({

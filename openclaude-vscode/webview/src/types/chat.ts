@@ -40,6 +40,26 @@ export interface SystemInlineMessageState {
   label?: string;
   title?: string;
   detail?: string;
+  collapsible?: boolean;
+  meta?: Array<{
+    label: string;
+    value: string;
+  }>;
+  timeline?: Array<{
+    id: string;
+    label: string;
+    detail?: string;
+    timestamp: number;
+    tone?: 'info' | 'warning' | 'error' | 'success';
+  }>;
+}
+
+export interface AgentTeamTaskEventState {
+  id: string;
+  label: string;
+  detail?: string;
+  timestamp: number;
+  tone?: 'info' | 'warning' | 'error' | 'success';
 }
 
 export interface AgentTeamTaskState {
@@ -57,6 +77,7 @@ export interface AgentTeamTaskState {
   durationMs: number;
   duplicateDescription?: boolean;
   writeHeavy?: boolean;
+  events: AgentTeamTaskEventState[];
 }
 
 export interface AgentTeamSummaryState {

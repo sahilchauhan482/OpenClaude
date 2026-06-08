@@ -119,6 +119,8 @@ describe('agent team policy', () => {
     expect(state.tasks[0]?.status).toBe('completed');
     expect(state.tasks[0]?.toolUses).toBe(8);
     expect(state.tasks[0]?.summary).toContain('Replay bug isolated');
+    expect(state.tasks[0]?.events.length).toBeGreaterThanOrEqual(3);
+    expect(state.tasks[0]?.events[0]?.label).toBe('Started');
     expect(state.summaries[0]?.statusCategory).toBe('review_ready');
     expect(state.summaries[0]?.needsAction).toContain('Patch parent conversation binding');
   });

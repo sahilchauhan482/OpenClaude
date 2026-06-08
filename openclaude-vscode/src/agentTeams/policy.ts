@@ -33,6 +33,13 @@ export interface AgentTeamTaskState {
   durationMs: number;
   duplicateDescription?: boolean;
   writeHeavy?: boolean;
+  events: Array<{
+    id: string;
+    label: string;
+    detail?: string;
+    timestamp: number;
+    tone?: 'info' | 'warning' | 'error' | 'success';
+  }>;
 }
 
 export interface AgentTeamSummaryState {
@@ -97,6 +104,74 @@ function deriveProgressNote(summary?: string, lastToolName?: string): string | u
   if (normalized.includes('edit') || normalized.includes('write')) return 'Applying file changes';
   if (normalized.includes('agent')) return 'Coordinating worker tasks';
   return `Using ${lastToolName}`;
+}
+
+function appendTaskEvent(
+  task: AgentTeamTaskState,
+  entry: AgentTeamTaskState['events'][number],
+): AgentTeamTaskState['events'] {
+  const events = task.events.slice();
+  const lastEvent = events[events.length - 1];
+
+  if (
+    lastEvent &&
+    lastEvent.label === entry.label &&
+    (lastEvent.detail ?? '') === (entry.detail ?? '') &&
+    lastEvent.tone === entry.tone
+  ) {
+    events[events.length - 1] = entry;
+    return events;
+  }
+
+  events.push(entry);
+  return events.slice(-12);
+}
+
+function createTaskEvent(
+  label: string,
+  detail?: string,
+  tone: AgentTeamTaskState['events'][number]['tone'] = 'info',
+): AgentTeamTaskState['events'][number] {
+  const timestamp = Date.now();
+  return {
+    id: `${label}-${timestamp}`,
+    label,
+    detail,
+    timestamp,
+    tone,
+  };
+}
+
+function formatProgressEventDetail(params: {
+  summary?: string;
+  description?: string;
+  lastToolName?: string;
+  toolUses?: number;
+  tokenCount?: number;
+  durationMs?: number;
+}): string | undefined {
+  const parts: string[] = [];
+
+  if (params.summary?.trim()) {
+    parts.push(params.summary.trim());
+  }
+  if (params.lastToolName?.trim()) {
+    parts.push(`Last tool: ${params.lastToolName.trim()}`);
+  }
+  if (typeof params.toolUses === 'number' && params.toolUses > 0) {
+    parts.push(`${params.toolUses} operation${params.toolUses !== 1 ? 's' : ''}`);
+  }
+  if (typeof params.tokenCount === 'number' && params.tokenCount > 0) {
+    parts.push(`${params.tokenCount} tokens`);
+  }
+  if (typeof params.durationMs === 'number' && params.durationMs > 0) {
+    parts.push(`${Math.max(1, Math.round(params.durationMs / 1000))}s elapsed`);
+  }
+  if (params.description?.trim() && !parts.some((part) => part === params.description?.trim())) {
+    parts.push(params.description.trim());
+  }
+
+  return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
 function recomputeTaskWarnings(state: AgentTeamBoardState): AgentTeamBoardState {
@@ -206,6 +281,13 @@ export function applyAgentTeamEvent(
       durationMs: 0,
       progressNote: 'Worker started',
       writeHeavy: isWriteHeavyTask(event.description, event.task_type),
+      events: [
+        createTaskEvent(
+          'Started',
+          event.prompt?.trim() || event.description,
+          'info',
+        ),
+      ],
     });
     return recomputeTaskWarnings({
       ...state,
@@ -227,6 +309,21 @@ export function applyAgentTeamEvent(
               lastToolName: event.last_tool_name,
               summary: event.summary,
               progressNote: deriveProgressNote(event.summary, event.last_tool_name),
+              events: appendTaskEvent(
+                task,
+                createTaskEvent(
+                  event.summary?.trim() || event.last_tool_name?.trim() || 'Progress update',
+                  formatProgressEventDetail({
+                    summary: event.summary,
+                    description: event.description,
+                    lastToolName: event.last_tool_name,
+                    toolUses: event.usage.tool_uses,
+                    tokenCount: event.usage.total_tokens,
+                    durationMs: event.usage.duration_ms,
+                  }),
+                  'info',
+                ),
+              ),
             }
           : task,
       ),
@@ -246,6 +343,28 @@ export function applyAgentTeamEvent(
               toolUses: event.usage?.tool_uses ?? task.toolUses,
               tokenCount: event.usage?.total_tokens ?? task.tokenCount,
               durationMs: event.usage?.duration_ms ?? task.durationMs,
+              events: appendTaskEvent(
+                task,
+                createTaskEvent(
+                  event.status === 'failed'
+                    ? 'Failed'
+                    : event.status === 'stopped'
+                      ? 'Stopped'
+                      : 'Completed',
+                  formatProgressEventDetail({
+                    summary: event.summary,
+                    lastToolName: task.lastToolName,
+                    toolUses: event.usage?.tool_uses ?? task.toolUses,
+                    tokenCount: event.usage?.total_tokens ?? task.tokenCount,
+                    durationMs: event.usage?.duration_ms ?? task.durationMs,
+                  }),
+                  event.status === 'failed'
+                    ? 'warning'
+                    : event.status === 'stopped'
+                      ? 'error'
+                      : 'success',
+                ),
+              ),
             }
           : task,
       ),
@@ -302,6 +421,22 @@ export function settleRunningAgentTeamTasks(
             ...task,
             status,
             summary: task.summary || summary,
+            events: appendTaskEvent(
+              task,
+              createTaskEvent(
+                status === 'failed'
+                  ? 'Failed'
+                  : status === 'stopped'
+                    ? 'Stopped'
+                    : 'Completed',
+                task.summary || summary,
+                status === 'failed'
+                  ? 'warning'
+                  : status === 'stopped'
+                    ? 'error'
+                    : 'success',
+              ),
+            ),
           }
         : task,
     ),

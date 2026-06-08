@@ -666,6 +666,13 @@ export interface AgentTeamTaskView {
   durationMs: number;
   duplicateDescription?: boolean;
   writeHeavy?: boolean;
+  events: Array<{
+    id: string;
+    label: string;
+    detail?: string;
+    timestamp: number;
+    tone?: 'info' | 'warning' | 'error' | 'success';
+  }>;
 }
 
 export interface AgentTeamSummaryView {
