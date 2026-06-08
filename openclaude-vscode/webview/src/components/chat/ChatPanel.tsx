@@ -1125,6 +1125,7 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState('');
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const hasDraftContent = inputValue.trim().length > 0 || attachments.length > 0;
 
   // Slash commands
   const { filteredCommands, isLoaded: slashCommandsLoaded } = useSlashCommands();
@@ -1157,7 +1158,7 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
   const doSend = useCallback(() => {
     const text = inputValue.trim();
     if (!text && attachments.length === 0) return;
-    if (isStreaming || isStarting) return;
+    if (isStarting) return;
     onSend(text, attachments);
     setInputValue('');
     setAttachments([]);
@@ -1167,7 +1168,7 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [inputValue, attachments, isStreaming, isStarting, onSend, clearAtMentions]);
+  }, [inputValue, attachments, isStarting, onSend, clearAtMentions]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // If a picker is open, let it handle arrow keys / enter
@@ -1185,8 +1186,8 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
 
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (isStreaming) {
-        // Claude Code: Enter during streaming interrupts the current turn
+      if (isStreaming && !hasDraftContent) {
+        // Only interrupt when there is no draft to send.
         onInterrupt();
       } else {
         doSend();
@@ -1366,8 +1367,8 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
   // Claude Code: textarea is NEVER disabled during streaming — user can type while generating
   // Only disable during initial CLI startup
   const textareaDisabled = isStarting;
-  // Send button disabled only during startup (not streaming — streaming shows stop button)
-  const sendDisabled = isStarting;
+  // During streaming, the button becomes send when a draft exists, otherwise stop.
+  const sendDisabled = isStarting || (!hasDraftContent && !isStreaming);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -1432,17 +1433,17 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
           className="sendButton"
           disabled={sendDisabled}
           onClick={() => {
-            if (isStreaming) {
+            if (isStreaming && !hasDraftContent) {
               onInterrupt();
             } else {
               doSend();
             }
           }}
-          title={isStreaming ? 'Stop generation (Escape)' : 'Send message (Enter)'}
+          title={isStreaming && !hasDraftContent ? 'Stop generation (Escape)' : (isStreaming ? 'Send queued message (Enter)' : 'Send message (Enter)')}
           data-permission-mode={permissionMode}
           style={{ flexShrink: 0, margin: '0 6px 8px 0' }}
         >
-          {isStreaming ? (
+          {isStreaming && !hasDraftContent ? (
             /* Stop icon */
             <svg className="stopIcon" viewBox="0 0 16 16" fill="currentColor">
               <rect x="3" y="3" width="10" height="10" rx="2" />
