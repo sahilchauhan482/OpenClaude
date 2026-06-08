@@ -80,4 +80,90 @@ describe('PermissionHandler', () => {
       handler.handleSetPermissionMode({ mode: 'fullAccess' } as never),
     ).toThrow('Permission mode change rejected: fullAccess');
   });
+
+  it('does not auto-approve interactive tools in full access mode', async () => {
+    const { handler, broadcast } = makeHandler(true);
+    handler.setMode('fullAccess');
+
+    const result = await handler.handleToolRequest({
+      tool_name: 'AskUserQuestion',
+      input: {
+        questions: [
+          {
+            question: 'Which files should we include?',
+            header: 'Files',
+            options: [
+              { label: 'Modified only', description: 'Skip extras' },
+              { label: 'Everything', description: 'Include all files' },
+            ],
+          },
+        ],
+      },
+      tool_use_id: 'tool-use-1',
+    } as never, new AbortController().signal, 'req-1');
+
+    expect(result).toBeTypeOf('symbol');
+    expect(broadcast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'permission_request',
+        requestId: 'req-1',
+        toolName: 'AskUserQuestion',
+      }),
+    );
+  });
+
+  it('uses updatedInput from permission responses when provided', async () => {
+    const { handler } = makeHandler(true);
+    const writeToStdin = vi.fn();
+    handler.setWriteToStdin(writeToStdin);
+
+    await handler.handleToolRequest({
+      tool_name: 'AskUserQuestion',
+      input: {
+        questions: [
+          {
+            question: 'Which files should we include?',
+            header: 'Files',
+            options: [
+              { label: 'Modified only', description: 'Skip extras' },
+              { label: 'Everything', description: 'Include all files' },
+            ],
+          },
+        ],
+      },
+      tool_use_id: 'tool-use-2',
+    } as never, new AbortController().signal, 'req-2');
+
+    handler['handlePermissionResponse']('req-2', true, false, {
+      questions: [
+        {
+          question: 'Which files should we include?',
+          header: 'Files',
+          options: [
+            { label: 'Modified only', description: 'Skip extras' },
+            { label: 'Everything', description: 'Include all files' },
+          ],
+        },
+      ],
+      answers: {
+        'Which files should we include?': 'Modified only',
+      },
+    });
+
+    expect(writeToStdin).toHaveBeenCalledWith({
+      type: 'control_response',
+      response: {
+        subtype: 'success',
+        request_id: 'req-2',
+        response: expect.objectContaining({
+          behavior: 'allow',
+          updatedInput: expect.objectContaining({
+            answers: {
+              'Which files should we include?': 'Modified only',
+            },
+          }),
+        }),
+      },
+    });
+  });
 });

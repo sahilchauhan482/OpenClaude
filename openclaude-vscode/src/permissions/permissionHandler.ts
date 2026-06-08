@@ -27,6 +27,12 @@ const ACCEPT_EDITS_TOOLS = new Set([
   ...FILE_EDIT_TOOLS,
 ]);
 
+/** Interactive tools must still prompt even in full access because they collect user decisions. */
+const ALWAYS_INTERACTIVE_TOOLS = new Set([
+  'AskUserQuestion',
+  'ExitPlanMode',
+]);
+
 /** Callback to write a control_response to the CLI's stdin */
 export type WriteToStdinFn = (message: unknown) => void;
 
@@ -54,6 +60,7 @@ export class PermissionHandler implements vscode.Disposable {
           message.requestId,
           message.allowed,
           message.alwaysAllow ?? false,
+          message.updatedInput as Record<string, unknown> | undefined,
         );
       }),
     );
@@ -194,6 +201,10 @@ export class PermissionHandler implements vscode.Disposable {
   private checkAutoApprove(request: ControlRequestPermission): PermissionResult | null {
     const { tool_name } = request;
 
+    if (ALWAYS_INTERACTIVE_TOOLS.has(tool_name)) {
+      return null;
+    }
+
     // bypassPermissions mode: auto-allow everything
     if (this.currentMode === 'bypassPermissions' || this.currentMode === 'fullAccess') {
       return {
@@ -229,6 +240,7 @@ export class PermissionHandler implements vscode.Disposable {
     requestId: string,
     allowed: boolean,
     alwaysAllow: boolean,
+    updatedInput?: Record<string, unknown>,
   ): void {
     const pending = this.pendingRequests.get(requestId);
     if (!pending) {
@@ -251,7 +263,7 @@ export class PermissionHandler implements vscode.Disposable {
     if (allowed) {
       result = {
         behavior: 'allow',
-        updatedInput: pending.request.input,
+        updatedInput: updatedInput ?? pending.request.input,
         toolUseID: pending.request.tool_use_id,
         decisionClassification: alwaysAllow ? 'user_permanent' : 'user_temporary',
       };

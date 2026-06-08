@@ -125,7 +125,7 @@ function App() {
         permissionRequest={currentRequest}
         permissionQueue={queue}
         pendingPermissionCount={pendingCount}
-        onPermissionAllow={(id) => respond(id, true)}
+        onPermissionAllow={(id, updatedInput) => respond(id, true, false, updatedInput)}
         onPermissionAlwaysAllow={(id) => respond(id, true, true)}
         onPermissionDeny={(id) => respond(id, false)}
       />
@@ -135,7 +135,7 @@ function App() {
         <PermissionDialog
           request={currentRequest}
           pendingCount={pendingCount}
-          onAllow={(id) => respond(id, true)}
+          onAllow={(id, updatedInput) => respond(id, true, false, updatedInput)}
           onAlwaysAllow={(id) => respond(id, true, true)}
           onDeny={(id) => respond(id, false)}
         />

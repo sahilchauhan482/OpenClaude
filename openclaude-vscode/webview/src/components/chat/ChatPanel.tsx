@@ -51,7 +51,7 @@ interface ChatPanelProps {
   permissionRequest?: PermissionRequest | null;
   permissionQueue?: PermissionRequest[];
   pendingPermissionCount?: number;
-  onPermissionAllow?: (requestId: string) => void;
+  onPermissionAllow?: (requestId: string, updatedInput?: Record<string, unknown>) => void;
   onPermissionAlwaysAllow?: (requestId: string) => void;
   onPermissionDeny?: (requestId: string) => void;
 }
@@ -521,7 +521,7 @@ function PermissionRail({
   request: PermissionRequest;
   queue: PermissionRequest[];
   pendingCount: number;
-  onAllow?: (requestId: string) => void;
+  onAllow?: (requestId: string, updatedInput?: Record<string, unknown>) => void;
   onAlwaysAllow?: (requestId: string) => void;
   onDeny?: (requestId: string) => void;
 }) {

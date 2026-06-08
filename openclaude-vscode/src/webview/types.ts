@@ -46,6 +46,7 @@ export interface PermissionResponseMessage {
   requestId: string;
   allowed: boolean;
   alwaysAllow?: boolean;
+  updatedInput?: Record<string, unknown>;
 }
 
 /** User responds to an elicitation request */
