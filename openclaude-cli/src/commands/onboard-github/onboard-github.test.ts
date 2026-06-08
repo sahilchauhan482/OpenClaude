@@ -75,7 +75,7 @@ describe('onboarding auth precedence cleanup', () => {
     expect(env.OPENAI_ORG).toBeUndefined()
     expect(env.OPENAI_PROJECT).toBeUndefined()
     expect(env.OPENAI_ORGANIZATION).toBeUndefined()
-    expect(env.OPENAI_BASE_URL).toBeUndefined()
+    expect(env.OPENAI_BASE_URL).toBe('https://models.github.ai/inference')
     expect(env.OPENAI_API_BASE).toBeUndefined()
 
     expect(env.CLAUDE_CODE_USE_OPENAI).toBeUndefined()
@@ -85,6 +85,9 @@ describe('onboarding auth precedence cleanup', () => {
     const settingsEnv = buildGithubOnboardingSettingsEnv('github:copilot')
     expect(settingsEnv.CLAUDE_CODE_USE_GITHUB).toBe('1')
     expect(settingsEnv.OPENAI_MODEL).toBe('github:copilot')
+    expect(settingsEnv.OPENAI_BASE_URL).toBe(
+      'https://models.github.ai/inference',
+    )
     expect(settingsEnv.OPENAI_API_KEY).toBeUndefined()
     expect(settingsEnv.OPENAI_ORG).toBeUndefined()
     expect(settingsEnv.OPENAI_PROJECT).toBeUndefined()

@@ -18,6 +18,7 @@ import {
 import { getSettingsForSource, updateSettingsForSource } from '../../utils/settings/settings.js'
 
 const DEFAULT_MODEL = 'github:copilot'
+const DEFAULT_BASE_URL = 'https://models.github.ai/inference'
 const FORCE_RELOGIN_ARGS = new Set([
   'force',
   '--force',
@@ -87,11 +88,11 @@ export function buildGithubOnboardingSettingsEnv(
   return {
     CLAUDE_CODE_USE_GITHUB: '1',
     OPENAI_MODEL: model,
+    OPENAI_BASE_URL: DEFAULT_BASE_URL,
     OPENAI_API_KEY: undefined,
     OPENAI_ORG: undefined,
     OPENAI_PROJECT: undefined,
     OPENAI_ORGANIZATION: undefined,
-    OPENAI_BASE_URL: undefined,
     OPENAI_API_BASE: undefined,
     CLAUDE_CODE_USE_OPENAI: undefined,
     CLAUDE_CODE_USE_GEMINI: undefined,
@@ -107,12 +108,12 @@ export function applyGithubOnboardingProcessEnv(
 ): void {
   env.CLAUDE_CODE_USE_GITHUB = '1'
   env.OPENAI_MODEL = model
+  env.OPENAI_BASE_URL = DEFAULT_BASE_URL
 
   delete env.OPENAI_API_KEY
   delete env.OPENAI_ORG
   delete env.OPENAI_PROJECT
   delete env.OPENAI_ORGANIZATION
-  delete env.OPENAI_BASE_URL
   delete env.OPENAI_API_BASE
 
   delete env.CLAUDE_CODE_USE_OPENAI
@@ -216,10 +217,11 @@ function OnboardGithub(props: {
       }
       process.env.CLAUDE_CODE_USE_GITHUB = '1'
       process.env.OPENAI_MODEL = model.trim() || DEFAULT_MODEL
+      process.env.OPENAI_BASE_URL = DEFAULT_BASE_URL
       hydrateGithubModelsTokenFromSecureStorage()
       onChangeAPIKey()
       onDone(
-        'GitHub Copilot onboard complete. Copilot token and OAuth token stored in secure storage (Windows/Linux: ~/.claude/.credentials.json, macOS: Keychain fallback to ~/.claude/.credentials.json); user settings updated. Restart if the model does not switch.',
+        'GitHub Models onboard complete. GitHub token and OAuth token stored in secure storage (Windows/Linux: ~/.claude/.credentials.json, macOS: Keychain fallback to ~/.claude/.credentials.json); user settings updated. Restart if the model does not switch.',
         { display: 'user' },
       )
     },
@@ -281,7 +283,7 @@ function OnboardGithub(props: {
   if (step === 'device-busy') {
     return (
       <Box flexDirection="column" gap={1}>
-        <Text>GitHub Copilot sign-in</Text>
+        <Text>GitHub Models sign-in</Text>
         {deviceHint ? (
           <>
             <Text>
@@ -313,7 +315,7 @@ function OnboardGithub(props: {
 
   return (
     <Box flexDirection="column" gap={1}>
-      <Text bold>GitHub Copilot setup</Text>
+      <Text bold>GitHub Models setup</Text>
       <Text dimColor>
         Stores your token in the OS credential store (macOS Keychain when available)
         and enables CLAUDE_CODE_USE_GITHUB in your user settings - no export

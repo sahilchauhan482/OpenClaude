@@ -3,6 +3,8 @@ import { acquireSharedMutationLock, releaseSharedMutationLock } from '../../test
 
 import {
   DEFAULT_GITHUB_MODELS_API_MODEL,
+  GITHUB_COPILOT_BASE_URL,
+  GITHUB_MODELS_BASE_URL,
   normalizeGithubModelsApiModel,
   resolveProviderRequest,
 } from './providerConfig.js'
@@ -59,6 +61,21 @@ test('resolveProviderRequest applies GitHub normalization when CLAUDE_CODE_USE_G
   const r = resolveProviderRequest({ model: 'github:gpt-4o' })
   expect(r.resolvedModel).toBe('gpt-4o')
   expect(r.transport).toBe('chat_completions')
+})
+
+test('resolveProviderRequest defaults GitHub mode to the GitHub Models endpoint', () => {
+  process.env.CLAUDE_CODE_USE_GITHUB = '1'
+  const r = resolveProviderRequest({ model: 'github:copilot' })
+  expect(r.baseUrl).toBe(GITHUB_MODELS_BASE_URL)
+})
+
+test('resolveProviderRequest preserves an explicit GitHub Copilot endpoint override', () => {
+  process.env.CLAUDE_CODE_USE_GITHUB = '1'
+  const r = resolveProviderRequest({
+    model: 'github:copilot',
+    baseUrl: GITHUB_COPILOT_BASE_URL,
+  })
+  expect(r.baseUrl).toBe(GITHUB_COPILOT_BASE_URL)
 })
 
 test('resolveProviderRequest routes GitHub GPT-5 codex models to responses transport', () => {

@@ -96,8 +96,8 @@ export function detectProvider(modelOverride?: string): { name: string; model: s
   if (useGithub) {
     const model = modelOverride || process.env.OPENAI_MODEL || 'github:copilot'
     const baseUrl =
-      process.env.OPENAI_BASE_URL || 'https://api.githubcopilot.com'
-    return { name: 'GitHub Copilot', model, baseUrl, isLocal: false }
+      process.env.OPENAI_BASE_URL || 'https://models.github.ai/inference'
+    return { name: 'GitHub Models', model, baseUrl, isLocal: false }
   }
 
   if (useOpenAI) {

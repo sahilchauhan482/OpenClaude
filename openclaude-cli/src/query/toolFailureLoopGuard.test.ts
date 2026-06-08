@@ -613,7 +613,7 @@ test('edit-tool mismatch errors normalize to FileWriteError and demand exact rei
     throw new Error('Expected repeated edit mismatch failures to trip')
   }
   expect(decision.errorCategory).toBe('FileWriteError')
-  expect(decision.recoveryHint).toContain('exact current text/whitespace')
+  expect(decision.recoveryHint).toContain('exact current text, whitespace')
   expect(decision.recoveryHint).toContain('smaller exact match')
 })
 
@@ -637,14 +637,14 @@ test('threshold override can be passed directly', () => {
     throw new Error('Expected threshold override to trip the guard')
   }
   expect(getToolFailureLoopThreshold('0')).toBe(0)
-  expect(getToolFailureLoopThreshold('bad')).toBe(3)
+  expect(getToolFailureLoopThreshold('bad')).toBe(5)
 })
 
 test('environment threshold parsing trims valid integers and rejects invalid values', () => {
   expect(getToolFailureLoopThreshold(' 2 ')).toBe(2)
-  expect(getToolFailureLoopThreshold('')).toBe(3)
-  expect(getToolFailureLoopThreshold('-1')).toBe(3)
-  expect(getToolFailureLoopThreshold('1.5')).toBe(3)
+  expect(getToolFailureLoopThreshold('')).toBe(5)
+  expect(getToolFailureLoopThreshold('-1')).toBe(5)
+  expect(getToolFailureLoopThreshold('1.5')).toBe(5)
 })
 
 test('zero threshold disables counting and invalid explicit thresholds fall back to default', () => {
@@ -674,10 +674,22 @@ test('zero threshold disables counting and invalid explicit thresholds fall back
     [toolResult('e', 'Error writing file: failed to replace text')],
     -1,
   )
-  const decision = update(
+  update(
     fallbackState,
     [toolUse('f', 'Edit')],
     [toolResult('f', 'Error writing file: failed to replace text')],
+    -1,
+  )
+  update(
+    fallbackState,
+    [toolUse('g', 'Edit')],
+    [toolResult('g', 'Error writing file: failed to replace text')],
+    -1,
+  )
+  const decision = update(
+    fallbackState,
+    [toolUse('h', 'Edit')],
+    [toolResult('h', 'Error writing file: failed to replace text')],
     -1,
   )
 
@@ -699,16 +711,28 @@ test('unsafe threshold values fall back to the default', () => {
     [toolResult('b', 'Error writing file: failed to replace text')],
     Number.MAX_SAFE_INTEGER + 1,
   )
-  const decision = update(
+  update(
     state,
     [toolUse('c', 'Edit')],
     [toolResult('c', 'Error writing file: failed to replace text')],
     Number.MAX_SAFE_INTEGER + 1,
   )
+  update(
+    state,
+    [toolUse('d', 'Edit')],
+    [toolResult('d', 'Error writing file: failed to replace text')],
+    Number.MAX_SAFE_INTEGER + 1,
+  )
+  const decision = update(
+    state,
+    [toolUse('e', 'Edit')],
+    [toolResult('e', 'Error writing file: failed to replace text')],
+    Number.MAX_SAFE_INTEGER + 1,
+  )
 
   expect(decision.tripped).toBe(true)
   expect(getToolFailureLoopThreshold(String(Number.MAX_SAFE_INTEGER + 1))).toBe(
-    3,
+    5,
   )
 })
 

@@ -35,6 +35,7 @@ export interface ProviderConfig {
   label: string;
   env: Record<string, string>;
   model?: string;
+  fallbackApiKeys?: string[];
   providerOptions: Record<string, string>;
   cliProvider?: string;
 }
@@ -42,6 +43,7 @@ export interface ProviderConfig {
 export interface ProviderUpdateInput {
   providerId: string;
   apiKey?: string;
+  fallbackApiKeys?: string[];
   baseUrl?: string;
   model?: string;
   providerOptions?: Record<string, string>;
@@ -59,6 +61,20 @@ function isNvidiaNimBaseUrl(baseUrl: string | undefined): boolean {
   }
 
   return normalized.startsWith('https://integrate.api.nvidia.com/');
+}
+
+function normalizeFallbackApiKeys(fallbackApiKeys: readonly string[] | undefined): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const key of fallbackApiKeys ?? []) {
+    const trimmed = key.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    normalized.push(trimmed);
+  }
+  return normalized;
 }
 
 // ============================================================================
@@ -94,6 +110,14 @@ const PROVIDER_DEFINITIONS: ProviderDefinition[] = [
     requiresApiKey: true,
     requiresBaseUrl: true,
     supportsModel: true,
+  },
+  {
+    id: 'openrouter',
+    label: 'OpenRouter',
+    requiresApiKey: true,
+    requiresBaseUrl: false,
+    supportsModel: true,
+    defaultBaseUrl: 'https://openrouter.ai/api/v1',
   },
   {
     id: 'codex',
@@ -208,6 +232,11 @@ export class AuthManager {
     const def = PROVIDER_DEFINITIONS.find((p) => p.id === providerId) ?? PROVIDER_DEFINITIONS[0];
     const rememberedProfile = this.settings.getProviderProfile(providerId);
     const apiKey = this.settings.apiKey ?? rememberedProfile?.apiKey;
+    const fallbackApiKeys = normalizeFallbackApiKeys(
+      this.settings.fallbackApiKeys.length > 0
+        ? this.settings.fallbackApiKeys
+        : rememberedProfile?.fallbackApiKeys,
+    );
     const baseUrl = this.settings.baseUrl ?? rememberedProfile?.baseUrl;
     const model = this.settings.selectedModel ?? rememberedProfile?.model;
     const providerOptions = {
@@ -218,8 +247,9 @@ export class AuthManager {
     return {
       id: def.id,
       label: def.label,
-      env: this._buildEnvForProvider(def, apiKey, baseUrl, providerOptions),
+      env: this._buildEnvForProvider(def, apiKey, fallbackApiKeys, baseUrl, providerOptions),
       model,
+      fallbackApiKeys,
       providerOptions,
       cliProvider: this.getCliProviderForProvider(def.id),
     };
@@ -239,6 +269,11 @@ export class AuthManager {
     const def = PROVIDER_DEFINITIONS.find((p) => p.id === providerId) ?? PROVIDER_DEFINITIONS[0];
     const rememberedProfile = this.settings.getProviderProfile(providerId);
     const apiKey = this.settings.apiKey ?? rememberedProfile?.apiKey;
+    const fallbackApiKeys = normalizeFallbackApiKeys(
+      this.settings.fallbackApiKeys.length > 0
+        ? this.settings.fallbackApiKeys
+        : rememberedProfile?.fallbackApiKeys,
+    );
     const baseUrl = this.settings.baseUrl ?? rememberedProfile?.baseUrl;
     const providerOptions = {
       ...(rememberedProfile?.providerOptions ?? {}),
@@ -252,7 +287,7 @@ export class AuthManager {
     }
 
     // Merge provider-specific env vars (provider takes precedence for its own keys)
-    const providerEnv = this._buildEnvForProvider(def, apiKey, baseUrl, providerOptions);
+    const providerEnv = this._buildEnvForProvider(def, apiKey, fallbackApiKeys, baseUrl, providerOptions);
     Object.assign(env, providerEnv);
 
     // Keep the VS Code extension isolated to OpenClaude-owned storage so
@@ -266,6 +301,7 @@ export class AuthManager {
     const previousProviderId = this.settings.selectedProvider;
     const previousProfile: ProviderProfile = {
       apiKey: this.settings.apiKey,
+      fallbackApiKeys: this.settings.fallbackApiKeys,
       baseUrl: this.settings.baseUrl,
       model: this.settings.selectedModel,
       providerOptions: this.settings.providerOptions,
@@ -276,6 +312,9 @@ export class AuthManager {
 
     const rememberedProfile = this.settings.getProviderProfile(input.providerId);
     const nextApiKey = input.apiKey ?? rememberedProfile?.apiKey;
+    const nextFallbackApiKeys = normalizeFallbackApiKeys(
+      input.fallbackApiKeys ?? rememberedProfile?.fallbackApiKeys,
+    );
     const nextBaseUrl = input.baseUrl ?? rememberedProfile?.baseUrl;
     const nextModel = input.providerId === 'codex'
       ? rememberedProfile?.model ?? 'codexplan'
@@ -284,11 +323,13 @@ export class AuthManager {
 
     if (input.providerId === 'codex') {
       await this.settings.setApiKey(undefined);
+      await this.settings.setFallbackApiKeys(undefined);
       await this.settings.setBaseUrl(undefined);
       await this.settings.setModel(nextModel);
       await this.settings.setProviderOptions(rememberedProfile?.providerOptions ?? {});
     } else {
       await this.settings.setApiKey(nextApiKey);
+      await this.settings.setFallbackApiKeys(nextFallbackApiKeys);
       await this.settings.setBaseUrl(nextBaseUrl);
       await this.settings.setModel(nextModel);
       await this.settings.setProviderOptions(nextProviderOptions ?? {});
@@ -296,6 +337,7 @@ export class AuthManager {
 
     await this.settings.setProviderProfile(input.providerId, {
       apiKey: input.providerId === 'codex' ? undefined : nextApiKey,
+      fallbackApiKeys: input.providerId === 'codex' ? undefined : nextFallbackApiKeys,
       baseUrl: input.providerId === 'codex' ? undefined : nextBaseUrl,
       model: nextModel,
       providerOptions: nextProviderOptions ?? {},
@@ -335,6 +377,7 @@ export class AuthManager {
   private _buildEnvForProvider(
     def: ProviderDefinition,
     apiKey: string | undefined,
+    fallbackApiKeys: string[],
     baseUrl: string | undefined,
     providerOptions: Record<string, string>,
   ): Record<string, string> {
@@ -359,8 +402,21 @@ export class AuthManager {
 
       case 'gemini':
         if (apiKey) env['GEMINI_API_KEY'] = apiKey;
+        if (fallbackApiKeys.length > 0) env['GEMINI_FALLBACK_API_KEYS'] = JSON.stringify(fallbackApiKeys);
         if (baseUrl) env['GEMINI_BASE_URL'] = baseUrl;
         env['CLAUDE_CODE_USE_GEMINI'] = '1';
+        break;
+
+      case 'openrouter':
+        if (apiKey) {
+          env['OPENROUTER_API_KEY'] = apiKey;
+          env['OPENAI_API_KEY'] = apiKey;
+        }
+        env['OPENAI_BASE_URL'] = def.defaultBaseUrl!;
+        env['CLAUDE_CODE_USE_OPENAI'] = '1';
+        delete env['OPENAI_AUTH_HEADER'];
+        delete env['OPENAI_AUTH_SCHEME'];
+        delete env['OPENAI_AUTH_HEADER_VALUE'];
         break;
 
       case 'codex':
@@ -434,6 +490,8 @@ export class AuthManager {
       case 'codex-freemodel':
       case 'custom':
         return 'openai';
+      case 'openrouter':
+        return 'openrouter';
       case 'codex':
         return 'codex';
       case 'blackbox':

@@ -24,6 +24,7 @@ const originalEnv = {
   CLAUDE_CODE_USE_GITHUB: process.env.CLAUDE_CODE_USE_GITHUB,
   CLAUDE_CODE_USE_MISTRAL: process.env.CLAUDE_CODE_USE_MISTRAL,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  GEMINI_FALLBACK_API_KEYS: process.env.GEMINI_FALLBACK_API_KEYS,
   GEMINI_MODEL: process.env.GEMINI_MODEL,
   GEMINI_BASE_URL: process.env.GEMINI_BASE_URL,
   GEMINI_AUTH_MODE: process.env.GEMINI_AUTH_MODE,
@@ -67,6 +68,7 @@ function clearEnvForMiniMaxOnlyTest(): void {
   delete process.env.CLAUDE_CODE_PROVIDER_PROFILE_ENV_APPLIED
   delete process.env.CLAUDE_CODE_PROVIDER_PROFILE_ENV_APPLIED_ID
   delete process.env.GEMINI_API_KEY
+  delete process.env.GEMINI_FALLBACK_API_KEYS
   delete process.env.GEMINI_MODEL
   delete process.env.GEMINI_BASE_URL
   delete process.env.GEMINI_AUTH_MODE
@@ -89,6 +91,7 @@ beforeEach(async () => {
   ;(globalThis as Record<string, unknown>).MACRO = { VERSION: 'test-version' }
   process.env.CLAUDE_CODE_USE_GEMINI = '1'
   process.env.GEMINI_API_KEY = 'gemini-test-key'
+  delete process.env.GEMINI_FALLBACK_API_KEYS
   process.env.GEMINI_MODEL = 'gemini-2.0-flash'
   process.env.GEMINI_BASE_URL = 'https://gemini.example/v1beta/openai'
   process.env.GEMINI_AUTH_MODE = 'api-key'
@@ -133,6 +136,7 @@ afterEach(() => {
     restoreEnv('CLAUDE_CODE_USE_GITHUB', originalEnv.CLAUDE_CODE_USE_GITHUB)
     restoreEnv('CLAUDE_CODE_USE_MISTRAL', originalEnv.CLAUDE_CODE_USE_MISTRAL)
     restoreEnv('GEMINI_API_KEY', originalEnv.GEMINI_API_KEY)
+    restoreEnv('GEMINI_FALLBACK_API_KEYS', originalEnv.GEMINI_FALLBACK_API_KEYS)
     restoreEnv('GEMINI_MODEL', originalEnv.GEMINI_MODEL)
     restoreEnv('GEMINI_BASE_URL', originalEnv.GEMINI_BASE_URL)
     restoreEnv('GEMINI_AUTH_MODE', originalEnv.GEMINI_AUTH_MODE)
@@ -291,6 +295,97 @@ test('routes Gemini provider requests through the OpenAI-compatible shim', async
   expect(capturedHeaders?.get('authorization')).toBe('Bearer gemini-test-key')
   expect(capturedBody?.model).toBe('gemini-2.0-flash')
   expect(response).toMatchObject({
+    role: 'assistant',
+    model: 'gemini-2.0-flash',
+  })
+})
+
+test('rotates Gemini fallback API keys on quota errors and keeps the working key active', async () => {
+  const authorizationHeaders: string[] = []
+  process.env.GEMINI_FALLBACK_API_KEYS = JSON.stringify([
+    'gemini-fallback-1',
+    'gemini-fallback-2',
+  ])
+
+  let callCount = 0
+  globalThis.fetch = (async (_input, init) => {
+    callCount += 1
+    const headers = new Headers(init?.headers)
+    authorizationHeaders.push(headers.get('authorization') ?? '')
+
+    if (callCount === 1) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            message: 'Quota exceeded for this API key',
+            status: 'RESOURCE_EXHAUSTED',
+          },
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+    }
+
+    return new Response(
+      JSON.stringify({
+        id: `chatcmpl-gemini-${callCount}`,
+        model: 'gemini-2.0-flash',
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: 'gemini ok',
+            },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: {
+          prompt_tokens: 8,
+          completion_tokens: 3,
+          total_tokens: 11,
+        },
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    )
+  }) as FetchType
+
+  const client = (await getAnthropicClient({
+    maxRetries: 0,
+    model: 'gemini-2.0-flash',
+  })) as unknown as ShimClient
+
+  const firstResponse = await client.beta.messages.create({
+    model: 'gemini-2.0-flash',
+    messages: [{ role: 'user', content: 'hello' }],
+    max_tokens: 64,
+    stream: false,
+  })
+
+  const secondResponse = await client.beta.messages.create({
+    model: 'gemini-2.0-flash',
+    messages: [{ role: 'user', content: 'hello again' }],
+    max_tokens: 64,
+    stream: false,
+  })
+
+  expect(authorizationHeaders).toEqual([
+    'Bearer gemini-test-key',
+    'Bearer gemini-fallback-1',
+    'Bearer gemini-fallback-1',
+  ])
+  expect(firstResponse).toMatchObject({
+    role: 'assistant',
+    model: 'gemini-2.0-flash',
+  })
+  expect(secondResponse).toMatchObject({
     role: 'assistant',
     model: 'gemini-2.0-flash',
   })

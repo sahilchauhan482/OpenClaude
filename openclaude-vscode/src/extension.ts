@@ -282,6 +282,7 @@ export function activate(context: vscode.ExtensionContext) {
     override?: {
       providerId: string;
       apiKey?: string;
+      fallbackApiKeys?: string[];
       baseUrl?: string;
       model?: string;
       providerOptions?: Record<string, string>;
@@ -309,6 +310,7 @@ export function activate(context: vscode.ExtensionContext) {
       })),
       currentProviderId: current.id,
       currentApiKey: override?.apiKey ?? settingsSync.apiKey ?? settingsSync.getProviderProfile(current.id)?.apiKey,
+      currentFallbackApiKeys: override?.fallbackApiKeys ?? settingsSync.fallbackApiKeys ?? settingsSync.getProviderProfile(current.id)?.fallbackApiKeys ?? [],
       currentModel: override?.model ?? current.model,
       currentBaseUrl: override?.baseUrl ?? settingsSync.baseUrl ?? settingsSync.getProviderProfile(current.id)?.baseUrl,
       currentProviderOptions: override?.providerOptions ?? current.providerOptions,
@@ -1894,6 +1896,7 @@ export function activate(context: vscode.ExtensionContext) {
     const msg = message as unknown as {
       providerId: string;
       apiKey?: string;
+      fallbackApiKeys?: string[];
       baseUrl?: string;
       model?: string;
       providerOptions?: Record<string, string>;
@@ -1920,6 +1923,7 @@ export function activate(context: vscode.ExtensionContext) {
     await authManager.updateProvider({
       providerId: msg.providerId,
       apiKey: msg.apiKey,
+      fallbackApiKeys: msg.fallbackApiKeys,
       baseUrl: msg.baseUrl,
       model: msg.providerId === 'codex' ? undefined : savedModel,
       providerOptions: msg.providerOptions,
@@ -2046,6 +2050,7 @@ export function activate(context: vscode.ExtensionContext) {
       })),
       currentProviderId: current.id,
       currentApiKey: settingsSync.apiKey ?? settingsSync.getProviderProfile(current.id)?.apiKey,
+      currentFallbackApiKeys: settingsSync.fallbackApiKeys ?? settingsSync.getProviderProfile(current.id)?.fallbackApiKeys ?? [],
       currentModel: current.model,
       currentBaseUrl: settingsSync.baseUrl ?? settingsSync.getProviderProfile(current.id)?.baseUrl,
       currentProviderOptions: current.providerOptions,

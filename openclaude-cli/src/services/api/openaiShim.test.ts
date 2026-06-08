@@ -463,6 +463,44 @@ test('uses Hicap api-key auth header for the Hicap route', async () => {
   expect(capturedHeaders?.get('authorization')).toBeNull()
 })
 
+test('ignores stale managed custom auth header overrides for OpenRouter routes', async () => {
+  process.env.OPENAI_API_KEY = 'openrouter-live-key'
+  process.env.OPENAI_BASE_URL = 'https://openrouter.ai/api/v1'
+  process.env.OPENAI_AUTH_HEADER = 'api-key'
+  process.env.OPENAI_AUTH_SCHEME = 'raw'
+  let capturedHeaders: Headers | undefined
+
+  globalThis.fetch = (async (_input, init) => {
+    capturedHeaders = new Headers(init?.headers as HeadersInit)
+
+    return new Response(
+      JSON.stringify({
+        id: 'chatcmpl-1',
+        choices: [{ message: { role: 'assistant', content: 'ok' } }],
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    )
+  }) as FetchType
+
+  const client = createOpenAIShimClient({ defaultHeaders: {} }) as OpenAIShimClient
+
+  await client.beta.messages.create({
+    model: 'moonshotai/kimi-k2.6:free',
+    messages: [{ role: 'user', content: 'hello' }],
+    max_tokens: 64,
+    stream: false,
+  })
+
+  expect(capturedHeaders?.get('authorization')).toBe(
+    'Bearer openrouter-live-key',
+  )
+  expect(capturedHeaders?.get('api-key')).toBeNull()
+})
+
 test('defaults Authorization custom auth header to bearer scheme', async () => {
   process.env.OPENAI_API_KEY = 'authorization-key'
   process.env.OPENAI_AUTH_HEADER = 'Authorization'
@@ -749,7 +787,7 @@ test('strips Anthropic-specific headers on GitHub Codex transport requests', asy
   expect(capturedHeaders?.get('x-anthropic-additional-protection')).toBeNull()
   expect(capturedHeaders?.get('x-safe-header')).toBe('keep-me')
   expect(capturedHeaders?.get('authorization')).toBe('Bearer github-test-key')
-  expect(capturedHeaders?.get('editor-plugin-version')).toBe('copilot-chat/0.26.7')
+  expect(capturedHeaders?.get('editor-plugin-version')).toBeNull()
 })
 
 test('strips Anthropic-specific headers on GitHub Codex transport with providerOverride API key', async () => {

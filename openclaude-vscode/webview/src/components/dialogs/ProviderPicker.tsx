@@ -28,11 +28,13 @@ interface ProviderPickerProps {
   providers: ProviderDef[];
   currentProviderId: string;
   currentApiKey?: string;
+  currentFallbackApiKeys?: string[];
   currentModel?: string;
   currentBaseUrl?: string;
   currentProviderOptions?: Record<string, string>;
   providerProfiles?: Record<string, {
     apiKey?: string;
+    fallbackApiKeys?: string[];
     baseUrl?: string;
     model?: string;
     providerOptions?: Record<string, string>;
@@ -41,14 +43,30 @@ interface ProviderPickerProps {
     providerId: string;
     baseUrl?: string;
     model?: string;
+    fallbackApiKeys?: string[];
     providerOptions: Record<string, string>;
   }) => void;
+}
+
+function normalizeFallbackApiKeys(fallbackApiKeys: readonly string[] | undefined): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const key of fallbackApiKeys ?? []) {
+    const trimmed = key.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    normalized.push(trimmed);
+  }
+  return normalized;
 }
 
 export function ProviderPicker({
   providers,
   currentProviderId,
   currentApiKey,
+  currentFallbackApiKeys,
   currentModel,
   currentBaseUrl,
   currentProviderOptions,
@@ -57,6 +75,7 @@ export function ProviderPicker({
 }: ProviderPickerProps) {
   const [selectedId, setSelectedId] = useState(currentProviderId);
   const [apiKey, setApiKey] = useState(currentApiKey ?? '');
+  const [fallbackApiKeys, setFallbackApiKeys] = useState<string[]>(currentFallbackApiKeys ?? []);
   const [baseUrl, setBaseUrl] = useState(currentBaseUrl ?? '');
   const [model, setModel] = useState(currentModel ?? '');
   const [providerOptions, setProviderOptions] = useState<Record<string, string>>(currentProviderOptions ?? {});
@@ -72,6 +91,9 @@ export function ProviderPicker({
     const nextOptionsSource = isCurrentProvider
       ? { ...(rememberedProfile?.providerOptions ?? {}), ...(currentProviderOptions ?? {}) }
       : { ...(rememberedProfile?.providerOptions ?? {}) };
+    const nextFallbackApiKeys = isCurrentProvider
+      ? (currentFallbackApiKeys ?? rememberedProfile?.fallbackApiKeys ?? [])
+      : (rememberedProfile?.fallbackApiKeys ?? []);
     const nextModel = rememberedProfile?.model ?? currentModel ?? '';
 
     setApiKey(
@@ -79,6 +101,7 @@ export function ProviderPicker({
         ? (currentApiKey ?? rememberedProfile?.apiKey ?? '')
         : (rememberedProfile?.apiKey ?? ''),
     );
+    setFallbackApiKeys(nextFallbackApiKeys);
     setBaseUrl(
       isCurrentProvider
         ? (currentBaseUrl ?? rememberedProfile?.baseUrl ?? selectedDef?.defaultBaseUrl ?? '')
@@ -96,7 +119,7 @@ export function ProviderPicker({
       ]),
     ));
     setErrors([]);
-  }, [selectedId, selectedDef, currentProviderId, currentApiKey, currentModel, currentBaseUrl, currentProviderOptions, providerProfiles]);
+  }, [selectedId, selectedDef, currentProviderId, currentApiKey, currentFallbackApiKeys, currentModel, currentBaseUrl, currentProviderOptions, providerProfiles]);
 
   const validate = useCallback((): string[] => {
     const errs: string[] = [];
@@ -126,6 +149,7 @@ export function ProviderPicker({
       type: 'set_provider',
       providerId: selectedId,
       apiKey: apiKey.trim() || undefined,
+      fallbackApiKeys: selectedDef?.id === 'gemini' ? normalizeFallbackApiKeys(fallbackApiKeys) : undefined,
       baseUrl: baseUrl.trim() || undefined,
       model: selectedDef?.id === 'codex' ? undefined : finalModel,
       providerOptions,
@@ -134,12 +158,25 @@ export function ProviderPicker({
       providerId: selectedId,
       baseUrl: baseUrl.trim() || undefined,
       model: selectedDef?.id === 'codex' ? undefined : finalModel,
+      fallbackApiKeys: selectedDef?.id === 'gemini' ? normalizeFallbackApiKeys(fallbackApiKeys) : undefined,
       providerOptions,
     });
-  }, [validate, selectedId, apiKey, baseUrl, model, currentModel, selectedDef, providerOptions, onClose]);
+  }, [validate, selectedId, apiKey, fallbackApiKeys, baseUrl, model, currentModel, selectedDef, providerOptions, onClose]);
 
   const updateProviderOption = useCallback((key: string, value: string) => {
     setProviderOptions((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const updateFallbackApiKey = useCallback((index: number, value: string) => {
+    setFallbackApiKeys((prev) => prev.map((key, keyIndex) => (keyIndex === index ? value : key)));
+  }, []);
+
+  const addFallbackApiKey = useCallback(() => {
+    setFallbackApiKeys((prev) => [...prev, '']);
+  }, []);
+
+  const removeFallbackApiKey = useCallback((index: number) => {
+    setFallbackApiKeys((prev) => prev.filter((_, keyIndex) => keyIndex !== index));
   }, []);
 
   const inputStyle: React.CSSProperties = {
@@ -168,9 +205,10 @@ export function ProviderPicker({
         inset: 0,
         zIndex: 100,
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'center',
         background: 'rgba(0,0,0,0.4)',
+        overflowY: 'auto',
+        padding: '24px 16px',
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
@@ -180,109 +218,163 @@ export function ProviderPicker({
           border: '1px solid var(--vscode-panel-border)',
           borderRadius: 6,
           padding: 20,
-          width: 360,
-          maxWidth: '90vw',
+          width: 420,
+          maxWidth: 'min(92vw, 420px)',
+          maxHeight: 'calc(100vh - 48px)',
           display: 'flex',
           flexDirection: 'column',
           gap: 14,
+          overflow: 'hidden',
+          margin: 'auto 0',
         }}
       >
         <div style={{ fontSize: 13, fontWeight: 600 }}>Select Provider</div>
 
-        {/* Provider list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {providers.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedId(p.id)}
-              style={{
-                textAlign: 'left',
-                padding: '6px 10px',
-                borderRadius: 4,
-                border: selectedId === p.id
-                  ? '1px solid var(--vscode-focusBorder)'
-                  : '1px solid transparent',
-                background: selectedId === p.id
-                  ? 'var(--vscode-list-activeSelectionBackground)'
-                  : 'transparent',
-                color: selectedId === p.id
-                  ? 'var(--vscode-list-activeSelectionForeground)'
-                  : 'var(--vscode-foreground)',
-                cursor: 'pointer',
-                fontSize: 12,
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Fields */}
-        {selectedDef?.requiresApiKey && (
-          <div>
-            <label style={labelStyle}>API Key</label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Enter API key..."
-              style={inputStyle}
-            />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', paddingRight: 4 }}>
+          {/* Provider list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: '34vh', overflowY: 'auto', paddingRight: 2 }}>
+            {providers.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedId(p.id)}
+                style={{
+                  textAlign: 'left',
+                  padding: '6px 10px',
+                  borderRadius: 4,
+                  border: selectedId === p.id
+                    ? '1px solid var(--vscode-focusBorder)'
+                    : '1px solid transparent',
+                  background: selectedId === p.id
+                    ? 'var(--vscode-list-activeSelectionBackground)'
+                    : 'transparent',
+                  color: selectedId === p.id
+                    ? 'var(--vscode-list-activeSelectionForeground)'
+                    : 'var(--vscode-foreground)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
-        )}
 
-        {(selectedDef?.requiresBaseUrl || selectedDef?.defaultBaseUrl) && (
-          <div>
-            <label style={labelStyle}>Base URL{selectedDef.requiresBaseUrl ? '' : ' (optional)'}</label>
-            <input
-              type="text"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder={selectedDef.defaultBaseUrl ?? 'https://...'}
-              style={inputStyle}
-            />
-          </div>
-        )}
-
-        {(selectedDef?.fields ?? []).map((field) => (
-          <div key={field.id}>
-            <label style={labelStyle}>
-              {field.label}{field.required ? '' : ' (optional)'}
-            </label>
-            <input
-              type={field.secret ? 'password' : 'text'}
-              value={providerOptions[field.id] ?? field.defaultValue ?? ''}
-              onChange={(e) => updateProviderOption(field.id, e.target.value)}
-              placeholder={field.placeholder ?? ''}
-              style={inputStyle}
-            />
-            {field.description && (
-              <div style={{ fontSize: 10, color: 'var(--vscode-descriptionForeground)', marginTop: 3 }}>
-                {field.description}
+          {/* Fields */}
+          {selectedDef?.requiresApiKey && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>API Key</label>
+                {selectedDef.id === 'gemini' && (
+                  <button
+                    type="button"
+                    onClick={addFallbackApiKey}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: 11,
+                      background: 'transparent',
+                      border: '1px solid var(--vscode-button-border, var(--vscode-panel-border))',
+                      color: 'var(--vscode-foreground)',
+                      borderRadius: 3,
+                      cursor: 'pointer',
+                    }}
+                    title="Add Gemini fallback key"
+                  >
+                    + Add fallback
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Enter API key..."
+                style={inputStyle}
+              />
+              {selectedDef.id === 'gemini' && fallbackApiKeys.map((fallbackKey, index) => (
+                <div key={`${selectedDef.id}-fallback-${index}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>Fallback Key {index + 1}</label>
+                    <button
+                      type="button"
+                      onClick={() => removeFallbackApiKey(index)}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: 11,
+                        background: 'transparent',
+                        border: '1px solid var(--vscode-button-border, var(--vscode-panel-border))',
+                        color: 'var(--vscode-foreground)',
+                        borderRadius: 3,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <input
+                    type="password"
+                    value={fallbackKey}
+                    onChange={(e) => updateFallbackApiKey(index, e.target.value)}
+                    placeholder={`Fallback key ${index + 1}`}
+                    style={inputStyle}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
-        {selectedDef?.supportsModel && selectedDef?.id !== 'codex' && (
-          <div>
-            <label style={labelStyle}>Model (optional)</label>
-            <input
-              type="text"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder={selectedDef?.id === 'blackbox' ? 'minimax-m2 or moonshotai/kimi-k2.6' : 'e.g. gpt-4o, llama3, gemini-1.5-pro'}
-              style={inputStyle}
-            />
-          </div>
-        )}
+          {(selectedDef?.requiresBaseUrl || selectedDef?.defaultBaseUrl) && (
+            <div>
+              <label style={labelStyle}>Base URL{selectedDef.requiresBaseUrl ? '' : ' (optional)'}</label>
+              <input
+                type="text"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder={selectedDef.defaultBaseUrl ?? 'https://...'}
+                style={inputStyle}
+              />
+            </div>
+          )}
 
-        {/* Errors */}
-        {errors.length > 0 && (
-          <div style={{ fontSize: 11, color: 'var(--vscode-errorForeground)' }}>
-            {errors.map((e, i) => <div key={i}>{e}</div>)}
-          </div>
-        )}
+          {(selectedDef?.fields ?? []).map((field) => (
+            <div key={field.id}>
+              <label style={labelStyle}>
+                {field.label}{field.required ? '' : ' (optional)'}
+              </label>
+              <input
+                type={field.secret ? 'password' : 'text'}
+                value={providerOptions[field.id] ?? field.defaultValue ?? ''}
+                onChange={(e) => updateProviderOption(field.id, e.target.value)}
+                placeholder={field.placeholder ?? ''}
+                style={inputStyle}
+              />
+              {field.description && (
+                <div style={{ fontSize: 10, color: 'var(--vscode-descriptionForeground)', marginTop: 3 }}>
+                  {field.description}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {selectedDef?.supportsModel && selectedDef?.id !== 'codex' && (
+            <div>
+              <label style={labelStyle}>Model (optional)</label>
+              <input
+                type="text"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder={selectedDef?.id === 'blackbox' ? 'minimax-m2 or moonshotai/kimi-k2.6' : 'e.g. gpt-4o, llama3, gemini-1.5-pro'}
+                style={inputStyle}
+              />
+            </div>
+          )}
+
+          {/* Errors */}
+          {errors.length > 0 && (
+            <div style={{ fontSize: 11, color: 'var(--vscode-errorForeground)' }}>
+              {errors.map((e, i) => <div key={i}>{e}</div>)}
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

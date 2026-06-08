@@ -1007,6 +1007,13 @@ export function getAssistantMessageFromError(
       })
     }
 
+    if (getAPIProvider() !== 'firstParty') {
+      return createAssistantAPIErrorMessage({
+        error: 'authentication_failed',
+        content: `${API_ERROR_MESSAGE_PREFIX}: ${error.message}. Verify your provider API key, base URL, and auth header settings.`,
+      })
+    }
+
     return createAssistantAPIErrorMessage({
       error: 'authentication_failed',
       content: getIsNonInteractiveSession()

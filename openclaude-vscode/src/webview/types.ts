@@ -222,6 +222,7 @@ export interface SetProviderMessage {
   type: 'set_provider';
   providerId: string;
   apiKey?: string;
+  fallbackApiKeys?: string[];
   baseUrl?: string;
   model?: string;
   providerOptions?: Record<string, string>;
@@ -609,11 +610,13 @@ export interface ProviderStateMessage {
   providers: ProviderDefinitionInfo[];
   currentProviderId: string;
   currentApiKey?: string;
+  currentFallbackApiKeys?: string[];
   currentModel?: string;
   currentBaseUrl?: string;
   currentProviderOptions?: Record<string, string>;
   providerProfiles?: Record<string, {
     apiKey?: string;
+    fallbackApiKeys?: string[];
     baseUrl?: string;
     model?: string;
     providerOptions?: Record<string, string>;

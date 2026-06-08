@@ -95,6 +95,7 @@ type SecretValueSource = Partial<{
   OPENAI_AUTH_HEADER_VALUE: string
   CODEX_API_KEY: string
   GEMINI_API_KEY: string
+  GEMINI_FALLBACK_API_KEYS: string
   GOOGLE_API_KEY: string
   GEMINI_ACCESS_TOKEN: string
   MISTRAL_API_KEY: string
@@ -245,6 +246,90 @@ function redactUrlsInMessage(message: string): string {
 
 function sleepMs(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function normalizeGeminiApiKeys(apiKeys: readonly string[]): string[] {
+  const seen = new Set<string>()
+  const normalized: string[] = []
+
+  for (const apiKey of apiKeys) {
+    const trimmed = apiKey.trim()
+    if (!trimmed || seen.has(trimmed)) {
+      continue
+    }
+    seen.add(trimmed)
+    normalized.push(trimmed)
+  }
+
+  return normalized
+}
+
+function parseGeminiFallbackApiKeys(rawValue: string | undefined): string[] {
+  const trimmed = rawValue?.trim()
+  if (!trimmed) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (Array.isArray(parsed)) {
+      return normalizeGeminiApiKeys(
+        parsed.filter((value): value is string => typeof value === 'string'),
+      )
+    }
+  } catch {
+    // Allow manual env setup as comma/newline-separated values.
+  }
+
+  return normalizeGeminiApiKeys(trimmed.split(/[\r\n,]+/))
+}
+
+function getGeminiApiKeyCandidates(
+  primaryApiKey: string | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  return normalizeGeminiApiKeys([
+    primaryApiKey ?? '',
+    ...parseGeminiFallbackApiKeys(env.GEMINI_FALLBACK_API_KEYS),
+  ])
+}
+
+function isGeminiFallbackEligibleHttpFailure(options: {
+  failure: ReturnType<typeof classifyOpenAIHttpFailure>
+  status: number
+  body: string
+}): boolean {
+  if (
+    options.failure.category === 'rate_limited' ||
+    options.failure.category === 'auth_invalid'
+  ) {
+    return true
+  }
+
+  if (
+    options.status !== 400 &&
+    options.status !== 403 &&
+    options.status !== 429
+  ) {
+    return false
+  }
+
+  const lowerBody = options.body.toLowerCase()
+  return (
+    lowerBody.includes('quota') ||
+    lowerBody.includes('resource_exhausted') ||
+    lowerBody.includes('rate limit') ||
+    lowerBody.includes('rate_limit') ||
+    lowerBody.includes('too many requests') ||
+    lowerBody.includes('api key') ||
+    lowerBody.includes('api_key') ||
+    lowerBody.includes('invalid key') ||
+    lowerBody.includes('key invalid') ||
+    lowerBody.includes('key not valid') ||
+    lowerBody.includes('permission denied') ||
+    lowerBody.includes('billing') ||
+    lowerBody.includes('exceeded your current quota')
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -1824,6 +1909,7 @@ class OpenAIShimMessages {
   private defaultHeaders: Record<string, string>
   private reasoningEffort?: 'low' | 'medium' | 'high' | 'xhigh'
   private providerOverride?: { model: string; baseURL: string; apiKey: string }
+  private activeGeminiApiKeyIndex = 0
 
   constructor(defaultHeaders: Record<string, string>, reasoningEffort?: 'low' | 'medium' | 'high' | 'xhigh', providerOverride?: { model: string; baseURL: string; apiKey: string }) {
     this.defaultHeaders = filterAnthropicHeaders(defaultHeaders)
@@ -2395,7 +2481,7 @@ class OpenAIShimMessages {
       return geminiBody
     }
 
-    const headers: Record<string, string> = {
+    const baseHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       ...filterAnthropicHeaders(shimConfig.headers),
       ...this.defaultHeaders,
@@ -2426,12 +2512,50 @@ class OpenAIShimMessages {
       process.env.OPENAI_API_KEY ??
       xaiOAuthToken ??
       ''
+    const geminiApiKeys = isGemini
+      ? getGeminiApiKeyCandidates(
+          this.providerOverride?.apiKey ??
+            process.env.GEMINI_API_KEY ??
+            process.env.GOOGLE_API_KEY,
+          process.env,
+        )
+      : []
+    let activeGeminiApiKeyIndex = geminiApiKeys.length > 0
+      ? Math.min(this.activeGeminiApiKeyIndex, geminiApiKeys.length - 1)
+      : -1
+    const attemptedGeminiApiKeyIndices = new Set<number>()
+    if (activeGeminiApiKeyIndex >= 0) {
+      attemptedGeminiApiKeyIndices.add(activeGeminiApiKeyIndex)
+    }
     const configuredAuthHeaderValue = process.env.OPENAI_AUTH_HEADER_VALUE?.trim()
     const customAuthHeader = process.env.OPENAI_AUTH_HEADER?.trim()
     const hasCustomAuthHeader = Boolean(
       customAuthHeader &&
       /^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/.test(customAuthHeader),
     )
+    const normalizedCustomAuthHeader = customAuthHeader?.toLowerCase()
+    const routeDefaultAuthHeaderName =
+      shimConfig.defaultAuthHeader?.name?.toLowerCase()
+    const routeDefaultAuthScheme = shimConfig.defaultAuthHeader?.scheme
+    const defaultCustomAuthScheme =
+      normalizedCustomAuthHeader === 'authorization' ? 'bearer' : 'raw'
+    const customAuthScheme =
+      process.env.OPENAI_AUTH_SCHEME === 'raw' ||
+      process.env.OPENAI_AUTH_SCHEME === 'bearer'
+        ? process.env.OPENAI_AUTH_SCHEME
+        : defaultCustomAuthScheme
+    const shouldIgnoreManagedCustomAuthHeader =
+      Boolean(
+        routeDefaultAuthHeaderName &&
+        routeDefaultAuthScheme &&
+        normalizedCustomAuthHeader &&
+        hasCustomAuthHeader &&
+        (normalizedCustomAuthHeader === 'authorization' ||
+          normalizedCustomAuthHeader === 'x-api-key' ||
+          normalizedCustomAuthHeader === 'api-key') &&
+        (normalizedCustomAuthHeader !== routeDefaultAuthHeaderName ||
+          customAuthScheme !== routeDefaultAuthScheme),
+      )
     const authValue = hasCustomAuthHeader
       ? configuredAuthHeaderValue || apiKey
       : apiKey
@@ -2451,56 +2575,71 @@ class OpenAIShimMessages {
         request.baseUrl.toLowerCase().includes('bankr')
     } catch { /* malformed URL — not Bankr */ }
 
-    if (authValue) {
-      if (hasCustomAuthHeader && customAuthHeader) {
-        const defaultCustomAuthScheme =
-          customAuthHeader.toLowerCase() === 'authorization' ? 'bearer' : 'raw'
-        const customAuthScheme =
-          process.env.OPENAI_AUTH_SCHEME === 'raw' ||
-          process.env.OPENAI_AUTH_SCHEME === 'bearer'
-            ? process.env.OPENAI_AUTH_SCHEME
-            : defaultCustomAuthScheme
-        headers[customAuthHeader] =
-          customAuthScheme === 'bearer'
-            ? `Bearer ${authValue}`
-            : authValue
-      } else if (isAzure) {
-        // Azure uses api-key header instead of Bearer token
-        headers['api-key'] = authValue
-      } else if (isBankr) {
-        // Bankr uses X-API-Key header instead of Bearer token
-        headers['X-API-Key'] = authValue
-      } else if (shimConfig.defaultAuthHeader?.name) {
-        headers[shimConfig.defaultAuthHeader.name] =
-          shimConfig.defaultAuthHeader.scheme === 'bearer'
-            ? `Bearer ${authValue}`
-            : authValue
-      } else {
-        headers.Authorization = `Bearer ${authValue}`
+    const buildRequestHeaders = async (
+      geminiApiKeyOverride?: string,
+    ): Promise<Record<string, string>> => {
+      const headers: Record<string, string> = {
+        ...baseHeaders,
       }
-    } else if (isGemini) {
-      const geminiCredential = await resolveGeminiCredential(process.env)
-      if (geminiCredential.kind !== 'none') {
-        headers.Authorization = `Bearer ${geminiCredential.credential}`
-        if (geminiCredential.kind !== 'api-key' && 'projectId' in geminiCredential && geminiCredential.projectId) {
-          headers['x-goog-user-project'] = geminiCredential.projectId
+      const effectiveApiKey = geminiApiKeyOverride ?? apiKey
+      const authValue = hasCustomAuthHeader
+        ? configuredAuthHeaderValue || effectiveApiKey
+        : effectiveApiKey
+
+      if (authValue) {
+        // Known routes can advertise their canonical auth header. When a saved
+        // custom profile carries a stale managed header (for example `api-key`
+        // against OpenRouter), prefer the route default so the request still
+        // authenticates instead of sending a misleading 401/login failure.
+        if (
+          hasCustomAuthHeader &&
+          customAuthHeader &&
+          !shouldIgnoreManagedCustomAuthHeader
+        ) {
+          headers[customAuthHeader] =
+            customAuthScheme === 'bearer'
+              ? `Bearer ${authValue}`
+              : authValue
+        } else if (isAzure) {
+          // Azure uses api-key header instead of Bearer token
+          headers['api-key'] = authValue
+        } else if (isBankr) {
+          // Bankr uses X-API-Key header instead of Bearer token
+          headers['X-API-Key'] = authValue
+        } else if (shimConfig.defaultAuthHeader?.name) {
+          headers[shimConfig.defaultAuthHeader.name] =
+            shimConfig.defaultAuthHeader.scheme === 'bearer'
+              ? `Bearer ${authValue}`
+              : authValue
+        } else {
+          headers.Authorization = `Bearer ${authValue}`
+        }
+      } else if (isGemini) {
+        const geminiCredential = await resolveGeminiCredential(process.env)
+        if (geminiCredential.kind !== 'none') {
+          headers.Authorization = `Bearer ${geminiCredential.credential}`
+          if (geminiCredential.kind !== 'api-key' && 'projectId' in geminiCredential && geminiCredential.projectId) {
+            headers['x-goog-user-project'] = geminiCredential.projectId
+          }
         }
       }
-    }
 
-    if (isGithubCopilot) {
-      Object.assign(headers, COPILOT_HEADERS)
-    } else if (isGithubModels) {
-      headers['Accept'] = 'application/vnd.github+json'
-      headers['X-GitHub-Api-Version'] = '2022-11-28'
-    }
+      if (isGithubCopilot) {
+        Object.assign(headers, COPILOT_HEADERS)
+      } else if (isGithubModels) {
+        headers['Accept'] = 'application/vnd.github+json'
+        headers['X-GitHub-Api-Version'] = '2022-11-28'
+      }
 
-    // xAI / Grok prompt caching. Pinning the session id via x-grok-conv-id
-    // routes follow-up requests to the same backend so xAI can reuse the
-    // cached system prompt and conversation history. Mirrors the Hermes
-    // implementation (RELEASE_v0.8.0 PR #5604).
-    if (isXaiRoute) {
-      headers['x-grok-conv-id'] ??= getSessionId()
+      // xAI / Grok prompt caching. Pinning the session id via x-grok-conv-id
+      // routes follow-up requests to the same backend so xAI can reuse the
+      // cached system prompt and conversation history. Mirrors the Hermes
+      // implementation (RELEASE_v0.8.0 PR #5604).
+      if (isXaiRoute) {
+        headers['x-grok-conv-id'] ??= getSessionId()
+      }
+
+      return headers
     }
 
     const buildChatCompletionsUrl = (baseUrl: string): string => {
@@ -2594,6 +2733,12 @@ class OpenAIShimMessages {
       serializedBody = serializeBody()
     }
 
+    let headers = await buildRequestHeaders(
+      activeGeminiApiKeyIndex >= 0
+        ? geminiApiKeys[activeGeminiApiKeyIndex]
+        : undefined,
+    )
+
     const buildFetchInit = () => ({
       method: 'POST' as const,
       headers,
@@ -2604,7 +2749,43 @@ class OpenAIShimMessages {
     const maxSelfHealAttempts = isLocal
       ? localRetryBaseUrls.length + 1
       : 0
-    const maxAttempts = (isGithub ? GITHUB_429_MAX_RETRIES : 1) + maxSelfHealAttempts
+    const maxGeminiFallbackAttempts = isGemini
+      ? Math.max(0, geminiApiKeys.length - 1)
+      : 0
+    const maxAttempts =
+      (isGithub ? GITHUB_429_MAX_RETRIES : 1) +
+      maxSelfHealAttempts +
+      maxGeminiFallbackAttempts
+
+    const promoteNextGeminiApiKey = async (
+      reason: 'rate_limited' | 'auth_invalid' | 'quota_or_key_error',
+      failureBody: string,
+    ): Promise<boolean> => {
+      if (!isGemini || geminiApiKeys.length < 2) {
+        return false
+      }
+
+      for (let offset = 1; offset <= geminiApiKeys.length; offset++) {
+        const candidateIndex =
+          ((activeGeminiApiKeyIndex < 0 ? 0 : activeGeminiApiKeyIndex) + offset) %
+          geminiApiKeys.length
+        if (attemptedGeminiApiKeyIndices.has(candidateIndex)) {
+          continue
+        }
+
+        activeGeminiApiKeyIndex = candidateIndex
+        attemptedGeminiApiKeyIndices.add(candidateIndex)
+        headers = await buildRequestHeaders(geminiApiKeys[candidateIndex])
+
+        logForDebugging(
+          `[OpenAIShim] gemini fallback retry reason=${reason} key=${candidateIndex + 1}/${geminiApiKeys.length} url=${redactUrlForDiagnostics(requestUrl)} model=${request.resolvedModel} message=${redactUrlsInMessage(failureBody).slice(0, 240)}`,
+          { level: 'warn' },
+        )
+        return true
+      }
+
+      return false
+    }
 
     const throwClassifiedTransportError = (
       error: unknown,
@@ -2736,6 +2917,9 @@ class OpenAIShimMessages {
             tokensOut = data.usage?.completion_tokens ?? 0
           } catch { /* ignore */ }
         }
+        if (activeGeminiApiKeyIndex >= 0) {
+          this.activeGeminiApiKeyIndex = activeGeminiApiKeyIndex
+        }
         logApiCallEnd(correlationId, startTime, request.resolvedModel, 'success', tokensIn, tokensOut, false)
         return response
       }
@@ -2803,7 +2987,26 @@ class OpenAIShimMessages {
       const failure = classifyOpenAIHttpFailure({
         status: response.status,
         body: errorBody,
+        url: requestUrl,
       })
+
+      if (
+        isGeminiFallbackEligibleHttpFailure({
+          failure,
+          status: response.status,
+          body: errorBody,
+        }) &&
+        await promoteNextGeminiApiKey(
+          failure.category === 'rate_limited'
+            ? 'rate_limited'
+            : failure.category === 'auth_invalid'
+              ? 'auth_invalid'
+              : 'quota_or_key_error',
+          errorBody,
+        )
+      ) {
+        continue
+      }
 
       if (
         isLocal &&

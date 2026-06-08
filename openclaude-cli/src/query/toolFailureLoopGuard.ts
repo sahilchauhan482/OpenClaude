@@ -2,7 +2,7 @@ import type { ToolUseBlock } from '@anthropic-ai/sdk/resources/index.mjs'
 
 import type { AttachmentMessage, UserMessage } from '../types/message.js'
 
-const DEFAULT_TOOL_FAILURE_LOOP_THRESHOLD = 3
+const DEFAULT_TOOL_FAILURE_LOOP_THRESHOLD = 5
 const MAX_FALLBACK_CATEGORY_LENGTH = 120
 
 export type ToolFailureLoopGuardState = {
@@ -551,7 +551,7 @@ function getCategoryRecoveryStrategy(errorCategory: string): string {
     case 'RateLimitError':
       return 'Verify quota, credit balance, rate-limit resets, and whether a fallback provider or smaller request is needed.'
     case 'FileWriteError':
-      return 'Read the target file again, capture the exact current text/whitespace, and avoid repeating the same edit payload. If an Edit failed on a large block, retry with a smaller exact match or a verified full-file rewrite only after inspection.'
+      return 'You MUST read the target file again to capture the exact current text, whitespace, and line endings before attempting another edit. Avoid repeating the same edit payload; if a block edit failed, try a smaller exact match or a full-file rewrite only after reading.'
     default:
       return 'Inspect the previous tool output carefully and avoid retrying the same failing action unchanged.'
   }

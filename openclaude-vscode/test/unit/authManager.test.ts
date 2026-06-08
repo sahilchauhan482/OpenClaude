@@ -10,6 +10,7 @@ function makeSettings(overrides: Partial<SettingsSync> = {}): SettingsSync {
     selectedProvider: overrides.selectedProvider ?? 'anthropic',
     selectedModel: overrides.selectedModel,
     apiKey: overrides.apiKey,
+    fallbackApiKeys: ((overrides as { fallbackApiKeys?: string[] }).fallbackApiKeys) ?? [],
     baseUrl: overrides.baseUrl,
     providerOptions: overrides.providerOptions ?? {},
     environmentVariables: overrides.environmentVariables ?? [],
@@ -25,6 +26,9 @@ function makeSettings(overrides: Partial<SettingsSync> = {}): SettingsSync {
     },
     get apiKey() {
       return state.apiKey;
+    },
+    get fallbackApiKeys() {
+      return state.fallbackApiKeys;
     },
     get baseUrl() {
       return state.baseUrl;
@@ -47,6 +51,9 @@ function makeSettings(overrides: Partial<SettingsSync> = {}): SettingsSync {
     setApiKey: vi.fn(async (apiKey: string | undefined) => {
       state.apiKey = apiKey;
     }),
+    setFallbackApiKeys: vi.fn(async (fallbackApiKeys: string[] | undefined) => {
+      state.fallbackApiKeys = fallbackApiKeys ?? [];
+    }),
     setBaseUrl: vi.fn(async (baseUrl: string | undefined) => {
       state.baseUrl = baseUrl;
     }),
@@ -60,6 +67,7 @@ function makeSettings(overrides: Partial<SettingsSync> = {}): SettingsSync {
           ...state.providerProfiles,
           [providerId]: {
             apiKey: profile.apiKey,
+            fallbackApiKeys: profile.fallbackApiKeys ?? [],
             baseUrl: profile.baseUrl,
             model: profile.model,
             providerOptions: profile.providerOptions ?? {},
@@ -84,6 +92,7 @@ describe('AuthManager', () => {
       const ids = providers.map((p) => p.id);
       expect(ids).toContain('anthropic');
       expect(ids).toContain('openai');
+      expect(ids).toContain('openrouter');
       expect(ids).toContain('ollama');
       expect(ids).toContain('gemini');
       expect(ids).toContain('vertex');
@@ -144,10 +153,12 @@ describe('AuthManager', () => {
       const manager = new AuthManager(makeSettings({
         selectedProvider: 'gemini',
         apiKey: 'gemini-key',
+        fallbackApiKeys: ['gemini-fallback-1', 'gemini-fallback-2'],
         baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
       }));
       const env = manager.buildProcessEnv();
       expect(env['GEMINI_API_KEY']).toBe('gemini-key');
+      expect(env['GEMINI_FALLBACK_API_KEYS']).toBe(JSON.stringify(['gemini-fallback-1', 'gemini-fallback-2']));
       expect(env['GEMINI_BASE_URL']).toBe('https://generativelanguage.googleapis.com/v1beta');
       expect(env['CLAUDE_CODE_USE_GEMINI']).toBe('1');
       expect(env['CLAUDE_CODE_USE_OPENAI']).toBeUndefined();
@@ -188,6 +199,21 @@ describe('AuthManager', () => {
     }));
     const env = manager.buildProcessEnv();
     expect(env['CLAUDE_CONFIG_DIR']).toBe(path.join(os.homedir(), '.openclaude'));
+  });
+
+  it('sets OpenRouter env and clears stale custom auth overrides', () => {
+    const manager = new AuthManager(makeSettings({
+      selectedProvider: 'openrouter',
+      apiKey: 'sk-or-test',
+    }));
+    const env = manager.buildProcessEnv();
+    expect(env['OPENROUTER_API_KEY']).toBe('sk-or-test');
+    expect(env['OPENAI_API_KEY']).toBe('sk-or-test');
+    expect(env['OPENAI_BASE_URL']).toBe('https://openrouter.ai/api/v1');
+    expect(env['CLAUDE_CODE_USE_OPENAI']).toBe('1');
+    expect(env['OPENAI_AUTH_HEADER']).toBeUndefined();
+    expect(env['OPENAI_AUTH_SCHEME']).toBeUndefined();
+    expect(env['OPENAI_AUTH_HEADER_VALUE']).toBeUndefined();
   });
 
   describe('buildProcessEnv freemodel', () => {
@@ -369,6 +395,7 @@ describe('AuthManager', () => {
     it('passes through explicit non-Codex providers', () => {
       expect(new AuthManager(makeSettings({ selectedProvider: 'gemini' })).getCliProvider()).toBe('gemini');
       expect(new AuthManager(makeSettings({ selectedProvider: 'vertex' })).getCliProvider()).toBe('gemini');
+      expect(new AuthManager(makeSettings({ selectedProvider: 'openrouter' })).getCliProvider()).toBe('openrouter');
       expect(new AuthManager(makeSettings({ selectedProvider: 'custom' })).getCliProvider()).toBe('openai');
     });
 
@@ -428,6 +455,7 @@ describe('AuthManager', () => {
 
       expect(settings.getProviderProfile('anthropic')).toEqual({
         apiKey: 'anthropic-key',
+        fallbackApiKeys: [],
         baseUrl: 'https://anthropic.example.com',
         model: 'claude-3.5-sonnet',
         providerOptions: { profile: 'anthropic' },
@@ -453,6 +481,7 @@ describe('AuthManager', () => {
         providerProfiles: {
           gemini: {
             apiKey: 'gemini-key',
+            fallbackApiKeys: ['gemini-fallback-1'],
             baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
             model: 'gemma-4-31b-it',
             providerOptions: { vertexProjectId: 'demo-project' },
@@ -464,8 +493,10 @@ describe('AuthManager', () => {
       const current = manager.getCurrentProvider();
 
       expect(current.env['GEMINI_API_KEY']).toBe('gemini-key');
+      expect(current.env['GEMINI_FALLBACK_API_KEYS']).toBe(JSON.stringify(['gemini-fallback-1']));
       expect(current.env['GEMINI_BASE_URL']).toBe('https://generativelanguage.googleapis.com/v1beta');
       expect(current.model).toBe('gemma-4-31b-it');
+      expect(current.fallbackApiKeys).toEqual(['gemini-fallback-1']);
       expect(current.providerOptions).toEqual({ vertexProjectId: 'demo-project' });
     });
 

@@ -32,6 +32,7 @@ const BUILTIN_PROVIDERS: ProviderDef[] = [
   { id: 'openai', label: 'OpenAI', requiresApiKey: true, requiresBaseUrl: false, supportsModel: true, defaultBaseUrl: 'https://api.openai.com/v1' },
   { id: 'gemini', label: 'Google Gemini', requiresApiKey: true, requiresBaseUrl: false, supportsModel: true },
   { id: 'ollama', label: 'Ollama (Local)', requiresApiKey: false, requiresBaseUrl: false, supportsModel: true, defaultBaseUrl: 'http://localhost:11434/v1' },
+  { id: 'openrouter', label: 'OpenRouter', requiresApiKey: true, requiresBaseUrl: false, supportsModel: true, defaultBaseUrl: 'https://openrouter.ai/api/v1' },
   { id: 'codex', label: 'Codex (ChatGPT login)', requiresApiKey: false, requiresBaseUrl: false, supportsModel: true },
   { id: 'bedrock', label: 'AWS Bedrock', requiresApiKey: false, requiresBaseUrl: false, supportsModel: true },
   {
@@ -58,11 +59,13 @@ export function ProviderBadge() {
   const [currentProviderId, setCurrentProviderId] = useState('anthropic');
   const [currentLabel, setCurrentLabel] = useState('Anthropic');
   const [currentApiKey, setCurrentApiKey] = useState<string | undefined>();
+  const [currentFallbackApiKeys, setCurrentFallbackApiKeys] = useState<string[]>([]);
   const [currentModel, setCurrentModel] = useState<string | undefined>();
   const [currentBaseUrl, setCurrentBaseUrl] = useState<string | undefined>();
   const [currentProviderOptions, setCurrentProviderOptions] = useState<Record<string, string>>({});
   const [providerProfiles, setProviderProfiles] = useState<Record<string, {
     apiKey?: string;
+    fallbackApiKeys?: string[];
     baseUrl?: string;
     model?: string;
     providerOptions?: Record<string, string>;
@@ -98,11 +101,13 @@ export function ProviderBadge() {
         providers?: ProviderDef[];
         currentProviderId: string;
         currentApiKey?: string;
+        currentFallbackApiKeys?: string[];
         currentModel?: string;
         currentBaseUrl?: string;
         currentProviderOptions?: Record<string, string>;
         providerProfiles?: Record<string, {
           apiKey?: string;
+          fallbackApiKeys?: string[];
           baseUrl?: string;
           model?: string;
           providerOptions?: Record<string, string>;
@@ -110,6 +115,7 @@ export function ProviderBadge() {
       };
       setCurrentProviderId(data.currentProviderId ?? 'anthropic');
       setCurrentApiKey(data.currentApiKey);
+      setCurrentFallbackApiKeys(data.currentFallbackApiKeys ?? []);
       setCurrentModel(data.currentModel);
       setCurrentBaseUrl(data.currentBaseUrl);
       setCurrentProviderOptions(data.currentProviderOptions ?? {});
@@ -132,6 +138,7 @@ export function ProviderBadge() {
     providerId: string;
     baseUrl?: string;
     model?: string;
+    fallbackApiKeys?: string[];
     providerOptions: Record<string, string>;
   }) => {
     setPickerOpen(false);
@@ -140,6 +147,7 @@ export function ProviderBadge() {
       setCurrentProviderId(saved.providerId);
       setCurrentLabel(providerDef?.label ?? saved.providerId);
       setCurrentModel(saved.model);
+      setCurrentFallbackApiKeys(saved.fallbackApiKeys ?? []);
       setCurrentBaseUrl(saved.baseUrl);
       setCurrentProviderOptions(saved.providerOptions);
       setTimeout(() => vscode.postMessage({ type: 'get_provider_state' }), 250);
@@ -181,6 +189,7 @@ export function ProviderBadge() {
           providers={providers}
           currentProviderId={currentProviderId}
           currentApiKey={currentApiKey}
+          currentFallbackApiKeys={currentFallbackApiKeys}
           currentModel={currentModel}
           currentBaseUrl={currentBaseUrl}
           currentProviderOptions={currentProviderOptions}

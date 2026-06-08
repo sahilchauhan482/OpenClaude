@@ -6,6 +6,7 @@ import type { PermissionMode } from '../types/session';
 
 export interface ProviderProfile {
   apiKey?: string;
+  fallbackApiKeys?: string[];
   baseUrl?: string;
   model?: string;
   providerOptions?: Record<string, string>;
@@ -45,6 +46,10 @@ export class SettingsSync {
     return this.config.get<string>('apiKey') || undefined;
   }
 
+  get fallbackApiKeys(): string[] {
+    return this.config.get<string[]>('fallbackApiKeys', []);
+  }
+
   get baseUrl(): string | undefined {
     return this.config.get<string>('baseUrl') || undefined;
   }
@@ -81,6 +86,10 @@ export class SettingsSync {
     await this.config.update('apiKey', apiKey ?? '', vscode.ConfigurationTarget.Global);
   }
 
+  async setFallbackApiKeys(fallbackApiKeys: string[] | undefined): Promise<void> {
+    await this.config.update('fallbackApiKeys', fallbackApiKeys ?? [], vscode.ConfigurationTarget.Global);
+  }
+
   async setBaseUrl(baseUrl: string | undefined): Promise<void> {
     await this.config.update('baseUrl', baseUrl ?? '', vscode.ConfigurationTarget.Global);
   }
@@ -100,6 +109,7 @@ export class SettingsSync {
     if (profile) {
       nextProfiles[providerId] = {
         apiKey: profile.apiKey,
+        fallbackApiKeys: profile.fallbackApiKeys ?? [],
         baseUrl: profile.baseUrl,
         model: profile.model,
         providerOptions: profile.providerOptions ?? {},

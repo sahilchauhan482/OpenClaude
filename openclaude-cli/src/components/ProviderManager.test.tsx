@@ -244,6 +244,17 @@ function mockProviderProfilesModule(options?: {
         }
       }
 
+      if (preset === 'openrouter') {
+        return {
+          provider: 'openrouter',
+          name: 'OpenRouter',
+          baseUrl: 'https://openrouter.ai/api/v1',
+          model: 'openai/gpt-5-mini',
+          apiKey: '',
+          requiresApiKey: true,
+        }
+      }
+
       if (preset === 'minimax') {
         return {
           provider: 'minimax',
@@ -756,6 +767,78 @@ test('ProviderManager asks for model and API key when adding OpenAI preset', asy
         model: 'gpt-5.4',
         apiKey: 'sk-openai-test',
         apiFormat: 'responses',
+      }),
+      expect.objectContaining({ makeActive: true }),
+    )
+  } finally {
+    await mounted.dispose()
+  }
+})
+
+test('ProviderManager OpenRouter preset hides advanced auth fields and saves canonical route', async () => {
+  const addProviderProfile = mock((payload: any) => ({
+    id: 'openrouter_profile',
+    ...payload,
+  }))
+
+  mockProviderManagerDependencies(() => undefined, async () => undefined, {
+    addProviderProfile,
+  })
+
+  const nonce = `${Date.now()}-${Math.random()}`
+  const { ProviderManager } = await import(`./ProviderManager.js?ts=${nonce}`)
+  const mounted = await mountProviderManager(ProviderManager)
+
+  try {
+    await waitForFrameOutput(mounted.getOutput, frame =>
+      frame.includes('Provider manager'),
+    )
+
+    mounted.stdin.write('\r')
+    await waitForFrameOutput(mounted.getOutput, frame =>
+      frame.includes('Choose provider preset'),
+    )
+
+    await navigateToPreset(mounted.stdin, 'OpenRouter')
+    mounted.stdin.write('\r')
+    const modelOutput = await waitForFrameOutput(mounted.getOutput, frame =>
+      frame.includes('Create provider profile') &&
+      frame.includes('Step 1 of 2: Default model'),
+    )
+
+    expect(modelOutput).toContain('OpenRouter')
+    expect(modelOutput).toContain('openai/gpt-5-mini')
+    expect(modelOutput).not.toContain('Auth header')
+    expect(modelOutput).not.toContain('Auth header value')
+
+    mounted.stdin.write('\u0015')
+    await Bun.sleep(25)
+    mounted.stdin.write('moonshotai/kimi-k2.6:free')
+    await waitForFrameOutput(mounted.getOutput, frame =>
+      frame.includes('moonshotai/kimi-k2.6:free'),
+    )
+    mounted.stdin.write('\r')
+
+    const keyOutput = await waitForFrameOutput(mounted.getOutput, frame =>
+      frame.includes('Step 2 of 2: API key'),
+    )
+    expect(keyOutput).not.toContain('Auth header')
+    expect(keyOutput).not.toContain('Auth header value')
+
+    mounted.stdin.write('sk-or-test')
+    await Bun.sleep(25)
+    mounted.stdin.write('\r')
+
+    await waitForCondition(() => addProviderProfile.mock.calls.length > 0)
+    expect(addProviderProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'openrouter',
+        name: 'OpenRouter',
+        baseUrl: 'https://openrouter.ai/api/v1',
+        model: 'moonshotai/kimi-k2.6:free',
+        apiKey: 'sk-or-test',
+        authHeader: undefined,
+        authHeaderValue: undefined,
       }),
       expect.objectContaining({ makeActive: true }),
     )

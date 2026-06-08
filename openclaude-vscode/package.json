@@ -2,7 +2,7 @@
 	"name": "openclaude-vscode",
 	"displayName": "OpenClaude VS Code",
 	"description": "OpenClaude VS Code: AI coding assistant powered by any LLM",
-	"version": "0.2.25",
+	"version": "0.2.27",
 	"publisher": "OpenClaude",
 	"license": "MIT",
 	"repository": {
@@ -145,6 +145,14 @@
 					"type": "string",
 					"default": "",
 					"description": "API key for the selected provider."
+				},
+				"openclaudeCode.fallbackApiKeys": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "Fallback API keys for the selected provider. Currently used for Gemini key rotation."
 				},
 				"openclaudeCode.baseUrl": {
 					"type": "string",

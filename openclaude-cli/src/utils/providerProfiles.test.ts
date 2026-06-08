@@ -451,25 +451,92 @@ describe('applyProviderProfileToProcessEnv', () => {
     expect(String(process.env.CLAUDE_CODE_USE_OPENAI)).toBe('1')
   })
 
-  test('openai profile sets custom auth header name and value', async () => {
+  test('custom profile sets custom auth header name and value', async () => {
     const { applyProviderProfileToProcessEnv } =
       await importFreshProviderProfileModules()
 
     applyProviderProfileToProcessEnv(
       buildProfile({
-        provider: 'openai',
-        baseUrl: 'https://api.hicap.ai/v1',
-        model: 'claude-opus-4.7',
+        provider: 'custom',
+        baseUrl: 'https://custom.example/v1',
+        model: 'custom-model',
         authHeader: 'api-key',
         authScheme: 'raw',
-        authHeaderValue: 'hicap-header-value',
+        authHeaderValue: 'custom-header-value',
       }),
     )
 
     expect(process.env.OPENAI_AUTH_HEADER).toBe('api-key')
     expect(process.env.OPENAI_AUTH_SCHEME).toBe('raw')
-    expect(process.env.OPENAI_AUTH_HEADER_VALUE).toBe('hicap-header-value')
+    expect(process.env.OPENAI_AUTH_HEADER_VALUE).toBe('custom-header-value')
     expect(String(process.env.CLAUDE_CODE_USE_OPENAI)).toBe('1')
+  })
+
+  test('openrouter profile strips stale custom auth header settings', async () => {
+    const { applyProviderProfileToProcessEnv, getProviderProfiles } =
+      await importFreshProviderProfileModules()
+
+    saveMockGlobalConfig(current => ({
+      ...current,
+      providerProfiles: [
+        buildProfile({
+          provider: 'openrouter',
+          name: 'OpenRouter',
+          baseUrl: 'https://openrouter.ai/api/v1',
+          model: 'moonshotai/kimi-k2.6:free',
+          apiKey: 'sk-or-live',
+          authHeader: 'api-key',
+          authScheme: 'raw',
+          authHeaderValue: 'stale-header-secret',
+        }),
+      ],
+      activeProviderProfileId: 'provider_test',
+    }))
+
+    const [profile] = getProviderProfiles()
+    expect(profile?.authHeader).toBeUndefined()
+    expect(profile?.authScheme).toBeUndefined()
+    expect(profile?.authHeaderValue).toBeUndefined()
+
+    applyProviderProfileToProcessEnv(profile!)
+
+    expect(process.env.CLAUDE_CODE_USE_OPENAI).toBe('1')
+    expect(process.env.OPENAI_BASE_URL).toBe('https://openrouter.ai/api/v1')
+    expect(process.env.OPENAI_MODEL).toBe('moonshotai/kimi-k2.6:free')
+    expect(process.env.OPENAI_API_KEY).toBe('sk-or-live')
+    expect(process.env.OPENAI_AUTH_HEADER).toBeUndefined()
+    expect(process.env.OPENAI_AUTH_SCHEME).toBeUndefined()
+    expect(process.env.OPENAI_AUTH_HEADER_VALUE).toBeUndefined()
+  })
+
+  test('custom OpenAI-compatible profile keeps visible api-key auth settings', async () => {
+    const { applyProviderProfileToProcessEnv, getProviderProfiles } =
+      await importFreshProviderProfileModules()
+
+    saveMockGlobalConfig(current => ({
+      ...current,
+      providerProfiles: [
+        buildProfile({
+          provider: 'custom',
+          baseUrl: 'https://custom.example/v1',
+          model: 'custom-model',
+          apiKey: 'custom-live-key',
+          authHeader: 'api-key',
+          authScheme: 'raw',
+        }),
+      ],
+      activeProviderProfileId: 'provider_test',
+    }))
+
+    const [profile] = getProviderProfiles()
+    expect(profile?.authHeader).toBe('api-key')
+    expect(profile?.authScheme).toBe('raw')
+
+    applyProviderProfileToProcessEnv(profile!)
+
+    expect(process.env.OPENAI_AUTH_HEADER).toBe('api-key')
+    expect(process.env.OPENAI_AUTH_SCHEME).toBe('raw')
+    expect(process.env.OPENAI_API_KEY).toBe('custom-live-key')
   })
 
   test('minimax profile ignores advanced OpenAI-compatible auth settings', async () => {

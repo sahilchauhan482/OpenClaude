@@ -37,6 +37,8 @@ import {
   routeSupportsApiFormatSelection,
   routeSupportsAuthHeaders,
   routeSupportsCustomHeaders,
+  routeShowsAuthHeader,
+  routeShowsAuthHeaderValue,
   resolveProfileRoute,
   resolveRouteIdFromBaseUrl,
   type ResolvedProfileRoute,
@@ -161,7 +163,8 @@ function sanitizeProfile(profile: ProviderProfile): ProviderProfile | null {
   const authHeaderValue = trimOrUndefined(profile.authHeaderValue)
   const capabilityRouteId = resolveProfileCapabilityRouteId(provider, baseUrl)
   const supportsApiFormat = routeSupportsApiFormatSelection(capabilityRouteId)
-  const supportsAuthHeaders = routeSupportsAuthHeaders(capabilityRouteId)
+  const showsAuthHeader = routeShowsAuthHeader(capabilityRouteId)
+  const showsAuthHeaderValue = routeShowsAuthHeaderValue(capabilityRouteId)
   const customHeaders = routeSupportsCustomHeaders(capabilityRouteId)
     ? sanitizeProfileCustomHeaders(profile.customHeaders)
     : undefined
@@ -181,12 +184,14 @@ function sanitizeProfile(profile: ProviderProfile): ProviderProfile | null {
   if (supportsApiFormat && apiFormat) {
     sanitized.apiFormat = apiFormat
   }
-  if (supportsAuthHeaders && authHeader) {
+  if (showsAuthHeader && authHeader) {
     sanitized.authHeader = authHeader
     sanitized.authScheme = authScheme ?? (
       authHeader.toLowerCase() === 'authorization' ? 'bearer' : 'raw'
     )
-    sanitized.authHeaderValue = authHeaderValue
+    if (showsAuthHeaderValue) {
+      sanitized.authHeaderValue = authHeaderValue
+    }
   }
   if (customHeaders) {
     sanitized.customHeaders = customHeaders
@@ -634,7 +639,8 @@ export function applyProviderProfileToProcessEnv(profile: ProviderProfile): void
       profile.baseUrl,
     )
     const supportsApiFormat = routeSupportsApiFormatSelection(capabilityRouteId)
-    const supportsAuthHeaders = routeSupportsAuthHeaders(capabilityRouteId)
+    const showsAuthHeader = routeShowsAuthHeader(capabilityRouteId)
+    const showsAuthHeaderValue = routeShowsAuthHeaderValue(capabilityRouteId)
     const normalizedProfileBaseUrl =
       route.routeId === 'xiaomi-mimo'
         ? normalizeXiaomiMimoBaseUrl(profile.baseUrl) ?? profile.baseUrl
@@ -646,14 +652,14 @@ export function applyProviderProfileToProcessEnv(profile: ProviderProfile): void
     if (supportsApiFormat && profile.apiFormat) {
       openAIProfileEnv.OPENAI_API_FORMAT = profile.apiFormat
     }
-    if (supportsAuthHeaders && profile.authHeader) {
+    if (showsAuthHeader && profile.authHeader) {
       openAIProfileEnv.OPENAI_AUTH_HEADER = profile.authHeader
       openAIProfileEnv.OPENAI_AUTH_SCHEME =
         profile.authScheme ??
         (profile.authHeader.toLowerCase() === 'authorization'
           ? 'bearer'
           : 'raw')
-      if (profile.authHeaderValue) {
+      if (showsAuthHeaderValue && profile.authHeaderValue) {
         openAIProfileEnv.OPENAI_AUTH_HEADER_VALUE = profile.authHeaderValue
       }
     }
@@ -963,12 +969,19 @@ function buildOpenAICompatibleStartupEnv(
   if (activeProfile.apiFormat) {
     env.OPENAI_API_FORMAT = activeProfile.apiFormat
   }
-  if (activeProfile.authHeader) {
+  const routeId = resolveProfileCapabilityRouteId(
+    activeProfile.provider,
+    activeProfile.baseUrl,
+  )
+  const showsAuthHeader = routeShowsAuthHeader(routeId)
+  const showsAuthHeaderValue = routeShowsAuthHeaderValue(routeId)
+
+  if (showsAuthHeader && activeProfile.authHeader) {
     env.OPENAI_AUTH_HEADER = activeProfile.authHeader
     env.OPENAI_AUTH_SCHEME = activeProfile.authScheme ?? (
       activeProfile.authHeader.toLowerCase() === 'authorization' ? 'bearer' : 'raw'
     )
-    if (activeProfile.authHeaderValue) {
+    if (showsAuthHeaderValue && activeProfile.authHeaderValue) {
       env.OPENAI_AUTH_HEADER_VALUE = activeProfile.authHeaderValue
     }
   }

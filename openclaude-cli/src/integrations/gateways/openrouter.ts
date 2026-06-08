@@ -18,6 +18,15 @@ export default defineGateway({
   transportConfig: {
     kind: 'openai-compatible',
     openaiShim: {
+      defaultAuthHeader: {
+        name: 'authorization',
+        scheme: 'bearer',
+      },
+      ui: {
+        showAuthHeader: false,
+        showAuthHeaderValue: false,
+        showCustomHeaders: true,
+      },
       supportsAuthHeaders: true,
     },
   },

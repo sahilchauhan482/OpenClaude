@@ -318,7 +318,7 @@ export const FileEditTool = buildTool({
       return {
         result: false,
         behavior: 'ask',
-        message: `String to replace not found in file.\nString: ${old_string}`,
+        message: `String to replace not found in file. This usually happens when the file has changed or there is a whitespace mismatch. You MUST use the Read tool to see the current exact content of the file before retrying.\nString: ${old_string}`,
         meta: {
           isFilePathAbsolute: String(isAbsolute(file_path)),
         },

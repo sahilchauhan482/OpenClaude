@@ -1,21 +1,22 @@
 import { defineGateway } from '../define.js'
 
 /**
- * GitHub Copilot has a special native-Claude path for Claude models.
- * When the model string contains "claude-", the runtime routes through
- * the native Anthropic path instead of the OpenAI shim to enable prompt
- * caching. This exception is handled in openaiShim.ts and providers.ts
- * and must be preserved during migration.
+ * GitHub Models is the default endpoint for the GitHub provider, but
+ * api.githubcopilot.com still has a special native-Claude path for Claude
+ * models. When the model string contains "claude-", the runtime routes
+ * through the native Anthropic path instead of the OpenAI shim to enable
+ * prompt caching. This exception is handled in openaiShim.ts and
+ * providers.ts and must be preserved during migration.
  *
  * @see src/utils/model/providers.ts — isGithubNativeAnthropicMode()
  * @see src/services/api/openaiShim.ts — getGithubEndpointType()
  */
 export default defineGateway({
   id: 'github',
-  label: 'GitHub Copilot',
+  label: 'GitHub Models',
   vendorId: 'openai',
   category: 'hosted',
-  defaultBaseUrl: 'https://api.githubcopilot.com',
+  defaultBaseUrl: 'https://models.github.ai/inference',
   supportsModelRouting: true,
   setup: {
     requiresAuth: true,
@@ -36,11 +37,11 @@ export default defineGateway({
       skipWhenUseOpenAI: true,
     },
     missingCredentialMessage:
-      'GitHub Copilot authentication required.\nRun /onboard-github in the CLI to sign in with your GitHub account.\nThis will store your OAuth token securely and enable Copilot models.',
+      'GitHub Models authentication required.\nRun /onboard-github in the CLI to sign in with your GitHub account.\nThis will store your OAuth token securely and enable GitHub Models.',
     expiredCredentialMessage:
-      'GitHub Copilot token has expired.\nRun /onboard-github to sign in again and get a fresh token.',
+      'GitHub Models token has expired.\nRun /onboard-github to sign in again and get a fresh token.',
     invalidCredentialMessage:
-      'GitHub Copilot token is invalid or corrupted.\nRun /onboard-github to sign in again with your GitHub account.',
+      'GitHub Models token is invalid or corrupted.\nRun /onboard-github to sign in again with your GitHub account.',
   },
   catalog: {
     source: 'static',

@@ -427,9 +427,9 @@ test('github validation stays descriptor-selected and reports missing auth', asy
   delete process.env.GH_TOKEN
 
   await expect(getProviderValidationError(process.env)).resolves.toBe(
-    'GitHub Copilot authentication required.\n' +
+    'GitHub Models authentication required.\n' +
       'Run /onboard-github in the CLI to sign in with your GitHub account.\n' +
-      'This will store your OAuth token securely and enable Copilot models.',
+      'This will store your OAuth token securely and enable GitHub Models.',
   )
 })
 

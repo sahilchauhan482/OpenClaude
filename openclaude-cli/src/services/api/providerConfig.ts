@@ -594,7 +594,7 @@ export const GITHUB_MODELS_BASE_URL = 'https://models.github.ai/inference'
 export function getGithubEndpointType(
   baseUrl: string | undefined,
 ): 'copilot' | 'models' | 'custom' {
-  if (!baseUrl) return 'copilot'
+  if (!baseUrl) return 'models'
   try {
     const hostname = new URL(baseUrl).hostname.toLowerCase()
     if (hostname === 'api.githubcopilot.com') {
@@ -605,7 +605,7 @@ export function getGithubEndpointType(
     }
     return 'custom'
   } catch {
-    return 'copilot'
+    return 'models'
   }
 }
 
@@ -763,7 +763,7 @@ export function resolveProviderRequest(options?: {
         (isGithubCopilot && transport === 'codex_responses'
           ? GITHUB_COPILOT_BASE_URL
           : (isGithubMode
-            ? GITHUB_COPILOT_BASE_URL
+            ? GITHUB_MODELS_BASE_URL
             : DEFAULT_OPENAI_BASE_URL))
       ).replace(/\/+$/, ''),
     reasoning,
