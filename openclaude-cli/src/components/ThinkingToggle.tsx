@@ -16,7 +16,7 @@ export type Props = {
   onCancel?: () => void;
   isMidConversation?: boolean;
 };
-export function ThinkingToggle(t0) {
+export function ThinkingToggle(t0: Props) {
   const $ = _c(27);
   const {
     currentValue,
@@ -25,7 +25,7 @@ export function ThinkingToggle(t0) {
     isMidConversation
   } = t0;
   const exitState = useExitOnCtrlCDWithKeybindings();
-  const [confirmationPending, setConfirmationPending] = useState(null);
+  const [confirmationPending, setConfirmationPending] = useState<boolean | null>(null);
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [{

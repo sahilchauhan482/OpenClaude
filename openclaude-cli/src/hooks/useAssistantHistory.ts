@@ -50,7 +50,8 @@ const SENTINEL_START = 'start of session'
 function pageToMessages(page: HistoryPage): Message[] {
   const out: Message[] = []
   for (const ev of page.events) {
-    const c = convertSDKMessage(ev, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const c = convertSDKMessage(ev as any, {
       convertUserTextMessages: true,
       convertToolResults: true,
     })

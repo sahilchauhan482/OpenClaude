@@ -62,7 +62,8 @@ test('logs a warning when OPENAI_BASE_URL is literal undefined', async () => {
 
   expect(resolved.baseUrl).toBe('https://api.openai.com/v1')
 
-  const warningCall = debugSpy.mock.calls.find(call =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const warningCall = (debugSpy.mock.calls as any[]).find(call =>
     typeof call?.[0] === 'string' &&
     call[0].includes('OPENAI_BASE_URL') &&
     call[0].includes('"undefined"'),
@@ -91,7 +92,8 @@ test('does not warn for OPENAI_API_BASE when OPENAI_BASE_URL is active', async (
 
   expect(resolved.baseUrl).toBe('http://127.0.0.1:11434/v1')
 
-  const aliasWarning = debugSpy.mock.calls.find(call =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const aliasWarning = (debugSpy.mock.calls as any[]).find(call =>
     typeof call?.[0] === 'string' &&
     call[0].includes('OPENAI_API_BASE') &&
     call[0].includes('"undefined"'),

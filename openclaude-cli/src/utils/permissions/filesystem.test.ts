@@ -12,7 +12,7 @@ const writeTool = {
   getPath(input: { file_path: string }) {
     return input.file_path
   },
-} as Tool<{ file_path: string }>
+} as any
 
 function permissionContext(mode: ToolPermissionContext['mode']) {
   return {

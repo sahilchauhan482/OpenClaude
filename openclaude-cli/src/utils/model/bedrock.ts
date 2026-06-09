@@ -11,7 +11,7 @@ export const getBedrockInferenceProfiles = memoize(async function (): Promise<
     createBedrockClient(),
     import('@aws-sdk/client-bedrock'),
   ])
-  const allProfiles = []
+  const allProfiles: Array<{ inferenceProfileId?: string }> = []
   let nextToken: string | undefined
 
   try {
@@ -23,7 +23,7 @@ export const getBedrockInferenceProfiles = memoize(async function (): Promise<
       const response = await client.send(command)
 
       if (response.inferenceProfileSummaries) {
-        allProfiles.push(...response.inferenceProfileSummaries)
+        allProfiles.push(...(response.inferenceProfileSummaries as any[]))
       }
 
       nextToken = response.nextToken

@@ -99,7 +99,7 @@ export async function startMCPServer(
     ListToolsRequestSchema,
     async (): Promise<ListToolsResult> => {
       const toolPermissionContext = getEmptyToolPermissionContext()
-      const tools = getCombinedTools(getTools(toolPermissionContext), mcpTools)
+      const tools = getCombinedTools(getTools(toolPermissionContext) as InternalTool[], mcpTools)
       return {
         tools: await Promise.all(
           tools.map(async tool => {
@@ -138,7 +138,7 @@ export async function startMCPServer(
     CallToolRequestSchema,
     async ({ params: { name, arguments: args } }): Promise<CallToolResult> => {
       const toolPermissionContext = getEmptyToolPermissionContext()
-      const tools = getCombinedTools(getTools(toolPermissionContext), mcpTools)
+      const tools = getCombinedTools(getTools(toolPermissionContext) as InternalTool[], mcpTools)
       const tool = findToolByName(tools, name)
       if (!tool) {
         throw new Error(`Tool ${name} not found`)

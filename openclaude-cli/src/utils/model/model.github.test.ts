@@ -16,7 +16,7 @@ const env = {
   CLAUDE_CODE_USE_FOUNDRY: process.env.CLAUDE_CODE_USE_FOUNDRY,
   OPENAI_MODEL: process.env.OPENAI_MODEL,
 }
-const originalModel = getGlobalConfig().model
+const originalModel = (getGlobalConfig() as any).model
 
 function restoreEnv(key: keyof typeof env): void {
   if (env[key] === undefined) {

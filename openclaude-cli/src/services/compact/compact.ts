@@ -299,6 +299,9 @@ export const ERROR_MESSAGE_USER_ABORT = 'API Error: Request was aborted.'
 export const ERROR_MESSAGE_INCOMPLETE_RESPONSE =
   'Compaction interrupted · This may be due to network issues — please try again.'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type CacheSafePromptData = any
+
 export interface CompactionResult {
   boundaryMarker: SystemMessage
   summaryMessages: UserMessage[]
@@ -715,7 +718,8 @@ export async function compactConversation(
     // Write a reduced transcript segment for the pre-compaction messages
     // (assistant mode only). Fire-and-forget — errors are logged internally.
     if (feature('KAIROS')) {
-      void sessionTranscriptModule?.writeSessionTranscriptSegment(messages)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      void (sessionTranscriptModule as any)?.writeSessionTranscriptSegment(messages)
     }
 
     context.onCompactProgress?.({
@@ -794,10 +798,11 @@ export async function partialCompactConversation(
         ? allMessages
             .slice(pivotIndex)
             .filter(
-              m =>
-                m.type !== 'progress' &&
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (m: any) =>
+                (m as any).type !== 'progress' &&
                 !isCompactBoundaryMessage(m) &&
-                !(m.type === 'user' && m.isCompactSummary),
+                !((m as any).type === 'user' && (m as any).isCompactSummary),
             )
         : allMessages.slice(0, pivotIndex).filter(m => m.type !== 'progress')
 
@@ -1059,7 +1064,8 @@ export async function partialCompactConversation(
     reAppendSessionMetadata()
 
     if (feature('KAIROS')) {
-      void sessionTranscriptModule?.writeSessionTranscriptSegment(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      void (sessionTranscriptModule as any)?.writeSessionTranscriptSegment(
         messagesToSummarize,
       )
     }

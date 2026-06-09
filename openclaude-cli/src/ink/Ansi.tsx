@@ -29,7 +29,7 @@ type SpanProps = {
  *
  * Memoized to prevent re-renders when parent changes but children string is the same.
  */
-export const Ansi = React.memo(function Ansi(t0) {
+export const Ansi = React.memo(function Ansi(t0: Props) {
   const $ = _c(12);
   const {
     children,
@@ -229,8 +229,10 @@ type BaseTextStyleProps = {
   inverse?: boolean;
 };
 
+type StyledTextProps = BaseTextStyleProps & { bold?: boolean; dim?: boolean; children?: React.ReactNode };
+
 // Wrapper component that handles bold/dim mutual exclusivity for Text
-function StyledText(t0) {
+function StyledText(t0: StyledTextProps) {
   const $ = _c(14);
   let bold;
   let children;

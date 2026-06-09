@@ -633,7 +633,7 @@ export class QueryEngine {
         stop_reason: null,
         session_id: getSessionId(),
         total_cost_usd: getTotalCost(),
-        usage: this.totalUsage,
+        usage: this.totalUsage as any,
         modelUsage: getModelUsage(),
         permission_denials: this.permissionDenials,
         fast_mode_state: getFastModeState(
@@ -882,7 +882,7 @@ export class QueryEngine {
               stop_reason: lastStopReason,
               session_id: getSessionId(),
               total_cost_usd: getTotalCost(),
-              usage: this.totalUsage,
+              usage: this.totalUsage as any,
               modelUsage: getModelUsage(),
               permission_denials: this.permissionDenials,
               fast_mode_state: getFastModeState(
@@ -1012,7 +1012,7 @@ export class QueryEngine {
           stop_reason: lastStopReason,
           session_id: getSessionId(),
           total_cost_usd: getTotalCost(),
-          usage: this.totalUsage,
+          usage: this.totalUsage as any,
           modelUsage: getModelUsage(),
           permission_denials: this.permissionDenials,
           fast_mode_state: getFastModeState(
@@ -1056,7 +1056,7 @@ export class QueryEngine {
             stop_reason: lastStopReason,
             session_id: getSessionId(),
             total_cost_usd: getTotalCost(),
-            usage: this.totalUsage,
+            usage: this.totalUsage as any,
             modelUsage: getModelUsage(),
             permission_denials: this.permissionDenials,
             fast_mode_state: getFastModeState(
@@ -1089,7 +1089,7 @@ export class QueryEngine {
     const edeResultType = result?.type ?? 'undefined'
     const edeLastContentType =
       result?.type === 'assistant'
-        ? (last(result.message.content)?.type ?? 'none')
+        ? ((last(result.message.content) as any)?.type ?? 'none')
         : 'n/a'
 
     // Flush buffered transcript writes before yielding result.
@@ -1115,7 +1115,7 @@ export class QueryEngine {
         stop_reason: lastStopReason,
         session_id: getSessionId(),
         total_cost_usd: getTotalCost(),
-        usage: this.totalUsage,
+        usage: this.totalUsage as any,
         modelUsage: getModelUsage(),
         permission_denials: this.permissionDenials,
         fast_mode_state: getFastModeState(
@@ -1147,7 +1147,7 @@ export class QueryEngine {
     let isApiError = false
 
     if (result.type === 'assistant') {
-      const lastContent = last(result.message.content)
+      const lastContent = last(result.message.content) as any
       if (
         lastContent?.type === 'text' &&
         !SYNTHETIC_MESSAGES.has(lastContent.text)
@@ -1168,7 +1168,7 @@ export class QueryEngine {
       stop_reason: lastStopReason,
       session_id: getSessionId(),
       total_cost_usd: getTotalCost(),
-      usage: this.totalUsage,
+      usage: this.totalUsage as any,
       modelUsage: getModelUsage(),
       permission_denials: this.permissionDenials,
       structured_output: structuredOutputFromTool,
@@ -1240,7 +1240,7 @@ export class QueryEngine {
       }
       return agent
     }, 'injectAgents')
-    this.config.agents = validated
+    this.config.agents = validated as AgentDefinition[]
   }
 
   /**
@@ -1426,7 +1426,7 @@ export async function* ask({
           snipReplay: (yielded: Message, store: Message[]) => {
             if (!snipProjection!.isSnipBoundaryMessage(yielded))
               return undefined
-            return snipModule!.snipCompactIfNeeded(store, { force: true })
+            return snipModule!.snipCompactIfNeeded(store, { force: true }) as any
           },
         }
       : {}),

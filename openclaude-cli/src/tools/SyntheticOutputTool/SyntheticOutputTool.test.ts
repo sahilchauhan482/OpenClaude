@@ -42,11 +42,12 @@ describe('createSyntheticOutputTool (#1256 root schema wrapping)', () => {
     if (!('tool' in result)) throw new Error(`expected tool: ${result.error}`)
 
     const payload = [{ name: 'one' }, { name: 'two' }]
-    const callResult = await result.tool.call(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const callResult = await (result.tool.call as any)(
       { result: payload },
       undefined as never,
     )
-    expect(callResult.structured_output).toEqual(payload)
+    expect((callResult as any).structured_output).toEqual(payload)
   })
 
   test('top-level string root: same wrap-and-unwrap behaviour', async () => {
@@ -55,11 +56,12 @@ describe('createSyntheticOutputTool (#1256 root schema wrapping)', () => {
     const schema = result.tool.inputJSONSchema as Record<string, unknown>
     expect(schema.type).toBe('object')
 
-    const callResult = await result.tool.call(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const callResult = await (result.tool.call as any)(
       { result: 'hello' },
       undefined as never,
     )
-    expect(callResult.structured_output).toBe('hello')
+    expect((callResult as any).structured_output).toBe('hello')
   })
 
   test('object root: passes through untouched', async () => {
@@ -67,18 +69,20 @@ describe('createSyntheticOutputTool (#1256 root schema wrapping)', () => {
     if (!('tool' in result)) throw new Error(`expected tool: ${result.error}`)
     expect(result.tool.inputJSONSchema).toEqual(OBJECT_SCHEMA)
 
-    const callResult = await result.tool.call(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const callResult = await (result.tool.call as any)(
       { count: 5 },
       undefined as never,
     )
-    expect(callResult.structured_output).toEqual({ count: 5 })
+    expect((callResult as any).structured_output).toEqual({ count: 5 })
   })
 
   test('wrapped tool rejects payloads that violate the inner schema', async () => {
     const result = createSyntheticOutputTool({ ...ARRAY_OF_OBJECTS_SCHEMA })
     if (!('tool' in result)) throw new Error(`expected tool: ${result.error}`)
     await expect(
-      result.tool.call({ result: [{ wrong: 'shape' }] }, undefined as never),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (result.tool.call as any)({ result: [{ wrong: 'shape' }] }, undefined as never),
     ).rejects.toThrow(/schema/)
   })
 })

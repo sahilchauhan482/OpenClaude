@@ -1,0 +1,62 @@
+
+> vscode:lint
+> npm --prefix openclaude-vscode run lint
+
+
+> openclaude-vscode@0.2.27 lint
+> eslint src/ webview/src/
+
+
+d:\OpenClaude\openclaude-vscode\src\attachments\promptAttachments.ts
+  90:14  error  Unexpected control character(s) in regular expression: \x00  no-control-regex
+
+d:\OpenClaude\openclaude-vscode\src\context\workspaceContext.ts
+  61:10  error  Unexpected constant condition  no-constant-condition
+
+d:\OpenClaude\openclaude-vscode\src\context\worktreeHooks.ts
+  26:10  warning  'sanitizeWorktreeName' is defined but never used  @typescript-eslint/no-unused-vars
+  43:10  warning  'deriveWorktreePath' is defined but never used    @typescript-eslint/no-unused-vars
+
+d:\OpenClaude\openclaude-vscode\src\extension.ts
+    82:5  warning  'permissionHandlerInstance' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  2116:9  warning  'blockStarted' is assigned a value but never used               @typescript-eslint/no-unused-vars
+
+d:\OpenClaude\openclaude-vscode\src\observability\eventLog.ts
+  193:18  error  Redundant Boolean call  no-extra-boolean-cast
+
+d:\OpenClaude\openclaude-vscode\src\process\ndjsonTransport.ts
+  60:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+d:\OpenClaude\openclaude-vscode\src\recommendations\recommendationEngine.ts
+  12:10  warning  'hasKeywordMatch' is defined but never used  @typescript-eslint/no-unused-vars
+
+d:\OpenClaude\openclaude-vscode\src\types\messages.ts
+   6:3  warning  'AccountInfo' is defined but never used                         @typescript-eslint/no-unused-vars
+   7:3  warning  'AgentDefinition' is defined but never used                     @typescript-eslint/no-unused-vars
+   8:3  warning  'AgentInfo' is defined but never used                           @typescript-eslint/no-unused-vars
+  12:3  warning  'HookCallbackMatcher' is defined but never used                 @typescript-eslint/no-unused-vars
+  13:3  warning  'HookEvent' is defined but never used                           @typescript-eslint/no-unused-vars
+  14:3  warning  'McpServerConfigForProcessTransport' is defined but never used  @typescript-eslint/no-unused-vars
+  15:3  warning  'McpServerStatus' is defined but never used                     @typescript-eslint/no-unused-vars
+  16:3  warning  'ModelInfo' is defined but never used                           @typescript-eslint/no-unused-vars
+  20:3  warning  'SlashCommand' is defined but never used                        @typescript-eslint/no-unused-vars
+
+d:\OpenClaude\openclaude-vscode\src\types\protocol.ts
+  11:3  warning  'HookEvent' is defined but never used  @typescript-eslint/no-unused-vars
+
+d:\OpenClaude\openclaude-vscode\src\utils\modelCapabilities.ts
+  26:10  warning  'isBoolean' is defined but never used  @typescript-eslint/no-unused-vars
+
+d:\OpenClaude\openclaude-vscode\webview\src\components\shared\MarkdownRenderer.tsx
+  14:45  warning  'isStreaming' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+d:\OpenClaude\openclaude-vscode\webview\src\hooks\usePermissions.ts
+  51:32  warning  'index' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+d:\OpenClaude\openclaude-vscode\webview\src\hooks\useStream.ts
+    7:19  warning  'MessageToolUseBlock' is defined but never used  @typescript-eslint/no-unused-vars
+  480:49  warning  Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+
+✖ 24 problems (3 errors, 21 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

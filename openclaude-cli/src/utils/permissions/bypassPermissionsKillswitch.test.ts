@@ -82,13 +82,13 @@ describe('checkAndDisableBypassPermissionsIfNeeded', () => {
 
     const startupCheck = checkAndDisableBypassPermissionsIfNeeded(
       context,
-      setAppState,
-      deps,
+      (setAppState as any),
+      deps as any,
     )
     const firstQueryCheck = checkAndDisableBypassPermissionsIfNeeded(
       context,
-      setAppState,
-      deps,
+      (setAppState as any),
+      deps as any,
     )
 
     expect(gateChecks).toBe(1)

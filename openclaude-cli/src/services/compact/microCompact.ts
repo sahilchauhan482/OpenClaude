@@ -350,8 +350,8 @@ async function cachedMicrocompactPath(
       activeToolCount: state.toolOrder.length - state.deletedRefs.size,
       triggerType:
         'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      threshold: config.triggerThreshold,
-      keepRecent: config.keepRecent,
+      threshold: (config as any)!.triggerThreshold,
+      keepRecent: (config as any)!.keepRecent,
     })
 
     // Suppress warning after successful compaction

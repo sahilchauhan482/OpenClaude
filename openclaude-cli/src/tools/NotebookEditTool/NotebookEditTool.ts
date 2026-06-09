@@ -376,16 +376,16 @@ export const NotebookEditTool = buildTool({
         }
       }
 
-      const language = notebook.metadata.language_info?.name ?? 'python'
-      let new_cell_id = undefined
+      const language = (notebook.metadata as any)?.language_info?.name ?? 'python'
+      let new_cell_id: string | undefined = undefined
       if (
-        notebook.nbformat > 4 ||
-        (notebook.nbformat === 4 && notebook.nbformat_minor >= 5)
+        (notebook.nbformat as any) > 4 ||
+        ((notebook.nbformat as any) === 4 && (notebook.nbformat_minor as any) >= 5)
       ) {
         if (edit_mode === 'insert') {
           new_cell_id = Math.random().toString(36).substring(2, 15)
         } else if (cell_id !== null) {
-          new_cell_id = cell_id
+          new_cell_id = cell_id ?? undefined
         }
       }
 

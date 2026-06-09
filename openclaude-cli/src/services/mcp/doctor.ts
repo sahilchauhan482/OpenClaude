@@ -212,7 +212,8 @@ function getConfigSignature(config: ScopedMcpServerConfig): string {
     case 'sdk':
       return `${config.scope}:${config.type}:${config.name}`
     default:
-      return `${config.scope}:${config.type ?? 'stdio'}:${config.command}:${JSON.stringify(config.args ?? [])}`
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return `${config.scope}:${config.type ?? 'stdio'}:${(config as any).command}:${JSON.stringify((config as any).args ?? [])}`
   }
 }
 

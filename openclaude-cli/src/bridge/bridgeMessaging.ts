@@ -413,7 +413,7 @@ export function makeResultMessage(sessionId: string): SDKResultSuccess {
     result: '',
     stop_reason: null,
     total_cost_usd: 0,
-    usage: { ...EMPTY_USAGE },
+    usage: { ...EMPTY_USAGE } as unknown as Record<string, number>,
     modelUsage: {},
     permission_denials: [],
     session_id: sessionId,

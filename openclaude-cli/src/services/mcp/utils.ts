@@ -540,7 +540,8 @@ export function extractAgentMcpServers(
       result.push({
         name,
         sourceAgents,
-        transport: 'ws',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        transport: 'ws' as any,
         url: config.url,
         needsAuth: false,
       })

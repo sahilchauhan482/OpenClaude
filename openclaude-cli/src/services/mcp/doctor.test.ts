@@ -20,7 +20,8 @@ function stdioConfig(scope: 'local' | 'project' | 'user' | 'enterprise', command
   }
 }
 
-function makeDependencies(overrides: Partial<McpDoctorDependencies> = {}): McpDoctorDependencies {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeDependencies(overrides: any = {}): McpDoctorDependencies {
   return {
     getAllMcpConfigs: async () => ({ servers: {}, errors: [] }),
     getMcpConfigsByScope: () => ({ servers: {}, errors: [] }),
@@ -34,8 +35,9 @@ function makeDependencies(overrides: Partial<McpDoctorDependencies> = {}): McpDo
       capabilities: {},
       config,
       cleanup: async () => {},
-    }),
-    ...overrides,
+    }) as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...overrides as any,
   }
 }
 

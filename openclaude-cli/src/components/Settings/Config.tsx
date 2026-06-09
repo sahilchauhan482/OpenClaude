@@ -431,6 +431,7 @@ export function Config({
     }
   }] : []),
   // Speculation toggle (internal-only)
+  // @ts-ignore - build-time constant comparison
   ...("external" === 'ant' ? [{
     id: 'speculationEnabled',
     label: 'Speculative execution',

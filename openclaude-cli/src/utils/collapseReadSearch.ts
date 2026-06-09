@@ -14,9 +14,10 @@ import {
   type PrAction,
 } from '../tools/shared/gitOperationTracking.js'
 import { TOOL_SEARCH_TOOL_NAME } from '../tools/ToolSearchTool/prompt.js'
+// @ts-ignore
+import type { CollapsibleMessage } from '../types/message.js'
 import type {
   CollapsedReadSearchGroup,
-  CollapsibleMessage,
   RenderableMessage,
   StopHookInfo,
   SystemStopHookSummaryMessage,
@@ -36,7 +37,8 @@ const teamMemOps = feature('TEAMMEM')
   : null
 const SNIP_TOOL_NAME = feature('HISTORY_SNIP')
   ? (
-      require('../tools/SnipTool/prompt.js') as typeof import('../tools/SnipTool/prompt.js')
+      // @ts-ignore
+      require('../tools/SnipTool/prompt.js') as any
     ).SNIP_TOOL_NAME
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */

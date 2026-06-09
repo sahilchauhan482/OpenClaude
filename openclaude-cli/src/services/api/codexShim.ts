@@ -675,12 +675,13 @@ async function* readSseEvents(response: Response, signal?: AbortSignal): AsyncGe
         signal.addEventListener('abort', abortCleanup, { once: true })
       }
 
-      reader.read().then(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      reader!.read().then(
         result => {
           clearTimeout(timeoutId)
           if (signal && abortCleanup) signal.removeEventListener('abort', abortCleanup)
           if (result.value) lastDataTime = Date.now()
-          resolve(result)
+          resolve(result as ReadableStreamReadResult<Uint8Array>)
         },
         err => {
           clearTimeout(timeoutId)

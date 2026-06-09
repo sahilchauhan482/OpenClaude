@@ -97,7 +97,8 @@ export function useLspInitializationNotification() {
       if (manager) {
         const servers = manager.getAllServers();
         for (const [serverName, server] of servers) {
-          if (server.state === "error" && server.lastError) {
+          // @ts-ignore -- LspServerState comparison
+          if ((server.state as any) === "error" && server.lastError) {
             addError(serverName, server.lastError.message);
           }
         }

@@ -40,7 +40,7 @@ export async function showDangerousModePromptIfNeeded(
 
   await showSetupDialog(root, done => (
     <DialogComponent
-      mode={dangerousPromptState.mode}
+      mode={dangerousPromptState.mode as 'bypassPermissions' | 'fullAccess' | undefined}
       onAccept={() => {
         persistAcceptance(dangerousPromptState.mode!)
         done()

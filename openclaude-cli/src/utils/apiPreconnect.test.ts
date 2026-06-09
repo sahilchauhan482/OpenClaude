@@ -34,7 +34,7 @@ describe('preconnectAnthropicApi', () => {
   // getAPIProvider() to 'firstParty' here and break these assertions.
   test('does not fetch when OpenAI mode is enabled', async () => {
     const fetchMock = mock(() => Promise.resolve(new Response(null, { status: 200 })))
-    globalThis.fetch = fetchMock as typeof globalThis.fetch
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch
 
     const { preconnectAnthropicApi } = await importFreshModule()
     preconnectAnthropicApi('openai')
@@ -44,7 +44,7 @@ describe('preconnectAnthropicApi', () => {
 
   test('does not fetch when Gemini mode is enabled', async () => {
     const fetchMock = mock(() => Promise.resolve(new Response(null, { status: 200 })))
-    globalThis.fetch = fetchMock as typeof globalThis.fetch
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch
 
     const { preconnectAnthropicApi } = await importFreshModule()
     preconnectAnthropicApi('gemini')
@@ -54,7 +54,7 @@ describe('preconnectAnthropicApi', () => {
 
   test('does not fetch when GitHub mode is enabled', async () => {
     const fetchMock = mock(() => Promise.resolve(new Response(null, { status: 200 })))
-    globalThis.fetch = fetchMock as typeof globalThis.fetch
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch
 
     const { preconnectAnthropicApi } = await importFreshModule()
     preconnectAnthropicApi('github')
@@ -90,7 +90,7 @@ describe('preconnectAnthropicApi', () => {
     delete process.env.CLAUDE_CODE_CLIENT_KEY
 
     const fetchMock = mock(() => Promise.resolve(new Response(null, { status: 200 })))
-    globalThis.fetch = fetchMock as typeof globalThis.fetch
+    globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch
 
     const { preconnectAnthropicApi } = await importFreshModule()
     preconnectAnthropicApi('firstParty')

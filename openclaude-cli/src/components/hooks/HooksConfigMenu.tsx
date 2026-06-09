@@ -262,9 +262,9 @@ export function HooksConfigMenu(t0) {
     const byEvent = {};
     let total = 0;
     for (const [event_0, matchers] of Object.entries(hooksByEventAndMatcher)) {
-      const eventCount = Object.values(matchers).reduce(_temp5, 0);
+      const eventCount = Object.values(matchers as Record<string, { length: number }[]>).reduce(_temp5, 0);
       byEvent[event_0 as HookEvent] = eventCount;
-      total = total + eventCount;
+      total = total + (eventCount as number);
     }
     t20 = {
       hooksByEvent: byEvent,

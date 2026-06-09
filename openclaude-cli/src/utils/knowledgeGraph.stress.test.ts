@@ -6,7 +6,8 @@ import {
   resetGlobalGraph,
   initOrama,
   getGlobalGraph,
-  clearMemoryOnly
+  clearMemoryOnly,
+  type Entity,
 } from './knowledgeGraph.js'
 import { mkdtempSync, rmSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
@@ -168,7 +169,7 @@ describe('KnowledgeGraph Phase 1 Stress & Edge Cases', () => {
     
     // 2. Perform 50 concurrent updates
     const count = 50
-    const promises = []
+    const promises: Promise<Entity>[] = []
     for (let i = 0; i < count; i++) {
       promises.push(addGlobalEntity('tool', 'concurrent-entity', { [`k${i}`]: String(i) }))
     }

@@ -1,9 +1,7 @@
-import {
-  type ClaudeForChromeContext,
-  createClaudeForChromeMcpServer,
-  type Logger,
-  type PermissionMode,
-} from '@ant/claude-for-chrome-mcp'
+// @ts-ignore -- @ant/claude-for-chrome-mcp is an optional internal package
+import type { ClaudeForChromeContext, Logger, PermissionMode } from '@ant/claude-for-chrome-mcp'
+// @ts-ignore
+import { createClaudeForChromeMcpServer } from '@ant/claude-for-chrome-mcp'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { format } from 'util'
 import { shutdownDatadog } from '../../services/analytics/datadog.js'

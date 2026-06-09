@@ -510,7 +510,7 @@ export async function uninstallPluginOp(
   }
   newEnabledPlugins[pluginId] = undefined
   updateSettingsForSource(settingSource, {
-    enabledPlugins: newEnabledPlugins,
+    enabledPlugins: newEnabledPlugins as Record<string, boolean | string[]>,
   })
 
   clearAllCaches()

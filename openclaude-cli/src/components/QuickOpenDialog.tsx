@@ -25,13 +25,13 @@ const PREVIEW_LINES = 20;
  * Quick Open dialog (ctrl+shift+p / cmd+shift+p).
  * Fuzzy file finder with a syntax-highlighted preview of the focused file.
  */
-export function QuickOpenDialog(t0) {
+export function QuickOpenDialog(t0: Props) {
   const $ = _c(35);
   const {
     onDone,
     onInsert
   } = t0;
-  useRegisterOverlay("quick-open");
+  useRegisterOverlay("quick-open", true);
   const {
     columns,
     rows
@@ -39,15 +39,15 @@ export function QuickOpenDialog(t0) {
   const visibleResults = Math.min(VISIBLE_RESULTS, Math.max(4, rows - 14));
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-    t1 = [];
+    t1 = [] as string[];
     $[0] = t1;
   } else {
     t1 = $[0];
   }
-  const [results, setResults] = useState(t1);
+  const [results, setResults] = useState<string[]>(t1);
   const [query, setQuery] = useState("");
-  const [focusedPath, setFocusedPath] = useState(undefined);
-  const [preview, setPreview] = useState(null);
+  const [focusedPath, setFocusedPath] = useState<string | undefined>(undefined);
+  const [preview, setPreview] = useState<{ path: string; content: string } | null>(null);
   const queryGenRef = useRef(0);
   let t2;
   let t3;
@@ -207,7 +207,7 @@ export function QuickOpenDialog(t0) {
   }
   let t14;
   if ($[25] !== handleOpen || $[26] !== onDone || $[27] !== results || $[28] !== t10 || $[29] !== t11 || $[30] !== t12 || $[31] !== t13 || $[32] !== t9 || $[33] !== visibleResults) {
-    t14 = <FuzzyPicker title="Quick Open" placeholder={"Type to search files\u2026"} items={results} getKey={_temp5} visibleCount={visibleResults} direction="up" previewPosition={t9} onQueryChange={handleQueryChange} onFocus={setFocusedPath} onSelect={handleOpen} onTab={t10} onShiftTab={t11} onCancel={onDone} emptyMessage={_temp6} selectAction="open in editor" renderItem={t12} renderPreview={t13} />;
+    t14 = <FuzzyPicker title="Quick Open" placeholder={"Type to search files\u2026"} items={results} getKey={_temp5} visibleCount={visibleResults} direction="up" previewPosition={t9} onQueryChange={handleQueryChange} onFocus={(item: string | undefined) => setFocusedPath(item)} onSelect={handleOpen} onTab={t10} onShiftTab={t11} onCancel={onDone} emptyMessage={_temp6} selectAction="open in editor" renderItem={t12} renderPreview={t13} />;
     $[25] = handleOpen;
     $[26] = onDone;
     $[27] = results;

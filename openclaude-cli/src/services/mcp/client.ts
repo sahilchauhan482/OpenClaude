@@ -928,6 +928,7 @@ export const connectToServer = memoize(
         const { createChromeContext } = await import(
           '../../utils/claudeInChrome/mcpServer.js'
         )
+        // @ts-ignore — @ant/claude-for-chrome-mcp is a native stub not included in source snapshot
         const { createClaudeForChromeMcpServer } = await import(
           '@ant/claude-for-chrome-mcp'
         )
@@ -935,9 +936,10 @@ export const connectToServer = memoize(
           './InProcessTransport.js'
         )
         const context = createChromeContext(serverRef.env)
-        inProcessServer = createClaudeForChromeMcpServer(context)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        inProcessServer = createClaudeForChromeMcpServer(context) as any
         const [clientTransport, serverTransport] = createLinkedTransportPair()
-        await inProcessServer.connect(serverTransport)
+        await inProcessServer!.connect(serverTransport)
         transport = clientTransport
         logMCPDebug(name, `In-process Chrome MCP server started`)
       } else if (
@@ -956,7 +958,7 @@ export const connectToServer = memoize(
         )
         inProcessServer = await createComputerUseMcpServerForCli()
         const [clientTransport, serverTransport] = createLinkedTransportPair()
-        await inProcessServer.connect(serverTransport)
+        await inProcessServer!.connect(serverTransport)
         transport = clientTransport
         logMCPDebug(name, `In-process Computer Use MCP server started`)
       } else if (serverRef.type === 'stdio' || !serverRef.type) {

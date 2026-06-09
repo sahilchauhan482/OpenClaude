@@ -225,7 +225,8 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
         }
       } else {
         try {
-          const cwd = toolUseContext.options?.cwd ?? process.cwd()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cwd = (toolUseContext.options as any)?.cwd ?? process.cwd()
           const autoFixResult = await runAutoFixCheck({
             lint: autoFixConfig.lint,
             test: autoFixConfig.test,
@@ -500,7 +501,8 @@ export async function resolveHookPermissionDecision(
     )
     return {
       decision: fullAccessDecision,
-      input: fullAccessDecision.updatedInput ?? askInput,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      input: (fullAccessDecision as any).updatedInput ?? askInput,
     }
   }
   const forceDecision =

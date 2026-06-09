@@ -159,7 +159,8 @@ export function useRemoteSession({
         if (sdkMessage.type === 'user') {
           const c = sdkMessage.message?.content
           parts.push(
-            `content=${Array.isArray(c) ? c.map(b => b.type).join(',') : typeof c}`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            `content=${Array.isArray(c) ? c.map((b: any) => b.type).join(',') : typeof c}`,
           )
         }
         logForDebugging(`[useRemoteSession] Received ${parts.join(' ')}`)
@@ -250,7 +251,8 @@ export function useRemoteSession({
           const content = sdkMessage.message?.content
           if (Array.isArray(content)) {
             const resultIds: string[] = []
-            for (const block of content) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            for (const block of content as any[]) {
               if (block.type === 'tool_result') {
                 resultIds.push(block.tool_use_id)
               }

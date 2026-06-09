@@ -46,6 +46,9 @@ import { getAPIProvider } from '../../utils/model/providers.js';
 import { useMainLoopModel } from '../../hooks/useMainLoopModel.js';
 import { renderModelSetting } from '../../utils/model/model.js';
 const LEFT_PANEL_MAX_WIDTH = 50;
+// Stubs for internal-only components that are conditionally rendered via dead code
+function GateOverridesWarning() { return null; }
+function ExperimentEnrollmentNotice() { return null; }
 export function LogoV2() {
   const $ = _c(94);
   const activities = getRecentActivitySync();

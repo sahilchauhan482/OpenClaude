@@ -91,7 +91,7 @@ test('shows the fullAccess dangerous-mode dialog through the rendered startup fl
       false,
       testShowSetupDialog,
       {
-        DialogComponent: TestBypassPermissionsModeDialog,
+        DialogComponent: TestBypassPermissionsModeDialog as any,
         getPromptState: ({ permissionMode }) => ({
           mode: permissionMode === 'fullAccess' ? 'fullAccess' : null,
           shouldShow: true,
@@ -120,7 +120,7 @@ test('skips rendering the dialog when fullAccess consent was already accepted', 
       false,
       testShowSetupDialog,
       {
-        DialogComponent: TestBypassPermissionsModeDialog,
+        DialogComponent: TestBypassPermissionsModeDialog as any,
         getPromptState: ({ permissionMode }) => ({
           mode: permissionMode === 'fullAccess' ? 'fullAccess' : null,
           shouldShow:

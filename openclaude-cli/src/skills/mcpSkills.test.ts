@@ -91,7 +91,7 @@ describe('fetchMcpSkillsForClient privilege stripping', () => {
     const commands = await fetchMcpSkillsForClient(client)
     expect(commands).toHaveLength(1)
     expect(commands[0]?.loadedFrom).toBe('mcp')
-    expect(commands[0]?.hooks).toBeUndefined()
+    expect((commands[0] as any)?.hooks).toBeUndefined()
   })
 
   test('discards allowed-tools declared in an MCP skill resource', async () => {
@@ -99,6 +99,6 @@ describe('fetchMcpSkillsForClient privilege stripping', () => {
     const commands = await fetchMcpSkillsForClient(client)
     expect(commands).toHaveLength(1)
     expect(commands[0]?.loadedFrom).toBe('mcp')
-    expect(commands[0]?.allowedTools).toEqual([])
+    expect((commands[0] as any)?.allowedTools).toEqual([])
   })
 })

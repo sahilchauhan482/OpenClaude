@@ -50,7 +50,7 @@ test('logs classified transport diagnostics with category and code', async () =>
 
   globalThis.fetch = mock(async () => {
     throw transportError
-  }) as typeof globalThis.fetch
+  }) as unknown as typeof globalThis.fetch
 
   const client = createOpenAIShimClient({}) as {
     beta: {
@@ -69,7 +69,8 @@ test('logs classified transport diagnostics with category and code', async () =>
     }),
   ).rejects.toThrow('openai_category=connection_refused')
 
-  const transportLog = debugSpy.mock.calls.find(call =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const transportLog = (debugSpy.mock.calls as any[]).find(call =>
     typeof call?.[0] === 'string' && call[0].includes('transport failure'),
   )
 
@@ -97,7 +98,7 @@ test('redacts credentials in transport diagnostic URL logs', async () => {
 
   globalThis.fetch = mock(async () => {
     throw transportError
-  }) as typeof globalThis.fetch
+  }) as unknown as typeof globalThis.fetch
 
   const client = createOpenAIShimClient({}) as {
     beta: {
@@ -116,7 +117,8 @@ test('redacts credentials in transport diagnostic URL logs', async () => {
     }),
   ).rejects.toThrow('openai_category=connection_refused')
 
-  const transportLog = debugSpy.mock.calls.find(call =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const transportLog = (debugSpy.mock.calls as any[]).find(call =>
     typeof call?.[0] === 'string' && call[0].includes('transport failure'),
   )
 
@@ -172,7 +174,7 @@ test('logs self-heal localhost fallback with redacted from/to URLs', async () =>
         },
       },
     )
-  }) as typeof globalThis.fetch
+  }) as unknown as typeof globalThis.fetch
 
   const client = createOpenAIShimClient({}) as {
     beta: {
@@ -191,7 +193,8 @@ test('logs self-heal localhost fallback with redacted from/to URLs', async () =>
     }),
   ).resolves.toBeDefined()
 
-  const fallbackLog = debugSpy.mock.calls.find(call =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fallbackLog = (debugSpy.mock.calls as any[]).find(call =>
     typeof call?.[0] === 'string' &&
     call[0].includes('self-heal retry reason=localhost_resolution_failed'),
   )
@@ -253,7 +256,7 @@ test('logs self-heal toolless retry for local tool-call incompatibility', async 
         },
       },
     )
-  }) as typeof globalThis.fetch
+  }) as unknown as typeof globalThis.fetch
 
   const client = createOpenAIShimClient({}) as {
     beta: {
@@ -285,7 +288,8 @@ test('logs self-heal toolless retry for local tool-call incompatibility', async 
     }),
   ).resolves.toBeDefined()
 
-  const fallbackLog = debugSpy.mock.calls.find(call =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fallbackLog = (debugSpy.mock.calls as any[]).find(call =>
     typeof call?.[0] === 'string' &&
     call[0].includes('self-heal retry reason=tool_call_incompatible mode=toolless'),
   )

@@ -14,7 +14,7 @@ const passthroughTool = {
       message: '',
     }
   },
-} as Tool<Record<string, unknown>>
+} as unknown as Tool
 
 const denyTool = {
   name: 'DenyTool',
@@ -25,7 +25,7 @@ const denyTool = {
       message: 'Denied by tool',
     }
   },
-} as Tool<Record<string, unknown>>
+} as unknown as Tool
 
 const askWithUpdatedInputTool = {
   name: 'AskWithUpdatedInputTool',
@@ -37,7 +37,7 @@ const askWithUpdatedInputTool = {
       updatedInput: { normalized: true },
     }
   },
-} as Tool<Record<string, unknown>>
+} as unknown as Tool
 
 function contextForFullAccess() {
   return {

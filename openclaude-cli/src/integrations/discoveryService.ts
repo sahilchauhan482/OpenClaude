@@ -101,10 +101,10 @@ function normalizeDiscoveryCacheBaseUrl(
 function normalizeDiscoveryCacheHeaders(
   headers: Record<string, string> | undefined,
 ): Array<[string, string]> {
-  return Object.entries(headers ?? {})
+  return (Object.entries(headers ?? {})
     .map(([name, value]) => [name.trim().toLowerCase(), value.trim()] as const)
     .filter(([name, value]) => name && value)
-    .sort(([leftName], [rightName]) => leftName.localeCompare(rightName))
+    .sort(([leftName], [rightName]) => leftName.localeCompare(rightName))) as [string, string][]
 }
 
 function hashDiscoveryCachePartition(value: unknown): string {

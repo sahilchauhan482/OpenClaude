@@ -437,7 +437,7 @@ async function runPermissionRequestHooksForHeadlessAgent(
           context.setAppState(prev => {
             updatedContext = applyPermissionUpdatesToLiveContext(
               prev.toolPermissionContext,
-              decision.updatedPermissions,
+              decision.updatedPermissions!,
             )
             if (prev.toolPermissionContext === updatedContext) return prev
             return {
@@ -445,7 +445,7 @@ async function runPermissionRequestHooksForHeadlessAgent(
               toolPermissionContext: updatedContext,
             }
           })
-          persistPermissionUpdates(decision.updatedPermissions)
+          persistPermissionUpdates(decision.updatedPermissions!)
         }
         return {
           behavior: 'allow',
@@ -1168,7 +1168,7 @@ export async function checkRuleBasedPermissions(
   if (
     toolPermissionResult?.behavior === 'ask' &&
     toolPermissionResult.decisionReason?.type === 'safetyCheck' &&
-    appState.toolPermissionContext.mode !== 'fullAccess'
+    (appState.toolPermissionContext.mode as string) !== 'fullAccess'
   ) {
     return toolPermissionResult
   }

@@ -112,14 +112,15 @@ function formatContextAsMarkdownTable(data: ContextData): string {
   // even before anything has fired.
   if (feature('CONTEXT_COLLAPSE')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
+    // @ts-ignore - getStats may not exist in this build
     const { getStats, isContextCollapseEnabled } =
-      require('../../services/contextCollapse/index.js') as typeof import('../../services/contextCollapse/index.js')
+      require('../../services/contextCollapse/index.js') as typeof import('../../services/contextCollapse/index.js') & { getStats?: () => any }
     /* eslint-enable @typescript-eslint/no-require-imports */
     if (isContextCollapseEnabled()) {
-      const s = getStats()
+      const s = getStats!()
       const { health: h } = s
 
-      const parts = []
+      const parts: string[] = []
       if (s.collapsedSpans > 0) {
         parts.push(
           `${s.collapsedSpans} ${plural(s.collapsedSpans, 'span')} summarized (${s.collapsedMessages} messages)`,

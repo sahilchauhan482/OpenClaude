@@ -575,9 +575,10 @@ async function processUserInputBase(
   if (inputString !== null && mode === 'prompt') {
     const trimmedInput = inputString.trim()
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const agentMention = attachmentMessages.find(
-      (m): m is AttachmentMessage<AgentMentionAttachment> =>
-        m.attachment.type === 'agent_mention',
+      (m): m is AttachmentMessage<any> =>
+        (m as any).attachment.type === 'agent_mention',
     )
 
     if (agentMention) {

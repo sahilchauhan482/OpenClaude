@@ -405,8 +405,9 @@ export async function getAnthropicClient({
         ? process.env.ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION
         : getAWSRegion()
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bedrockArgs: ConstructorParameters<typeof AnthropicBedrock>[0] = {
-      ...ARGS,
+      ...(ARGS as any),
       awsRegion,
       ...(isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH) && {
         skipAuth: true,
@@ -426,9 +427,12 @@ export async function getAnthropicClient({
       // Refresh auth and get credentials with cache clearing
       const cachedCredentials = await refreshAndGetAwsCredentials()
       if (cachedCredentials) {
-        bedrockArgs.awsAccessKey = cachedCredentials.accessKeyId
-        bedrockArgs.awsSecretKey = cachedCredentials.secretAccessKey
-        bedrockArgs.awsSessionToken = cachedCredentials.sessionToken
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(bedrockArgs as any).awsAccessKey = cachedCredentials.accessKeyId
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(bedrockArgs as any).awsSecretKey = cachedCredentials.secretAccessKey
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(bedrockArgs as any).awsSessionToken = cachedCredentials.sessionToken
       }
     }
     // we have always been lying about the return type - this doesn't support batching or models

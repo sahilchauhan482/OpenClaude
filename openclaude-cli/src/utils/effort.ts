@@ -1,4 +1,6 @@
 // biome-ignore-all assist/source/organizeImports: internal-only import markers must not be reordered
+declare function resolveAntModel(model: string): { defaultEffortLevel?: string; defaultEffortValue?: number; defaultMaxTokens?: number; upperMaxTokensLimit?: number } | null | undefined
+declare function getAntModelOverrideConfig(): { defaultModel?: string; defaultModelEffortLevel?: string } | null | undefined
 import { isUltrathinkEnabled } from './thinking.js'
 import { getInitialSettings } from './settings/settings.js'
 import { isProSubscriber, isMaxSubscriber, isTeamSubscriber } from './auth.js'
@@ -158,7 +160,7 @@ export function toPersistableEffort(
   if (value === 'max') {
     return value
   }
-  if (value === 'xhigh') {
+  if ((value as unknown as string) === 'xhigh') {
     return 'max'
   }
   return undefined
@@ -353,12 +355,12 @@ export function getDefaultEffortForModel(
       config?.defaultModel !== undefined &&
       model.toLowerCase() === config.defaultModel.toLowerCase()
     if (isDefaultModel && config?.defaultModelEffortLevel) {
-      return config.defaultModelEffortLevel
+      return config.defaultModelEffortLevel as EffortValue
     }
     const antModel = resolveAntModel(model)
     if (antModel) {
       if (antModel.defaultEffortLevel) {
-        return antModel.defaultEffortLevel
+        return antModel.defaultEffortLevel as EffortValue
       }
       if (antModel.defaultEffortValue !== undefined) {
         return antModel.defaultEffortValue

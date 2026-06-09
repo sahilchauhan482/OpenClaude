@@ -192,6 +192,7 @@ export function CodexUsage(): React.ReactNode {
         ) : (
           <CodexUsageTextRow
             key={`${row.label}-${index}`}
+            kind="text"
             label={row.label}
             value={row.value}
           />

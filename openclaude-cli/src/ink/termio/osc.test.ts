@@ -12,7 +12,7 @@ const mockedClipboardPath = join(process.cwd(), 'openclaude-clipboard.txt')
 const generateTempFilePathMock = mock(() => mockedClipboardPath)
 
 const execFileNoThrowMock = mock(
-  async () => ({ code: 0, stdout: '', stderr: '' }),
+  async (_file: string, _args: string[], _options?: Record<string, unknown>) => ({ code: 0, stdout: '', stderr: '' }),
 )
 
 function installOscMocks(): void {

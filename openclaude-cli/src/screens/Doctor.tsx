@@ -61,7 +61,7 @@ function DistTagsDisplay(t0) {
   const {
     promise
   } = t0;
-  const distTags = use(promise);
+  const distTags = use(promise) as NpmDistTags;
   if (!distTags.latest) {
     let t1;
     if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
@@ -113,10 +113,10 @@ export function Doctor(t0) {
     () => assembleToolPool(toolPermissionContext, mcpTools || []),
     [toolPermissionContext, mcpTools],
   );
-  const [diagnostic, setDiagnostic] = useState(null);
-  const [agentInfo, setAgentInfo] = useState(null);
-  const [contextWarnings, setContextWarnings] = useState(null);
-  const [versionLockInfo, setVersionLockInfo] = useState(null);
+  const [diagnostic, setDiagnostic] = useState<DiagnosticInfo | null>(null);
+  const [agentInfo, setAgentInfo] = useState<AgentInfo | null>(null);
+  const [contextWarnings, setContextWarnings] = useState<ContextWarnings | null>(null);
+  const [versionLockInfo, setVersionLockInfo] = useState<VersionLockInfo | null>(null);
   const validationErrors = useSettingsErrors();
   let t2;
   if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
@@ -160,7 +160,7 @@ export function Doctor(t0) {
   let t6;
   if ($[6] !== agentDefinitions || $[7] !== toolPermissionContext || $[8] !== tools) {
     t5 = () => {
-      getDoctorDiagnostic().then(setDiagnostic);
+      getDoctorDiagnostic().then(v => setDiagnostic(v));
       (async () => {
         const userAgentsDir = join(getClaudeConfigHomeDir(), "agents");
         const projectAgentsDir = join(getOriginalCwd(), ".claude", "agents");
@@ -179,7 +179,7 @@ export function Doctor(t0) {
           failedFiles
         };
         setAgentInfo(agentInfoData);
-        const warnings = await checkContextWarnings(tools, {
+        const warnings = await checkContextWarnings(tools as any, {
           activeAgents,
           allAgents,
           failedFiles

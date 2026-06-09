@@ -40,7 +40,7 @@ function readExternalLimits(
             entry[1] > 0,
         )
         .map(([key, value]) => [key.trim(), value])
-        .filter(([key]) => key.length > 0),
+        .filter(([key]) => (key as string).length > 0),
     )
   } catch {
     return {}

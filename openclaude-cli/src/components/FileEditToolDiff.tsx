@@ -50,7 +50,8 @@ export function FileEditToolDiff(props) {
   }
   return t2;
 }
-function DiffBody(t0) {
+type DiffBodyProps = { promise: Promise<DiffData>; file_path: string };
+function DiffBody(t0: DiffBodyProps) {
   const $ = _c(6);
   const {
     promise,

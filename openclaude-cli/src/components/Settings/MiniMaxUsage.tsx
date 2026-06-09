@@ -230,6 +230,7 @@ export function MiniMaxUsage(): React.ReactNode {
         ) : (
           <MiniMaxUsageTextRow
             key={`${row.label}-${index}`}
+            kind="text"
             label={row.label}
             value={row.value}
           />

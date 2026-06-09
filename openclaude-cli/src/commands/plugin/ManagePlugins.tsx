@@ -236,12 +236,12 @@ function PluginComponentsDisplay({
         const pluginEntry = marketplaceData.plugins.find(p => p.name === plugin.name);
         if (pluginEntry) {
           // Combine commands from both sources
-          const commandPathList = [];
+          const commandPathList: string[] = [];
           if (plugin.commandsPath) {
-            commandPathList.push(plugin.commandsPath);
+            commandPathList.push(plugin.commandsPath as string);
           }
           if (plugin.commandsPaths) {
-            commandPathList.push(...plugin.commandsPaths);
+            commandPathList.push(...(plugin.commandsPaths as string[]));
           }
 
           // Get base file names from all command paths
@@ -255,12 +255,12 @@ function PluginComponentsDisplay({
           }
 
           // Combine agents from both sources
-          const agentPathList = [];
+          const agentPathList: string[] = [];
           if (plugin.agentsPath) {
-            agentPathList.push(plugin.agentsPath);
+            agentPathList.push(plugin.agentsPath as string);
           }
           if (plugin.agentsPaths) {
-            agentPathList.push(...plugin.agentsPaths);
+            agentPathList.push(...(plugin.agentsPaths as string[]));
           }
 
           // Get base file names from all agent paths
@@ -274,12 +274,12 @@ function PluginComponentsDisplay({
           }
 
           // Combine skills from both sources
-          const skillPathList = [];
+          const skillPathList: string[] = [];
           if (plugin.skillsPath) {
-            skillPathList.push(plugin.skillsPath);
+            skillPathList.push(plugin.skillsPath as string);
           }
           if (plugin.skillsPaths) {
-            skillPathList.push(...plugin.skillsPaths);
+            skillPathList.push(...(plugin.skillsPaths as string[]));
           }
 
           // Get skill directory names from all skill paths
@@ -294,18 +294,18 @@ function PluginComponentsDisplay({
           }
 
           // Combine hooks from both sources
-          const hooksList = [];
+          const hooksList: any[] = [];
           if (plugin.hooksConfig) {
-            hooksList.push(Object.keys(plugin.hooksConfig));
+            hooksList.push(Object.keys(plugin.hooksConfig as object));
           }
           if (pluginEntry.hooks) {
             hooksList.push(pluginEntry.hooks);
           }
 
           // Combine MCP servers from both sources
-          const mcpServersList = [];
+          const mcpServersList: any[] = [];
           if (plugin.mcpServers) {
-            mcpServersList.push(Object.keys(plugin.mcpServers));
+            mcpServersList.push(Object.keys(plugin.mcpServers as object));
           }
           if (pluginEntry.mcpServers) {
             mcpServersList.push(pluginEntry.mcpServers);
@@ -977,9 +977,9 @@ export function ManagePlugins({
             name: failedItem.name,
             marketplace: failedItem.marketplace,
             errors: failedItem.errors,
-            scope: failedItem.scope
+            scope: failedItem.scope as FailedPluginInfo['scope']
           }
-        });
+        } as ViewState);
         hasAutoNavigated.current = true;
       }
 
@@ -1167,7 +1167,7 @@ export function ManagePlugins({
       const isEnabled_0 = mergedSettings_0?.enabledPlugins?.[pluginId_4] !== false;
       const pluginScope_0 = item_7.scope;
       const isBuiltin_0 = pluginScope_0 === 'builtin';
-      if (isBuiltin_0 || isInstallableScope(pluginScope_0)) {
+      if (isBuiltin_0 || isInstallableScope(pluginScope_0 as any)) {
         const newPending = new Map(pendingToggles);
         // Omit scope — see handleSingleOperation's enable/disable comment.
         if (currentPending) {
@@ -1240,9 +1240,9 @@ export function ManagePlugins({
           name: item_8.name,
           marketplace: item_8.marketplace,
           errors: item_8.errors,
-          scope: item_8.scope
+          scope: item_8.scope as FailedPluginInfo['scope']
         }
-      });
+      } as ViewState);
       setDetailsMenuIndex(0);
       setProcessError(null);
     } else if (item_8?.type === 'mcp') {
@@ -1472,7 +1472,7 @@ export function ManagePlugins({
                   enabledPlugins: {
                     ...settings.enabledPlugins,
                     [pluginId_7]: undefined
-                  }
+                  } as Record<string, boolean | string[]>
                 });
                 success = true;
               }

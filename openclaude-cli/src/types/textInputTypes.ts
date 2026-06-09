@@ -7,6 +7,7 @@ import type { PastedContent } from '../utils/config.js'
 import type { ImageDimensions } from '../utils/imageResizer.js'
 import type { TextHighlight } from '../utils/textHighlighting.js'
 import type { AgentId } from './ids.js'
+// @ts-ignore
 import type { AssistantMessage, MessageOrigin } from './message.js'
 
 /**

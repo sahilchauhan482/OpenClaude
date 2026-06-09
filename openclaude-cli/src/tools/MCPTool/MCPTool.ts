@@ -116,7 +116,8 @@ export const MCPTool = buildTool({
   // Overridden in mcpClient.ts
   userFacingName: () => 'mcp',
   renderToolUseProgressMessage,
-  renderToolResultMessage,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  renderToolResultMessage: renderToolResultMessage as any,
   isResultTruncated(output: Output): boolean {
     if (typeof output === 'string') {
       return isOutputLineTruncated(output)
@@ -133,22 +134,24 @@ export const MCPTool = buildTool({
     }
     return false
   },
-  mapToolResultToToolResultBlockParam(content, toolUseID) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mapToolResultToToolResultBlockParam(content: any, toolUseID: string) {
     // Defensive guard: if content is undefined/null (shouldn't happen after
     // the abort path fix in client.ts), return a clear indicator rather than
     // sending undefined to the API which would cause an error.
     if (content === undefined || content === null) {
       return {
         tool_use_id: toolUseID,
-        type: 'tool_result',
+        type: 'tool_result' as const,
         content: '[No content returned from MCP tool]',
       }
     }
     return {
       tool_use_id: toolUseID,
-      type: 'tool_result',
+      type: 'tool_result' as const,
       content,
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any
   },
 } satisfies ToolDef<InputSchema, Output>)
 

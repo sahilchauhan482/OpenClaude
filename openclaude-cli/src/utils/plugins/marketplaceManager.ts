@@ -2005,7 +2005,7 @@ export async function removeMarketplaceSource(name: string): Promise<void> {
 
       for (const pluginId in updatedPlugins) {
         if (pluginId.endsWith(marketplaceSuffix)) {
-          updatedPlugins[pluginId] = undefined
+          updatedPlugins[pluginId] = undefined as any
           removedPlugins = true
         }
       }

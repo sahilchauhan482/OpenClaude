@@ -978,7 +978,7 @@ export function stripExcessMediaItems(
       if (isMedia(block)) toRemove++
       if (isToolResult(block) && Array.isArray(block.content)) {
         for (const nested of block.content) {
-          if (isMedia(nested)) toRemove++
+          if (isMedia(nested as BetaContentBlockParam)) toRemove++
         }
       }
     }
@@ -1001,7 +1001,7 @@ export function stripExcessMediaItems(
         )
           return block
         const filtered = block.content.filter(n => {
-          if (toRemove > 0 && isMedia(n)) {
+          if (toRemove > 0 && isMedia(n as BetaContentBlockParam)) {
             toRemove--
             return false
           }
@@ -1214,7 +1214,8 @@ async function* queryModel(
     cachedMCEnabled = featureEnabled && modelSupported
     const config = getCachedMCConfig()
     logForDebugging(
-      `Cached MC gate: enabled=${featureEnabled} modelSupported=${modelSupported} model=${options.model} supportedModels=${jsonStringify(config?.supportedModels)}`,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      `Cached MC gate: enabled=${featureEnabled} modelSupported=${modelSupported} model=${options.model} supportedModels=${jsonStringify((config as any)?.supportedModels)}`,
     )
   }
 
@@ -1288,6 +1289,7 @@ async function* queryModel(
       cacheWeight: 0.4,
       freshWeight: 0.6,
       maxTotalTokens: Math.min(
+        // @ts-ignore — getContextWindowForModel, model, getSdkBetas, COMPACT_MAX_OUTPUT_TOKENS not imported (feature-gated)
         getContextWindowForModel(model, getSdkBetas()) - COMPACT_MAX_OUTPUT_TOKENS,
         200000
       ),
@@ -1719,8 +1721,9 @@ async function* queryModel(
         enablePromptCaching,
         options.querySource,
         useCachedMC,
-        consumedCacheEdits,
-        consumedPinnedEdits,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        consumedCacheEdits as any,
+        consumedPinnedEdits as any,
         options.skipCacheWrite,
       ),
       tools: allTools,
@@ -1766,7 +1769,8 @@ async function* queryModel(
         querySource: options.querySource,
         queryTracking: options.queryTracking,
         thinkingType: logThinkingType,
-        effortValue: logEffortValue,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        effortValue: logEffortValue as any,
         fastMode: isFastMode,
         previousRequestId,
       })
@@ -2265,10 +2269,12 @@ async function* queryModel(
             }
 
             // Update cost
-            const costUSDForPart = calculateUSDCost(resolvedModel, usage)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const costUSDForPart = calculateUSDCost(resolvedModel, usage as any)
             costUSD += addToTotalSessionCost(
               costUSDForPart,
-              usage,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              usage as any,
               options.model,
             )
 

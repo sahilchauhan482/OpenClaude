@@ -102,8 +102,8 @@ export class ExitPlanModeScanner {
     for (const m of newEvents) {
       if (m.type === 'assistant') {
         for (const block of m.message.content) {
-          if (block.type !== 'tool_use') continue
-          const tu = block as ToolUseBlock
+          if ((block as any).type !== 'tool_use') continue
+          const tu = block as unknown as ToolUseBlock
           if (tu.name === EXIT_PLAN_MODE_V2_TOOL_NAME) {
             this.exitPlanCalls.push(tu.id)
           }
@@ -112,8 +112,9 @@ export class ExitPlanModeScanner {
         const content = m.message.content
         if (!Array.isArray(content)) continue
         for (const block of content) {
-          if (block.type === 'tool_result') {
-            this.results.set(block.tool_use_id, block)
+          const b = block as any
+          if (b.type === 'tool_result') {
+            this.results.set(b.tool_use_id, b as ToolResultBlockParam)
           }
         }
       } else if (m.type === 'result' && m.subtype !== 'success') {

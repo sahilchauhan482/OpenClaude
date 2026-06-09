@@ -99,9 +99,10 @@ export function UserTextMessage(t0) {
       } else {
         t1 = $[9];
       }
+      // @ts-ignore
       const {
         UserGitHubWebhookMessage
-      } = t1 as typeof import('./UserGitHubWebhookMessage.js');
+      } = t1 as any;
       let t2;
       if ($[10] !== addMargin || $[11] !== param) {
         t2 = <UserGitHubWebhookMessage addMargin={addMargin} param={param} />;
@@ -220,9 +221,10 @@ export function UserTextMessage(t0) {
       } else {
         t1 = $[36];
       }
+      // @ts-ignore
       const {
         UserCrossSessionMessage
-      } = t1 as typeof import('./UserCrossSessionMessage.js');
+      } = t1 as any;
       let t2;
       if ($[37] !== addMargin || $[38] !== param) {
         t2 = <UserCrossSessionMessage addMargin={addMargin} param={param} />;

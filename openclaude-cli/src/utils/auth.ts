@@ -1232,7 +1232,7 @@ export function saveOAuthTokensIfNeeded(tokens: OAuthTokens): {
     secureStorage.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
 
   try {
-    const storageData = secureStorage.read() || {}
+    const storageData: any = secureStorage.read() || {}
     const existingOauth = storageData.claudeAiOauth
 
     storageData.claudeAiOauth = {
@@ -1282,8 +1282,8 @@ export const getClaudeAIOAuthTokens = memoize((): OAuthTokens | null => {
     // Return an inference-only token (unknown refresh and expiry)
     return {
       accessToken: process.env.CLAUDE_CODE_OAUTH_TOKEN,
-      refreshToken: null,
-      expiresAt: null,
+      refreshToken: null as unknown as string,
+      expiresAt: null as unknown as number,
       scopes: ['user:inference'],
       subscriptionType: null,
       rateLimitTier: null,
@@ -1296,8 +1296,8 @@ export const getClaudeAIOAuthTokens = memoize((): OAuthTokens | null => {
     // Return an inference-only token (unknown refresh and expiry)
     return {
       accessToken: oauthTokenFromFd,
-      refreshToken: null,
-      expiresAt: null,
+      refreshToken: null as unknown as string,
+      expiresAt: null as unknown as number,
       scopes: ['user:inference'],
       subscriptionType: null,
       rateLimitTier: null,
@@ -1306,7 +1306,7 @@ export const getClaudeAIOAuthTokens = memoize((): OAuthTokens | null => {
 
   try {
     const secureStorage = getSecureStorage()
-    const storageData = secureStorage.read()
+    const storageData: any = secureStorage.read()
     const oauthData = storageData?.claudeAiOauth
 
     if (!oauthData?.accessToken) {
@@ -1430,7 +1430,7 @@ export async function getClaudeAIOAuthTokensAsync(): Promise<OAuthTokens | null>
 
   try {
     const secureStorage = getSecureStorage()
-    const storageData = await secureStorage.readAsync()
+    const storageData: any = await secureStorage.readAsync()
     const oauthData = storageData?.claudeAiOauth
     if (!oauthData?.accessToken) {
       return null

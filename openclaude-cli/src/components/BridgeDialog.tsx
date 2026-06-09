@@ -17,12 +17,12 @@ import { Dialog } from './design-system/Dialog.js';
 type Props = {
   onDone: () => void;
 };
-export function BridgeDialog(t0) {
+export function BridgeDialog(t0: Props) {
   const $ = _c(87);
   const {
     onDone
   } = t0;
-  useRegisterOverlay("bridge-dialog");
+  useRegisterOverlay("bridge-dialog", true);
   const connected = useAppState(_temp);
   const sessionActive = useAppState(_temp2);
   const reconnecting = useAppState(_temp3);

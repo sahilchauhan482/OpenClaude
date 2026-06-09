@@ -152,7 +152,7 @@ export function getAllHooks(appState: AppState): IndividualHookConfig[] {
 
   for (const source of policyPackSources) {
     const sourceSettings = getSettingsForSource(source)
-    for (const matcher of getHookPolicyPackMatchers(sourceSettings)) {
+    for (const matcher of getHookPolicyPackMatchers(sourceSettings as any)) {
       for (const hookCommand of matcher.hooks) {
         hooks.push({
           event: matcher.event,

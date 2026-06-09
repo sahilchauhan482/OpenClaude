@@ -77,8 +77,8 @@ test('sandbox auto-allow still enforces Bash path constraints', async () => {
   )
 
   expect(result.behavior).toBe('ask')
-  expect(result.message).toContain('was blocked')
-  expect(result.message).toContain('passwd')
+  expect((result as any).message).toContain('was blocked')
+  expect((result as any).message).toContain('passwd')
 })
 
 // CC-643 regression: the subcommand-fanout cap must apply on the sandbox

@@ -289,7 +289,7 @@ export function deserializeMessagesWithInterruptDetection(
     const isAnthropicNativeTransport = usesAnthropicNativeMessageFormat({
       processEnv: process.env,
       model: process.env.OPENAI_MODEL,
-      providerCategory: provider,
+      providerCategory: provider as any,
     })
     const isThirdPartyProvider =
       provider !== 'foundry' && !isAnthropicNativeTransport
@@ -594,7 +594,7 @@ export async function loadConversationForResume(
       let skip = new Set<string>()
       if (feature('BG_SESSIONS')) {
         try {
-          const { listAllLiveSessions } = await import('./udsClient.js')
+          const { listAllLiveSessions } = await import('./udsClient.js') as any
           const live = await listAllLiveSessions()
           skip = new Set(
             live.flatMap(s =>

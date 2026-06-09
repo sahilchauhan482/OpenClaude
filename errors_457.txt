@@ -1,0 +1,457 @@
+src/bridge/bridgeMessaging.ts(416,12): error TS2352: Conversion of type '{ input_tokens: number; cache_creation_input_tokens: number; cache_read_input_tokens: number; output_tokens: number; server_tool_use: { web_search_requests: number; web_fetch_requests: number; }; ... 4 more ...; speed: string; }' to type 'Record<string, number>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/buddy/useBuddyNotification.tsx(13,7): error TS2367: This comparison appears to be unintentional because the types '"external"' and '"ant"' have no overlap.
+src/buddy/useBuddyNotification.tsx(18,7): error TS2367: This comparison appears to be unintentional because the types '"external"' and '"ant"' have no overlap.
+src/commands/insights.ts(2577,38): error TS2345: Argument of type 'NonSharedBuffer' is not assignable to parameter of type 'string'.
+src/commands/lsp/lsp.test.ts(154,59): error TS2345: Argument of type '{ getInitializationStatus: () => InitializationStatus; getLspServerManager: () => { getAllServers: () => Map<string, TestServerInstance>; } | undefined; ... 8 more ...; discoverWorkspaceExtensions: (pathspec?: string) => Promise<...>; }' is not assignable to parameter of type 'LspCommandDeps'.
+src/commands/plugin/PluginSettings.tsx(460,28): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<null>'.
+src/commands/plugin/PluginSettings.tsx(472,32): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<null>'.
+src/commands/plugin/PluginSettings.tsx(476,32): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<null>'.
+src/commands/tag/tag.tsx(141,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/components/agents/new-agent-creation/wizard-steps/ConfirmStep.tsx(158,9): error TS2322: Type 'NewAgentLocation | undefined' is not assignable to type '"userSettings" | "projectSettings" | "localSettings" | "flagSettings" | "policySettings" | "built-in"'.
+src/components/agents/new-agent-creation/wizard-steps/MemoryStep.tsx(77,9): error TS2322: Type '{ memory: AgentMemoryScope | undefined; getSystemPrompt: () => string | undefined; agentType: string; whenToUse: string; tools?: string[] | undefined; disallowedTools?: string[] | undefined; ... 17 more ...; source: "userSettings" | ... 3 more ... | "policySettings"; } | undefined' is not assignable to type 'DraftCustomAgent | undefined'.
+src/components/agents/ToolSelector.tsx(61,91): error TS2339: Property 'name' does not exist on type 'never'.
+src/components/GlobalSearchDialog.tsx(237,48): error TS18047: 'preview' is possibly 'null'.
+src/components/GlobalSearchDialog.tsx(237,163): error TS18047: 'preview' is possibly 'null'.
+src/components/permissions/PermissionDecisionDebugInfo.tsx(62,98): error TS2345: Argument of type '(t2: [string, any]) => JSX.Element' is not assignable to parameter of type '(value: unknown, index: number, array: unknown[]) => Element'.
+src/hooks/useApiKeyVerification.test.tsx(99,5): error TS2307: Cannot find module './useApiKeyVerification.ts?switch-to-third-party' or its corresponding type declarations.
+src/query/chaos.test.ts(10,8): error TS6059: File 'D:/OpenClaude/test/fixtures/failures/apiErrors.ts' is not under 'rootDir' 'D:/OpenClaude/openclaude-cli/src'. 'rootDir' is expected to contain all source files.
+src/QueryEngine.ts(1171,7): error TS2322: Type 'NonNullableUsage' is not assignable to type 'Record<string, number>'.
+src/services/api/claude.ts(1726,9): error TS2345: Argument of type 'PinnedCacheEdits[]' is not assignable to parameter of type 'CachedMCPinnedEdits[]'.
+src/services/api/openaiShim.test.ts(1903,38): error TS2769: No overload matches this call.
+src/services/api/openaiShim.test.ts(1904,32): error TS2769: No overload matches this call.
+src/services/api/openaiShim.test.ts(1958,38): error TS2769: No overload matches this call.
+src/services/api/openaiShim.test.ts(4498,22): error TS2352: Conversion of type '() => Promise<Response>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/services/api/openaiShim.ts(1115,18): error TS2322: Type 'Promise<ReadableStreamDefaultReadResult<Uint8Array<ArrayBuffer>>>' is not assignable to type 'Promise<ReadableStreamReadResult<Uint8Array<ArrayBufferLike>>>'.
+src/services/api/openaiShim.ts(1182,18): error TS2322: Type 'Promise<ReadableStreamDefaultReadResult<Uint8Array<ArrayBuffer>>>' is not assignable to type 'Promise<ReadableStreamReadResult<Uint8Array<ArrayBufferLike>>>'.
+src/services/api/providerConfig.codexSecureStorage.test.ts(40,7): error TS2307: Cannot find module './providerConfig.js?codex-secure-storage' or its corresponding type declarations.
+src/services/api/providerConfig.codexSecureStorage.test.ts(62,7): error TS2307: Cannot find module './providerConfig.js?codex-env-precedence' or its corresponding type declarations.
+src/services/api/providerConfig.codexSecureStorage.test.ts(85,7): error TS2307: Cannot find module './providerConfig.js?codex-env-nested-account' or its corresponding type declarations.
+src/services/api/providerConfig.codexSecureStorage.test.ts(126,9): error TS2307: Cannot find module './providerConfig.js?codex-auth-json-nested-account' or its corresponding type declarations.
+src/services/api/providerConfig.codexSecureStorage.test.ts(154,7): error TS2307: Cannot find module './providerConfig.js?codex-secure-storage-no-auth-io' or its corresponding type declarations.
+src/services/api/providerConfig.codexSecureStorage.test.ts(194,7): error TS2307: Cannot find module './providerConfig.js?codex-refresh-cooldown-fallback' or its corresponding type declarations.
+src/services/api/providerConfig.codexSecureStorage.test.ts(234,7): error TS2307: Cannot find module './providerConfig.js?codex-refresh-cooldown-account-id-fallback' or its corresponding type declarations.
+src/services/api/providerConfig.runtimeCodexCredentials.test.ts(104,5): error TS2307: Cannot find module './providerConfig.js?runtime-no-sync-secure-storage' or its corresponding type declarations.
+src/services/autoDream/autoDream.ts(245,29): error TS2345: Argument of type 'any' is not assignable to parameter of type 'never'.
+src/services/compact/compact.ts(805,21): error TS2339: Property 'type' does not exist on type 'never'.
+src/services/compact/compact.ts(805,42): error TS2339: Property 'isCompactSummary' does not exist on type 'never'.
+src/services/compact/microCompact.ts(353,26): error TS2339: Property 'triggerThreshold' does not exist on type 'never'.
+src/services/compact/microCompact.ts(354,27): error TS2339: Property 'keepRecent' does not exist on type 'never'.
+src/services/extractMemories/extractMemories.ts(496,31): error TS2345: Argument of type 'any' is not assignable to parameter of type 'never'.
+src/services/tools/toolExecution.ts(1478,26): error TS2345: Argument of type 'MessageUpdateLazy<any>' is not assignable to parameter of type 'never'.
+src/services/voice.ts(31,9): error TS2339: Property 'isNativeAudioAvailable' does not exist on type '{ default: typeof import("audio-capture-napi"); createAudioCapture(...args: unknown[]): unknown; }'.
+src/tools/MCPTool/MCPTool.test.ts(11,26): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(11,26): error TS18048: 'tool.validateInput' is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(27,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(27,25): error TS18048: 'tool.validateInput' is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(31,27): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(31,27): error TS18048: 'tool.validateInput' is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(46,26): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(46,26): error TS18048: 'tool.validateInput' is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(55,26): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(55,26): error TS18048: 'tool.validateInput' is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(65,26): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(65,26): error TS18048: 'tool.validateInput' is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(87,36): error TS2769: No overload matches this call.
+src/tools/MCPTool/MCPTool.test.ts(109,12): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(113,12): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(117,12): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(121,12): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(125,12): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(129,12): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.test.ts(130,12): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/tools/MCPTool/MCPTool.ts(119,3): error TS2322: Type '(output: MCPToolResult, _progressMessagesForMessage: any[], { verbose, input }: { verbose: boolean; input?: unknown; }) => ReactNode' is not assignable to type '(content: string | { type: string; text?: string | undefined; }[], progressMessagesForMessage: any[], options: { style?: "condensed" | undefined; theme: "light" | "dark" | "light-daltonized" | "dark-daltonized" | "light-ansi" | "dark-ansi"; ... 4 more ...; input?: unknown; }) => ReactNode'.
+src/tools/MCPTool/MCPTool.ts(136,3): error TS2322: Type '(content: string | { type: string; text?: string | undefined; }[], toolUseID: string) => { tool_use_id: string; type: "tool_result"; content: string | { type: string; text?: string | undefined; }[]; }' is not assignable to type '(content: any, toolUseID: string) => ToolResultBlockParam'.
+src/tools/MCPTool/MCPTool.ts(136,3): error TS2322: Type '(content: string | { type: string; text?: string | undefined; }[], toolUseID: string) => { tool_use_id: string; type: "tool_result"; content: string | { type: string; text?: string | undefined; }[]; }' is not assignable to type '(content: string | { type: string; text?: string | undefined; }[], toolUseID: string) => ToolResultBlockParam'.
+src/tools/NotebookEditTool/NotebookEditTool.ts(379,24): error TS18048: 'notebook.metadata' is possibly 'undefined'.
+src/tools/NotebookEditTool/NotebookEditTool.ts(379,57): error TS2339: Property 'name' does not exist on type '{}'.
+src/tools/NotebookEditTool/NotebookEditTool.ts(382,9): error TS18048: 'notebook.nbformat' is possibly 'undefined'.
+src/tools/NotebookEditTool/NotebookEditTool.ts(383,37): error TS18048: 'notebook.nbformat_minor' is possibly 'undefined'.
+src/tools/NotebookEditTool/NotebookEditTool.ts(386,11): error TS2322: Type 'string' is not assignable to type 'undefined'.
+src/tools/NotebookEditTool/NotebookEditTool.ts(388,11): error TS2322: Type 'string | undefined' is not assignable to type 'undefined'.
+src/tools/SkillTool/SkillTool.ts(141,25): error TS2551: Property 'isSkillSearchEnabled' does not exist on type '{ isRemoteSkillSearchEnabled(): boolean; logSkillSearchEvent(_event: string, _data?: any): void; loadRemoteSkills(_query: string): Promise<any[]>; getRemoteSkillState(): any; }'. Did you mean 'isRemoteSkillSearchEnabled'?
+src/tools/SkillTool/SkillTool.ts(391,40): error TS2339: Property 'stripCanonicalPrefix' does not exist on type '{ isRemoteSkillSearchEnabled(): boolean; logSkillSearchEvent(_event: string, _data?: any): void; loadRemoteSkills(_query: string): Promise<any[]>; getRemoteSkillState(): any; }'.
+src/tools/SkillTool/SkillTool.ts(395,42): error TS2339: Property 'getDiscoveredRemoteSkill' does not exist on type '{ isRemoteSkillSearchEnabled(): boolean; logSkillSearchEvent(_event: string, _data?: any): void; loadRemoteSkills(_query: string): Promise<any[]>; getRemoteSkillState(): any; }'.
+src/tools/SkillTool/SkillTool.ts(506,40): error TS2339: Property 'stripCanonicalPrefix' does not exist on type '{ isRemoteSkillSearchEnabled(): boolean; logSkillSearchEvent(_event: string, _data?: any): void; loadRemoteSkills(_query: string): Promise<any[]>; getRemoteSkillState(): any; }'.
+src/tools/SkillTool/SkillTool.ts(619,40): error TS2339: Property 'stripCanonicalPrefix' does not exist on type '{ isRemoteSkillSearchEnabled(): boolean; logSkillSearchEvent(_event: string, _data?: any): void; loadRemoteSkills(_query: string): Promise<any[]>; getRemoteSkillState(): any; }'.
+src/tools/SkillTool/SkillTool.ts(673,27): error TS2551: Property 'isSkillSearchEnabled' does not exist on type '{ isRemoteSkillSearchEnabled(): boolean; logSkillSearchEvent(_event: string, _data?: any): void; loadRemoteSkills(_query: string): Promise<any[]>; getRemoteSkillState(): any; }'. Did you mean 'isRemoteSkillSearchEnabled'?
+src/tools/SkillTool/SkillTool.ts(985,11): error TS2339: Property 'getDiscoveredRemoteSkill' does not exist on type '{ isRemoteSkillSearchEnabled(): boolean; logSkillSearchEvent(_event: string, _data?: any): void; loadRemoteSkills(_query: string): Promise<any[]>; getRemoteSkillState(): any; }'.
+src/tools/SkillTool/SkillTool.ts(985,37): error TS2339: Property 'loadRemoteSkill' does not exist on type '{ isRemoteSkillSearchEnabled(): boolean; logSkillSearchEvent(_event: string, _data?: any): void; loadRemoteSkills(_query: string): Promise<any[]>; getRemoteSkillState(): any; }'.
+src/tools/SkillTool/SkillTool.ts(985,54): error TS2339: Property 'logRemoteSkillLoaded' does not exist on type '{ isRemoteSkillSearchEnabled(): boolean; logSkillSearchEvent(_event: string, _data?: any): void; loadRemoteSkills(_query: string): Promise<any[]>; getRemoteSkillState(): any; }'.
+src/tools/SyntheticOutputTool/SyntheticOutputTool.test.ts(45,42): error TS2554: Expected 4-5 arguments, but got 2.
+src/tools/SyntheticOutputTool/SyntheticOutputTool.test.ts(49,23): error TS2339: Property 'structured_output' does not exist on type 'ToolResult<unknown>'.
+src/tools/SyntheticOutputTool/SyntheticOutputTool.test.ts(58,42): error TS2554: Expected 4-5 arguments, but got 2.
+src/tools/SyntheticOutputTool/SyntheticOutputTool.test.ts(62,23): error TS2339: Property 'structured_output' does not exist on type 'ToolResult<unknown>'.
+src/tools/SyntheticOutputTool/SyntheticOutputTool.test.ts(70,42): error TS2554: Expected 4-5 arguments, but got 2.
+src/tools/SyntheticOutputTool/SyntheticOutputTool.test.ts(74,23): error TS2339: Property 'structured_output' does not exist on type 'ToolResult<unknown>'.
+src/tools/SyntheticOutputTool/SyntheticOutputTool.test.ts(81,19): error TS2554: Expected 4-5 arguments, but got 2.
+src/tools/TaskOutputTool/TaskOutputTool.tsx(164,12): error TS2367: This comparison appears to be unintentional because the types '"external"' and '"ant"' have no overlap.
+src/tools/TaskStopTool/UI.tsx(28,7): error TS2367: This comparison appears to be unintentional because the types '"external"' and '"ant"' have no overlap.
+src/tools/testing/TestingPermissionTool.tsx(28,12): error TS2367: This comparison appears to be unintentional because the types '"production"' and '"test"' have no overlap.
+src/tools/WebFetchTool/utils.ts(339,61): error TS2339: Property 'entries' does not exist on type 'Headers'.
+src/tools/WebFetchTool/utils.ts(506,27): error TS2345: Argument of type 'string | number | boolean | string[] | AxiosHeaders' is not assignable to parameter of type 'string'.
+src/tools/WebFetchTool/utils.ts(508,58): error TS2345: Argument of type 'string | number | boolean | string[] | AxiosHeaders' is not assignable to parameter of type 'string | undefined'.
+src/tools/WebFetchTool/utils.ts(520,19): error TS2339: Property 'includes' does not exist on type 'string | number | boolean | string[] | AxiosHeaders'.
+src/tools/WebFetchTool/utils.ts(539,5): error TS2322: Type 'string | number | boolean | string[] | AxiosHeaders' is not assignable to type 'string'.
+src/tools/WebSearchTool/providers/firecrawl.ts(30,28): error TS2345: Argument of type '(r: { url: string; title?: string; description?: string; }) => { title: string; url: string; description: string | undefined; }' is not assignable to parameter of type '(value: Document | SearchResultWeb, index: number, array: (Document | SearchResultWeb)[]) => { title: string; url: string; description: string | undefined; }'.
+src/tools/WebSearchTool/WebSearchTool.ts(248,22): error TS2339: Property 'url' does not exist on type '{}'.
+src/tools/WebSearchTool/WebSearchTool.ts(248,50): error TS2339: Property 'url' does not exist on type '{}'.
+src/tools/WebSearchTool/WebSearchTool.ts(249,24): error TS2339: Property 'url' does not exist on type '{}'.
+src/tools/WebSearchTool/WebSearchTool.ts(251,21): error TS2339: Property 'title' does not exist on type '{}'.
+src/tools/WebSearchTool/WebSearchTool.ts(251,50): error TS2339: Property 'title' does not exist on type '{}'.
+src/tools/WebSearchTool/WebSearchTool.ts(252,18): error TS2339: Property 'title' does not exist on type '{}'.
+src/tools/WebSearchTool/WebSearchTool.ts(253,18): error TS2339: Property 'url' does not exist on type '{}'.
+src/tools/WebSearchTool/WebSearchTool.ts(254,17): error TS2339: Property 'url' does not exist on type '{}'.
+src/types/hooks.ts(202,3): error TS2344: Type 'false' does not satisfy the constraint 'true'.
+src/types/textInputTypes.ts(10,33): error TS2305: Module '"./message.js"' has no exported member 'MessageOrigin'.
+src/utils/attributionHooks.ts(3,7): error TS2322: Type '() => Promise<any>' is not assignable to type 'HookCallback'.
+src/utils/claudeInChrome/mcpServer.ts(3,8): error TS2305: Module '"@ant/claude-for-chrome-mcp"' has no exported member 'ClaudeForChromeContext'.
+src/utils/claudeInChrome/mcpServer.ts(4,3): error TS2305: Module '"@ant/claude-for-chrome-mcp"' has no exported member 'createClaudeForChromeMcpServer'.
+src/utils/claudeInChrome/mcpServer.ts(5,8): error TS2305: Module '"@ant/claude-for-chrome-mcp"' has no exported member 'Logger'.
+src/utils/claudeInChrome/mcpServer.ts(6,8): error TS2305: Module '"@ant/claude-for-chrome-mcp"' has no exported member 'PermissionMode'.
+src/utils/claudeInChrome/setupPortable.ts(178,18): error TS2367: This comparison appears to be unintentional because the types 'NonSharedBuffer' and 'string' have no overlap.
+src/utils/claudeInChrome/setupPortable.ts(178,57): error TS2339: Property 'startsWith' does not exist on type 'NonSharedBuffer'.
+src/utils/claudeInChrome/setupPortable.ts(193,11): error TS2345: Argument of type 'NonSharedBuffer' is not assignable to parameter of type 'string'.
+src/utils/codexCredentials.test.ts(88,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(90,7): error TS2307: Cannot find module './codexCredentials.js?save-bare-mode' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(126,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(128,7): error TS2307: Cannot find module './codexCredentials.js?save-plaintext-fallback' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(192,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(194,7): error TS2307: Cannot find module './codexCredentials.js?save-scoped-plaintext-fallback' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(252,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(254,7): error TS2307: Cannot find module './codexCredentials.js?save-fail-closed-shadowed-fallback' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(296,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(298,7): error TS2307: Cannot find module './codexCredentials.js?save-fail-closed-stale-native-delete' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(350,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(352,7): error TS2307: Cannot find module './codexCredentials.js?save-native-success-plaintext-cleanup-fails' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(387,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(389,7): error TS2307: Cannot find module './codexCredentials.js?save-incomplete' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(483,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(485,20): error TS2307: Cannot find module './codexCredentials.js?refresh-success' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(544,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(546,20): error TS2307: Cannot find module './codexCredentials.js?refresh-cooldown' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(631,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(633,20): error TS2307: Cannot find module './codexCredentials.js?refresh-drop-stale-api-key' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(728,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(730,7): error TS2307: Cannot find module './codexCredentials.js?refresh-dedupe' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(771,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(773,7): error TS2307: Cannot find module './codexCredentials.js?preserve-profile-id' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(808,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(812,22): error TS2307: Cannot find module './codexCredentials.js?attach-profile-id' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(855,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(857,7): error TS2307: Cannot find module './codexCredentials.js?clear-scoped-plaintext-fallback' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(900,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(902,7): error TS2307: Cannot find module './codexCredentials.js?refresh-async-read' or its corresponding type declarations.
+src/utils/codexCredentials.test.ts(958,5): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/codexCredentials.test.ts(960,7): error TS2307: Cannot find module './codexCredentials.js?refresh-memory-cooldown' or its corresponding type declarations.
+src/utils/computerUse/executor.ts(32,3): error TS2305: Module '"@ant/computer-use-mcp"' has no exported member 'ComputerExecutor'.
+src/utils/computerUse/executor.ts(33,3): error TS2305: Module '"@ant/computer-use-mcp"' has no exported member 'DisplayGeometry'.
+src/utils/computerUse/executor.ts(34,3): error TS2305: Module '"@ant/computer-use-mcp"' has no exported member 'FrontmostApp'.
+src/utils/computerUse/executor.ts(35,3): error TS2305: Module '"@ant/computer-use-mcp"' has no exported member 'InstalledApp'.
+src/utils/computerUse/executor.ts(36,3): error TS2305: Module '"@ant/computer-use-mcp"' has no exported member 'ResolvePrepareCaptureResult'.
+src/utils/computerUse/executor.ts(37,3): error TS2305: Module '"@ant/computer-use-mcp"' has no exported member 'RunningApp'.
+src/utils/computerUse/executor.ts(38,3): error TS2305: Module '"@ant/computer-use-mcp"' has no exported member 'ScreenshotResult'.
+src/utils/computerUse/hostAdapter.ts(3,3): error TS2305: Module '"@ant/computer-use-mcp/types"' has no exported member 'ComputerUseHostAdapter'.
+src/utils/computerUse/hostAdapter.ts(4,3): error TS2305: Module '"@ant/computer-use-mcp/types"' has no exported member 'Logger'.
+src/utils/computerUse/inputLoader.ts(3,3): error TS2305: Module '"@ant/computer-use-input"' has no exported member 'ComputerUseInput'.
+src/utils/computerUse/inputLoader.ts(4,3): error TS2305: Module '"@ant/computer-use-input"' has no exported member 'ComputerUseInputAPI'.
+src/utils/computerUse/mcpServer.ts(3,3): error TS2305: Module '"@ant/computer-use-mcp"' has no exported member 'buildComputerUseTools'.
+src/utils/computerUse/mcpServer.ts(4,3): error TS2724: '"@ant/computer-use-mcp"' has no exported member named 'createComputerUseMcpServer'. Did you mean 'createComputerUseMcp'?
+src/utils/effort.ts(163,8): error TS2352: Conversion of type 'number | undefined' to type 'string' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/effort.ts(358,7): error TS2322: Type 'string' is not assignable to type 'EffortValue | undefined'.
+src/utils/effort.ts(363,9): error TS2322: Type 'string' is not assignable to type 'EffortValue | undefined'.
+src/utils/envUtils.ts(332,7): error TS2554: Expected 1 arguments, but got 0.
+src/utils/filePersistence/outputsScanner.ts(87,44): error TS2345: Argument of type 'NonSharedBuffer' is not assignable to parameter of type 'string'.
+src/utils/githubModelsCredentials.hydrate.test.ts(56,7): error TS2307: Cannot find module './githubModelsCredentials.js?hydrate=sets-token' or its corresponding type declarations.
+src/utils/githubModelsCredentials.hydrate.test.ts(59,43): error TS2769: No overload matches this call.
+src/utils/githubModelsCredentials.hydrate.test.ts(77,7): error TS2307: Cannot find module './githubModelsCredentials.js?hydrate=preserve-existing' or its corresponding type declarations.
+src/utils/githubModelsCredentials.refresh.test.ts(84,38): error TS2339: Property 'startsWith' does not exist on type 'never'.
+src/utils/githubModelsCredentials.refresh.test.ts(132,38): error TS2339: Property 'startsWith' does not exist on type 'never'.
+src/utils/githubModelsCredentials.test.ts(28,7): error TS2307: Cannot find module './githubModelsCredentials.js?read-bare-mode' or its corresponding type declarations.
+src/utils/githubModelsCredentials.test.ts(39,7): error TS2307: Cannot find module './githubModelsCredentials.js?save-bare-mode' or its corresponding type declarations.
+src/utils/githubModelsCredentials.test.ts(50,7): error TS2307: Cannot find module './githubModelsCredentials.js?clear-bare-mode' or its corresponding type declarations.
+src/utils/hooks.ts(4660,16): error TS2339: Property 'decision' does not exist on type '{ continue?: boolean | undefined; suppressOutput?: boolean | undefined; stopReason?: string | undefined; decision?: "approve" | "block" | undefined; reason?: string | undefined; systemMessage?: string | undefined; hookSpecificOutput?: { ...; } | ... 14 more ... | undefined; } | { ...; }'.
+src/utils/hooks.ts(4663,33): error TS2339: Property 'reason' does not exist on type '{ continue?: boolean | undefined; suppressOutput?: boolean | undefined; stopReason?: string | undefined; decision?: "approve" | "block" | undefined; reason?: string | undefined; systemMessage?: string | undefined; hookSpecificOutput?: { ...; } | ... 14 more ... | undefined; } | { ...; }'.
+src/utils/hooks.ts(4669,29): error TS2339: Property 'hookSpecificOutput' does not exist on type '{ continue?: boolean | undefined; suppressOutput?: boolean | undefined; stopReason?: string | undefined; decision?: "approve" | "block" | undefined; reason?: string | undefined; systemMessage?: string | undefined; hookSpecificOutput?: { ...; } | ... 14 more ... | undefined; } | { ...; }'.
+src/utils/hooks.ts(4691,18): error TS2339: Property 'reason' does not exist on type '{ continue?: boolean | undefined; suppressOutput?: boolean | undefined; stopReason?: string | undefined; decision?: "approve" | "block" | undefined; reason?: string | undefined; systemMessage?: string | undefined; hookSpecificOutput?: { ...; } | ... 14 more ... | undefined; } | { ...; }'.
+src/utils/incrementalTokenCounter.test.ts(23,9): error TS2353: Object literal may only specify known properties, and 'maxCacheSize' does not exist in type 'IncrementalCounterConfig'.
+src/utils/incrementalTokenCounter.test.ts(166,53): error TS2353: Object literal may only specify known properties, and 'maxCacheSize' does not exist in type 'IncrementalCounterConfig'.
+src/utils/incrementalTokenCounter.test.ts(210,30): error TS2353: Object literal may only specify known properties, and 'maxCacheSize' does not exist in type 'Partial<IncrementalCounterConfig>'.
+src/utils/knowledgeGraph.stress.test.ts(173,21): error TS2345: Argument of type 'Promise<Entity>' is not assignable to parameter of type 'never'.
+src/utils/knowledgeGraph.ts(270,44): error TS2345: Argument of type 'Buffer<ArrayBufferLike>' is not assignable to parameter of type 'string'.
+src/utils/messageFilters.ts(58,13): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/messageFilters.ts(59,13): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/messageFilters.ts(60,13): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/messageFilters.ts(61,13): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/messageFilters.ts(61,36): error TS2339: Property 'isMeta' does not exist on type 'never'.
+src/utils/messageFilters.ts(64,13): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/messageFilters.ts(65,27): error TS2339: Property 'message' does not exist on type 'never'.
+src/utils/messageFilters.ts(74,13): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/messageQueueManager.ts(343,53): error TS2769: No overload matches this call.
+src/utils/messageQueueManager.ts(345,3): error TS1360: Type 'string[]' does not satisfy the expected type '"task-notification"'.
+src/utils/messages.ts(46,3): error TS2305: Module '"../types/message.js"' has no exported member 'MessageOrigin'.
+src/utils/messages.ts(55,3): error TS2305: Module '"../types/message.js"' has no exported member 'SystemAgentsKilledMessage'.
+src/utils/messages.ts(57,3): error TS2724: '"../types/message.js"' has no exported member named 'SystemApiMetricsMessage'. Did you mean 'SystemAPIErrorMessage'?
+src/utils/messages.ts(58,3): error TS2305: Module '"../types/message.js"' has no exported member 'SystemAwaySummaryMessage'.
+src/utils/messages.ts(65,3): error TS2724: '"../types/message.js"' has no exported member named 'SystemMessageLevel'. Did you mean 'SystemMessage'?
+src/utils/messages.ts(66,3): error TS2724: '"../types/message.js"' has no exported member named 'SystemMicrocompactBoundaryMessage'. Did you mean 'SystemCompactBoundaryMessage'?
+src/utils/messages.ts(67,3): error TS2305: Module '"../types/message.js"' has no exported member 'SystemPermissionRetryMessage'.
+src/utils/messages.ts(68,3): error TS2305: Module '"../types/message.js"' has no exported member 'SystemScheduledTaskFireMessage'.
+src/utils/messages.ts(910,15): error TS2339: Property 'attachment' does not exist on type 'never'.
+src/utils/messages.ts(912,33): error TS2339: Property 'attachment' does not exist on type 'never'.
+src/utils/messages.ts(927,15): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/messages.ts(928,15): error TS2339: Property 'message' does not exist on type 'never'.
+src/utils/messages.ts(930,33): error TS2339: Property 'message' does not exist on type 'never'.
+src/utils/messages.ts(946,15): error TS2339: Property 'attachment' does not exist on type 'never'.
+src/utils/messages.ts(948,33): error TS2339: Property 'attachment' does not exist on type 'never'.
+src/utils/messages.ts(994,16): error TS2339: Property 'attachment' does not exist on type 'never'.
+src/utils/messages.ts(995,17): error TS2339: Property 'attachment' does not exist on type 'never'.
+src/utils/messages.ts(1002,15): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/messages.ts(1003,15): error TS2339: Property 'message' does not exist on type 'never'.
+src/utils/messages.ts(1010,17): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/messages.ts(1010,46): error TS2339: Property 'subtype' does not exist on type 'never'.
+src/utils/messages.ts(1038,15): error TS2315: Type 'AttachmentMessage' is not generic.
+src/utils/messages.ts(1077,19): error TS2315: Type 'AttachmentMessage' is not generic.
+src/utils/messages.ts(1475,19): error TS2315: Type 'NormalizedAssistantMessage' is not generic.
+src/utils/messages.ts(2364,13): error TS2339: Property 'isSnipRuntimeEnabled' does not exist on type 'typeof import("D:/OpenClaude/openclaude-cli/src/services/compact/snipCompact")'.
+src/utils/messages.ts(2434,13): error TS2339: Property 'isSnipRuntimeEnabled' does not exist on type 'typeof import("D:/OpenClaude/openclaude-cli/src/services/compact/snipCompact")'.
+src/utils/messages.ts(2777,59): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/utils/messages.ts(4168,17): error TS2339: Property 'SNIP_NUDGE_TEXT' does not exist on type 'typeof import("D:/OpenClaude/openclaude-cli/src/services/compact/snipCompact")'.
+src/utils/messages/mappers.ts(18,3): error TS2305: Module '"src/types/message.js"' has no exported member 'CompactMetadata'.
+src/utils/model/bedrock.ts(26,26): error TS2345: Argument of type 'InferenceProfileSummary' is not assignable to parameter of type 'never'.
+src/utils/model/bedrock.ts(34,34): error TS2339: Property 'inferenceProfileId' does not exist on type 'never'.
+src/utils/model/bedrock.ts(35,31): error TS2339: Property 'inferenceProfileId' does not exist on type 'never'.
+src/utils/model/deprecation.ts(36,5): error TS2741: Property 'xai' is missing in type '{ firstParty: string; bedrock: string; vertex: string; foundry: string; openai: null; gemini: null; github: null; codex: null; 'nvidia-nim': null; minimax: null; 'xiaomi-mimo': null; mistral: null; }' but required in type 'Record<LegacyAPIProvider, string | null>'.
+src/utils/model/deprecation.ts(53,5): error TS2741: Property 'xai' is missing in type '{ firstParty: string; bedrock: string; vertex: string; foundry: string; openai: null; gemini: null; github: null; codex: null; 'nvidia-nim': null; minimax: null; 'xiaomi-mimo': null; mistral: null; }' but required in type 'Record<LegacyAPIProvider, string | null>'.
+src/utils/model/deprecation.ts(70,5): error TS2741: Property 'xai' is missing in type '{ firstParty: string; bedrock: null; vertex: null; foundry: null; openai: null; gemini: null; github: null; codex: null; 'nvidia-nim': null; minimax: null; 'xiaomi-mimo': null; mistral: null; }' but required in type 'Record<LegacyAPIProvider, string | null>'.
+src/utils/model/model.github.test.ts(19,41): error TS2339: Property 'model' does not exist on type 'GlobalConfig'.
+src/utils/model/model.openai-shim-providers.test.ts(60,38): error TS2339: Property 'model' does not exist on type 'GlobalConfig'.
+src/utils/model/model.ts(408,7): error TS2304: Cannot find name 'getAntModelOverrideConfig'.
+src/utils/model/model.ts(694,22): error TS2304: Cannot find name 'resolveAntModel'.
+src/utils/model/model.ts(792,22): error TS2304: Cannot find name 'resolveAntModel'.
+src/utils/model/openaiContextWindows.ts(43,32): error TS2339: Property 'length' does not exist on type 'string | number'.
+src/utils/multiTurnContext.test.ts(89,40): error TS2769: No overload matches this call.
+src/utils/notebook.ts(10,3): error TS2724: '"../types/notebook.js"' has no exported member named 'NotebookCellOutput'. Did you mean 'NotebookCell'?
+src/utils/notebook.ts(11,3): error TS2724: '"../types/notebook.js"' has no exported member named 'NotebookCellSource'. Did you mean 'NotebookCell'?
+src/utils/notebook.ts(12,3): error TS2305: Module '"../types/notebook.js"' has no exported member 'NotebookCellSourceOutput'.
+src/utils/notebook.ts(14,3): error TS2305: Module '"../types/notebook.js"' has no exported member 'NotebookOutputImage'.
+src/utils/notebook.ts(122,19): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/utils/notebook.ts(125,19): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/utils/notebook.ts(172,20): error TS18048: 'notebook.metadata' is possibly 'undefined'.
+src/utils/notebook.ts(172,53): error TS2339: Property 'name' does not exist on type '{}'.
+src/utils/permissions/bypassPermissionsKillswitch.test.ts(85,7): error TS2345: Argument of type '(update: (prev: { toolPermissionContext: never; }) => unknown) => void' is not assignable to parameter of type '(f: (prev: AppState) => AppState) => void'.
+src/utils/permissions/bypassPermissionsKillswitch.test.ts(90,7): error TS2345: Argument of type '(update: (prev: { toolPermissionContext: never; }) => unknown) => void' is not assignable to parameter of type '(f: (prev: AppState) => AppState) => void'.
+src/utils/permissions/classifierDecision.ts(29,77): error TS2307: Cannot find module '../../tools/TerminalCaptureTool/prompt.js' or its corresponding type declarations.
+src/utils/permissions/classifierDecision.ts(34,84): error TS2307: Cannot find module '../../tools/OverflowTestTool/OverflowTestTool.js' or its corresponding type declarations.
+src/utils/permissions/classifierDecision.ts(40,86): error TS2307: Cannot find module '../../tools/VerifyPlanExecutionTool/constants.js' or its corresponding type declarations.
+src/utils/permissions/dangerousModePromptFlow.test.tsx(94,9): error TS2322: Type '({ mode, onAccept, }: { mode?: "bypassPermissions" | "fullAccess" | undefined; onAccept: () => void; }) => null' is not assignable to type '({ mode, onAccept, onDecline, onCancel, }: Props) => Element'.
+src/utils/permissions/dangerousModePromptFlow.test.tsx(123,9): error TS2322: Type '({ mode, onAccept, }: { mode?: "bypassPermissions" | "fullAccess" | undefined; onAccept: () => void; }) => null' is not assignable to type '({ mode, onAccept, onDecline, onCancel, }: Props) => Element'.
+src/utils/permissions/dangerousModePromptFlow.tsx(43,7): error TS2322: Type 'DangerousPermissionMode | null' is not assignable to type '"bypassPermissions" | "fullAccess" | undefined'.
+src/utils/permissions/filesystem.test.ts(15,11): error TS2344: Type '{ file_path: string; }' does not satisfy the constraint 'AnyObject'.
+src/utils/permissions/filesystem.test.ts(47,7): error TS2345: Argument of type 'Tool<{ file_path: string; }>' is not assignable to parameter of type 'Tool<AnyObject>'.
+src/utils/permissions/filesystem.test.ts(61,7): error TS2345: Argument of type 'Tool<{ file_path: string; }>' is not assignable to parameter of type 'Tool<AnyObject>'.
+src/utils/permissions/filesystem.test.ts(75,7): error TS2345: Argument of type 'Tool<{ file_path: string; }>' is not assignable to parameter of type 'Tool<AnyObject>'.
+src/utils/permissions/filesystem.test.ts(86,7): error TS2345: Argument of type 'Tool<{ file_path: string; }>' is not assignable to parameter of type 'Tool<AnyObject>'.
+src/utils/permissions/filesystem.test.ts(98,7): error TS2345: Argument of type 'Tool<{ file_path: string; }>' is not assignable to parameter of type 'Tool<AnyObject>'.
+src/utils/permissions/permissions.test.ts(6,25): error TS2352: Conversion of type '{ name: string; inputSchema: ZodObject<{}, $strip>; checkPermissions(): Promise<{ behavior: "ask"; message: string; decisionReason: { type: "safetyCheck"; reason: string; classifierApprovable: false; }; }>; }' to type 'Tool<Record<string, never>>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/permissions/permissions.test.ts(20,11): error TS2344: Type 'Record<string, never>' does not satisfy the constraint 'AnyObject'.
+src/utils/permissions/permissions.test.ts(22,29): error TS2352: Conversion of type '{ name: string; inputSchema: ZodObject<{}, $strip>; requiresUserInteraction(): true; checkPermissions(): Promise<{ behavior: "ask"; message: string; }>; }' to type 'Tool<Record<string, never>>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/permissions/permissions.test.ts(34,11): error TS2344: Type 'Record<string, never>' does not satisfy the constraint 'AnyObject'.
+src/utils/permissions/permissions.test.ts(36,26): error TS2352: Conversion of type '{ name: string; inputSchema: ZodObject<{}, $strip>; checkPermissions(): Promise<{ behavior: "passthrough"; message: string; }>; }' to type 'Tool<Record<string, never>>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/permissions/permissions.test.ts(45,11): error TS2344: Type 'Record<string, never>' does not satisfy the constraint 'AnyObject'.
+src/utils/permissions/permissions.test.ts(47,24): error TS2352: Conversion of type '{ name: string; inputSchema: ZodObject<{}, $strip>; checkPermissions(): Promise<{ behavior: "ask"; message: string; decisionReason: { type: "rule"; rule: { ruleBehavior: "ask"; }; }; }>; }' to type 'Tool<Record<string, never>>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/permissions/permissions.test.ts(62,11): error TS2344: Type 'Record<string, never>' does not satisfy the constraint 'AnyObject'.
+src/utils/permissions/permissions.test.ts(64,18): error TS2352: Conversion of type '{ name: string; inputSchema: ZodObject<{}, $strip>; checkPermissions(): Promise<{ behavior: "deny"; message: string; }>; }' to type 'Tool<Record<string, never>>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/permissions/permissions.test.ts(73,11): error TS2344: Type 'Record<string, never>' does not satisfy the constraint 'AnyObject'.
+src/utils/permissions/permissions.test.ts(101,7): error TS2345: Argument of type 'Tool<Record<string, never>>' is not assignable to parameter of type 'Tool'.
+src/utils/permissions/permissions.test.ts(114,7): error TS2345: Argument of type 'Tool<Record<string, never>>' is not assignable to parameter of type 'Tool'.
+src/utils/permissions/permissions.test.ts(130,7): error TS2345: Argument of type 'Tool<Record<string, never>>' is not assignable to parameter of type 'Tool'.
+src/utils/permissions/permissions.test.ts(148,7): error TS2345: Argument of type 'Tool<Record<string, never>>' is not assignable to parameter of type 'Tool'.
+src/utils/permissions/permissions.test.ts(156,19): error TS2339: Property 'message' does not exist on type 'PermissionDecision<Record<string, unknown>>'.
+src/utils/permissions/permissions.test.ts(161,7): error TS2345: Argument of type 'Tool<Record<string, never>>' is not assignable to parameter of type 'Tool'.
+src/utils/permissions/permissions.test.ts(177,7): error TS2345: Argument of type 'Tool<Record<string, never>>' is not assignable to parameter of type 'Tool'.
+src/utils/permissions/permissions.test.ts(185,19): error TS2339: Property 'message' does not exist on type 'PermissionDecision<Record<string, unknown>>'.
+src/utils/permissions/permissions.ts(440,15): error TS2345: Argument of type 'PermissionUpdate[] | undefined' is not assignable to parameter of type 'PermissionUpdate[]'.
+src/utils/permissions/permissions.ts(1171,5): error TS2367: This comparison appears to be unintentional because the types '"default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk" | "auto" | "bubble"' and '"fullAccess"' have no overlap.
+src/utils/plans.ts(11,3): error TS2305: Module '"src/types/message.js"' has no exported member 'SystemFileSnapshotMessage'.
+src/utils/plugins/marketplaceHelpers.ts(96,7): error TS2322: Type '{ name: string; owner: { name: string; email?: string | undefined; url?: string | undefined; }; plugins: { name: string; source: string | { source: "npm"; package: string; version?: string | undefined; registry?: string | undefined; } | { ...; } | { ...; } | { ...; } | { ...; }; ... 20 more ...; tags?: string[] | un...' is not assignable to type 'null'.
+src/utils/plugins/marketplaceManager.ts(2008,11): error TS2322: Type 'undefined' is not assignable to type 'boolean | string[]'.
+src/utils/plugins/mcpbHandler.ts(2,3): error TS2724: '"@anthropic-ai/mcpb"' has no exported member named 'McpbManifest'. Did you mean 'McpbManifestAny'?
+src/utils/plugins/mcpbHandler.ts(3,3): error TS2305: Module '"@anthropic-ai/mcpb"' has no exported member 'McpbUserConfigurationOption'.
+src/utils/preflightChecks.tsx(101,19): error TS2345: Argument of type 'PreflightCheckResult' is not assignable to parameter of type 'SetStateAction<null>'.
+src/utils/preflightChecks.tsx(118,19): error TS2339: Property 'success' does not exist on type 'never'.
+src/utils/preflightChecks.tsx(120,36): error TS2339: Property 'success' does not exist on type 'never'.
+src/utils/preflightChecks.tsx(137,125): error TS2339: Property 'success' does not exist on type 'never'.
+src/utils/preflightChecks.tsx(137,282): error TS2339: Property 'error' does not exist on type 'never'.
+src/utils/preflightChecks.tsx(137,304): error TS2339: Property 'sslHint' does not exist on type 'never'.
+src/utils/preflightChecks.tsx(137,364): error TS2339: Property 'sslHint' does not exist on type 'never'.
+src/utils/processUserInput/processSlashCommand.tsx(276,7): error TS2367: This comparison appears to be unintentional because the types '"external"' and '"ant"' have no overlap.
+src/utils/processUserInput/processSlashCommand.tsx(430,11): error TS2367: This comparison appears to be unintentional because the types '"external"' and '"ant"' have no overlap.
+src/utils/processUserInput/processSlashCommand.tsx(501,9): error TS2367: This comparison appears to be unintentional because the types '"external"' and '"ant"' have no overlap.
+src/utils/processUserInput/processTextPrompt.ts(38,24): error TS2554: Expected 0 arguments, but got 1.
+src/utils/processUserInput/processUserInput.ts(579,17): error TS2315: Type 'AttachmentMessage' is not generic.
+src/utils/providerAutoDetect.test.ts(157,23): error TS2352: Conversion of type '() => Promise<Response>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerAutoDetect.test.ts(185,23): error TS2352: Conversion of type '() => Promise<Response>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerAutoDetect.test.ts(234,23): error TS2352: Conversion of type '() => Promise<never>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerAutoDetect.test.ts(250,23): error TS2352: Conversion of type '() => Promise<Response>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerAutoDetect.test.ts(266,23): error TS2352: Conversion of type '() => Promise<Response>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerAutoDetect.test.ts(278,23): error TS2352: Conversion of type '() => Promise<Response>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerAutoDetect.test.ts(295,23): error TS2352: Conversion of type '() => Promise<never>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerAutoDetect.test.ts(311,23): error TS2352: Conversion of type '() => Promise<never>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerAutoDetect.test.ts(329,23): error TS2352: Conversion of type '() => Promise<never>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerAutoDetect.test.ts(347,23): error TS2352: Conversion of type '() => Promise<never>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(9,3): error TS2578: Unused '@ts-expect-error' directive.
+src/utils/providerDiscovery.test.ts(43,22): error TS2352: Conversion of type 'Mock<(input: any, init: any) => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(76,22): error TS2352: Conversion of type 'Mock<() => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(155,22): error TS2352: Conversion of type 'Mock<(input: any) => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(179,22): error TS2352: Conversion of type 'Mock<(input: any) => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(208,22): error TS2352: Conversion of type 'Mock<(input: any) => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(241,22): error TS2352: Conversion of type 'Mock<(input: any) => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(274,22): error TS2352: Conversion of type 'Mock<(input: any) => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(312,22): error TS2352: Conversion of type 'Mock<(input: any) => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(356,22): error TS2352: Conversion of type 'Mock<(input: any) => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(372,22): error TS2352: Conversion of type 'Mock<() => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/providerDiscovery.test.ts(389,22): error TS2352: Conversion of type 'Mock<() => Promise<Response>>' to type 'typeof fetch' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/queryHelpers.ts(65,20): error TS2339: Property 'type' does not exist on type '{}'.
+src/utils/queryHelpers.ts(66,20): error TS2339: Property 'type' does not exist on type '{}'.
+src/utils/queryHelpers.ts(67,20): error TS2339: Property 'type' does not exist on type '{}'.
+src/utils/releaseNotes.ts(530,29): error TS2339: Property 'VERSION_CHANGELOG' does not exist on type '{ VERSION: string; DISPLAY_VERSION: string; BUILD_TIME: string; ISSUES_EXPLAINER: string; PACKAGE_URL: string; NATIVE_PACKAGE_URL: string | undefined; FEEDBACK_CHANNEL: string; }'.
+src/utils/releaseNotes.ts(578,29): error TS2339: Property 'VERSION_CHANGELOG' does not exist on type '{ VERSION: string; DISPLAY_VERSION: string; BUILD_TIME: string; ISSUES_EXPLAINER: string; PACKAGE_URL: string; NATIVE_PACKAGE_URL: string | undefined; FEEDBACK_CHANNEL: string; }'.
+src/utils/requestLogging.test.ts(80,11): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+src/utils/sdkEventQueue.ts(4,15): error TS2305: Module '"../types/tools.js"' has no exported member 'SdkWorkflowProgress'.
+src/utils/secureStorage/platformStorage.test.ts(80,19): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/utils/secureStorage/platformStorage.test.ts(80,33): error TS2769: No overload matches this call.
+src/utils/secureStorage/platformStorage.test.ts(89,22): error TS2532: Object is possibly 'undefined'.
+src/utils/secureStorage/platformStorage.test.ts(89,50): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/utils/secureStorage/platformStorage.test.ts(90,51): error TS2493: Tuple type '[]' of length '0' has no element at index '2'.
+src/utils/secureStorage/platformStorage.test.ts(93,14): error TS18048: 'options' is possibly 'undefined'.
+src/utils/secureStorage/platformStorage.test.ts(112,22): error TS2532: Object is possibly 'undefined'.
+src/utils/secureStorage/platformStorage.test.ts(112,50): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/utils/secureStorage/platformStorage.test.ts(113,51): error TS2493: Tuple type '[]' of length '0' has no element at index '2'.
+src/utils/secureStorage/platformStorage.test.ts(115,14): error TS18048: 'options' is possibly 'undefined'.
+src/utils/secureStorage/platformStorage.test.ts(119,52): error TS2493: Tuple type '[]' of length '0' has no element at index '2'.
+src/utils/secureStorage/platformStorage.test.ts(120,14): error TS18048: 'options2' is possibly 'undefined'.
+src/utils/secureStorage/platformStorage.test.ts(126,22): error TS2532: Object is possibly 'undefined'.
+src/utils/secureStorage/platformStorage.test.ts(126,50): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/utils/secureStorage/platformStorage.test.ts(133,22): error TS2532: Object is possibly 'undefined'.
+src/utils/secureStorage/platformStorage.test.ts(133,50): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/utils/secureStorage/platformStorage.test.ts(141,22): error TS2532: Object is possibly 'undefined'.
+src/utils/secureStorage/platformStorage.test.ts(141,50): error TS2493: Tuple type '[]' of length '0' has no element at index '1'.
+src/utils/secureStorage/platformStorage.test.ts(187,51): error TS2493: Tuple type '[]' of length '0' has no element at index '2'.
+src/utils/secureStorage/platformStorage.test.ts(188,14): error TS18048: 'options' is possibly 'undefined'.
+src/utils/secureStorage/windowsCredentialStorage.ts(55,34): error TS2339: Property 'trim' does not exist on type 'string | string[] | unknown[] | Uint8Array<ArrayBufferLike>'.
+src/utils/secureStorage/windowsCredentialStorage.ts(89,24): error TS2345: Argument of type 'string | string[] | unknown[] | Uint8Array<ArrayBufferLike>' is not assignable to parameter of type 'string'.
+src/utils/secureStorage/windowsCredentialStorage.ts(139,26): error TS2345: Argument of type 'string | string[] | unknown[] | Uint8Array<ArrayBufferLike>' is not assignable to parameter of type 'string'.
+src/utils/sessionStorage.test.ts(122,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(123,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(124,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(125,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(126,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(128,63): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(154,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(155,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(156,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(157,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(158,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(159,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(161,63): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(192,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(193,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(194,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(195,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(196,23): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(198,63): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(206,5): error TS2322: Type '{ type: string; tool_use_id: string; is_error: false; content: string; }[]' is not assignable to type 'string'.
+src/utils/sessionStorage.test.ts(228,6): error TS2352: Conversion of type 'string' to type '{ content: string; }[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/sessionStorage.test.ts(236,5): error TS2322: Type '{ type: string; tool_use_id: string; is_error: false; content: string; }[]' is not assignable to type 'string'.
+src/utils/sessionStorage.test.ts(252,31): error TS2345: Argument of type 'string' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/utils/sessionStorage.test.ts(259,6): error TS2352: Conversion of type 'string | undefined' to type '{ content: string; }[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/utils/sessionStorage.ts(1746,13): error TS2339: Property 'type' does not exist on type 'T'.
+src/utils/sessionStorage.ts(1746,36): error TS2339: Property 'isMeta' does not exist on type 'T'.
+src/utils/sessionStorage.ts(1748,31): error TS2322: Type 'T' is not assignable to type 'object'.
+src/utils/sessionStorage.ts(1750,25): error TS2339: Property 'message' does not exist on type 'T'.
+src/utils/sessionStorage.ts(3905,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3905,52): error TS2339: Property 'leafUuid' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3906,29): error TS2339: Property 'leafUuid' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3906,45): error TS2339: Property 'summary' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3907,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3907,57): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3908,32): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3908,49): error TS2339: Property 'customTitle' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3909,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3909,48): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3910,24): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3910,41): error TS2339: Property 'tag' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3911,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3911,55): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3912,30): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3912,47): error TS2339: Property 'agentName' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3913,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3913,56): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3914,31): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3914,48): error TS2339: Property 'agentColor' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3915,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3915,58): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3916,33): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3916,50): error TS2339: Property 'agentSetting' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3917,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3917,49): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3918,25): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3918,42): error TS2339: Property 'mode' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3919,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3919,59): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3920,34): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3920,51): error TS2339: Property 'worktreeSession' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3921,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3921,52): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3922,29): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3922,46): error TS2339: Property 'prNumber' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3923,26): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3923,43): error TS2339: Property 'prUrl' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3924,34): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3924,51): error TS2339: Property 'prRepository' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3925,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3926,40): error TS2339: Property 'messageId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3927,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3928,40): error TS2339: Property 'messageId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3929,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3932,19): error TS2339: Property 'agentId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3933,63): error TS2339: Property 'agentId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3934,46): error TS2339: Property 'agentId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3935,34): error TS2339: Property 'replacements' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3937,58): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3938,41): error TS2339: Property 'sessionId' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3939,34): error TS2339: Property 'replacements' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3941,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sessionStorage.ts(3943,24): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/sliceAnsi.ts(46,41): error TS2339: Property 'fullWidth' does not exist on type 'ControlCode | Char'.
+src/utils/sliceAnsi.ts(46,75): error TS2339: Property 'value' does not exist on type 'ControlCode | Char'.
+src/utils/sliceAnsi.ts(80,25): error TS2339: Property 'value' does not exist on type 'ControlCode | Char'.
+src/utils/stats.ts(201,26): error TS2339: Property 'type' does not exist on type 'never'.
+src/utils/stats.ts(202,48): error TS2339: Property 'timeSavedMs' does not exist on type 'never'.
+src/utils/storage/SQLiteMasterpiece.test.ts(194,7): error TS2322: Type 'unknown' is not assignable to type 'null'.
+src/utils/storage/SQLiteProvider.ts(23,27): error TS2322: Type 'void' is not assignable to type 'Promise<void>'.
+src/utils/streamlinedTransform.ts(119,9): error TS18046: 'block' is of type 'unknown'.
+src/utils/streamlinedTransform.ts(119,48): error TS18046: 'block' is of type 'unknown'.
+src/utils/swarm/It2SetupPrompt.tsx(31,27): error TS2345: Argument of type 'PythonPackageManager | null' is not assignable to parameter of type 'SetStateAction<null>'.
+src/utils/swarm/It2SetupPrompt.tsx(77,22): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<null>'.
+src/utils/swarm/It2SetupPrompt.tsx(94,18): error TS2345: Argument of type '"No Python package manager found (uvx, pipx, or pip)"' is not assignable to parameter of type 'SetStateAction<null>'.
+src/utils/swarm/It2SetupPrompt.tsx(103,18): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<null>'.
+src/utils/swarm/It2SetupPrompt.tsx(286,32): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<null>'.
+src/utils/task/sdkProgress.ts(1,15): error TS2305: Module '"../../types/tools.js"' has no exported member 'SdkWorkflowProgress'.
+src/utils/textHighlighting.ts(131,38): error TS2339: Property 'value' does not exist on type 'ControlCode | Char'.
+src/utils/textHighlighting.ts(138,35): error TS2339: Property 'value' does not exist on type 'ControlCode | Char'.
+src/utils/toolErrors.ts(111,21): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/utils/toolErrors.ts(118,21): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/utils/toolErrors.ts(126,21): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/utils/truncate.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/utils/truncate.test.ts(4,3): error TS2582: Cannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/utils/truncate.test.ts(5,5): error TS2304: Cannot find name 'expect'.
+src/utils/truncate.test.ts(8,3): error TS2582: Cannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/utils/truncate.test.ts(9,5): error TS2304: Cannot find name 'expect'.
+src/utils/truncate.test.ts(12,3): error TS2582: Cannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/utils/truncate.test.ts(13,5): error TS2304: Cannot find name 'expect'.
+src/utils/ultraplan/ccrSession.ts(105,15): error TS18046: 'block' is of type 'unknown'.
+src/utils/ultraplan/ccrSession.ts(115,15): error TS18046: 'block' is of type 'unknown'.
+src/utils/ultraplan/ccrSession.ts(116,30): error TS18046: 'block' is of type 'unknown'.
+src/utils/ultraplan/ccrSession.ts(116,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'ToolResultBlockParam'.
+src/utils/withResolvers.ts(7,37): error TS2304: Cannot find name 'PromiseWithResolvers'.

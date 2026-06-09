@@ -58,6 +58,7 @@ export async function getMcpHeadersFromHelper(
 
   try {
     logMCPDebug(serverName, 'Executing headersHelper to get dynamic headers')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const execResult = await execFileNoThrowWithCwd(config.headersHelper, [], {
       shell: true,
       timeout: 10000,
@@ -68,7 +69,7 @@ export async function getMcpHeadersFromHelper(
         CLAUDE_CODE_MCP_SERVER_NAME: serverName,
         CLAUDE_CODE_MCP_SERVER_URL: config.url,
       },
-    })
+    } as any)
     if (execResult.code !== 0 || !execResult.stdout) {
       throw new Error(
         `headersHelper for MCP server '${serverName}' did not return a valid value`,

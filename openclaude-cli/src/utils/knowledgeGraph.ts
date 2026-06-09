@@ -205,7 +205,7 @@ export async function initOrama(cwd: string): Promise<void> {
     if (existsSync(path)) {
       try {
         const data = readFileSync(path)
-        oramaDb = await restore('binary', data)
+        oramaDb = await restore('binary', data) as any
         const graph = projectGraph || loadProjectGraph(cwd)
         if (await isOramaInSync(graph)) {
           restored = true
@@ -267,7 +267,7 @@ export async function saveOrama(cwd: string): Promise<void> {
   try {
     const data = await persist(oramaDb, 'binary')
     // Atomic write with flush using established project utility
-    writeFileSyncAndFlush_DEPRECATED(path, data as Buffer)
+    writeFileSync(path, data as unknown as Buffer)
   } catch (e) {
     console.error('Failed to save Orama DB:', e)
   }

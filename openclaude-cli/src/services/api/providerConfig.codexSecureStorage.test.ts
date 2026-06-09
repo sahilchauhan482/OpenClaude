@@ -35,10 +35,8 @@ describe('resolveCodexApiCredentials with secure storage', () => {
       }),
     }))
 
-    // @ts-expect-error cache-busting query string for Bun module mocks
-    const { resolveCodexApiCredentials } = await import(
-      './providerConfig.js?codex-secure-storage'
-    )
+    // @ts-ignore cache-busting query string for Bun module mocks
+    const { resolveCodexApiCredentials } = await import('./providerConfig.js?codex-secure-storage')
 
     const credentials = resolveCodexApiCredentials({} as NodeJS.ProcessEnv)
     expect(credentials.apiKey).toBe('codex-api-key-token')
@@ -57,10 +55,8 @@ describe('resolveCodexApiCredentials with secure storage', () => {
       }),
     }))
 
-    // @ts-expect-error cache-busting query string for Bun module mocks
-    const { resolveCodexApiCredentials } = await import(
-      './providerConfig.js?codex-env-precedence'
-    )
+    // @ts-ignore cache-busting query string for Bun module mocks
+    const { resolveCodexApiCredentials } = await import('./providerConfig.js?codex-env-precedence')
 
     const credentials = resolveCodexApiCredentials({
       CODEX_API_KEY: 'env-token',
@@ -80,10 +76,8 @@ describe('resolveCodexApiCredentials with secure storage', () => {
       readCodexCredentials: () => undefined,
     }))
 
-    // @ts-expect-error cache-busting query string for Bun module mocks
-    const { resolveCodexApiCredentials } = await import(
-      './providerConfig.js?codex-env-nested-account'
-    )
+    // @ts-ignore cache-busting query string for Bun module mocks
+    const { resolveCodexApiCredentials } = await import('./providerConfig.js?codex-env-nested-account')
 
     const credentials = resolveCodexApiCredentials({
       CODEX_API_KEY: makeJwt({
@@ -121,10 +115,8 @@ describe('resolveCodexApiCredentials with secure storage', () => {
     )
 
     try {
-      // @ts-expect-error cache-busting query string for Bun module mocks
-      const { resolveCodexApiCredentials } = await import(
-        './providerConfig.js?codex-auth-json-nested-account'
-      )
+      // @ts-ignore cache-busting query string for Bun module mocks
+      const { resolveCodexApiCredentials } = await import('./providerConfig.js?codex-auth-json-nested-account')
 
       const credentials = resolveCodexApiCredentials({
         CODEX_AUTH_JSON_PATH: authPath,
@@ -149,10 +141,8 @@ describe('resolveCodexApiCredentials with secure storage', () => {
       }),
     }))
 
-    // @ts-expect-error cache-busting query string for Bun module mocks
-    const { resolveCodexApiCredentials } = await import(
-      './providerConfig.js?codex-secure-storage-no-auth-io'
-    )
+    // @ts-ignore cache-busting query string for Bun module mocks
+    const { resolveCodexApiCredentials } = await import('./providerConfig.js?codex-secure-storage-no-auth-io')
 
     const credentials = resolveCodexApiCredentials({} as NodeJS.ProcessEnv)
     expect(credentials.apiKey).toBe('codex-api-key-token')
@@ -189,10 +179,8 @@ describe('resolveCodexApiCredentials with secure storage', () => {
       }),
     }))
 
-    // @ts-expect-error cache-busting query string for Bun module mocks
-    const { resolveCodexApiCredentials } = await import(
-      './providerConfig.js?codex-refresh-cooldown-fallback'
-    )
+    // @ts-ignore cache-busting query string for Bun module mocks
+    const { resolveCodexApiCredentials } = await import('./providerConfig.js?codex-refresh-cooldown-fallback')
 
     try {
       const credentials = resolveCodexApiCredentials({} as NodeJS.ProcessEnv)
@@ -229,10 +217,8 @@ describe('resolveCodexApiCredentials with secure storage', () => {
       }),
     }))
 
-    // @ts-expect-error cache-busting query string for Bun module mocks
-    const { resolveCodexApiCredentials } = await import(
-      './providerConfig.js?codex-refresh-cooldown-account-id-fallback'
-    )
+    // @ts-ignore cache-busting query string for Bun module mocks
+    const { resolveCodexApiCredentials } = await import('./providerConfig.js?codex-refresh-cooldown-account-id-fallback')
 
     try {
       const credentials = resolveCodexApiCredentials({} as NodeJS.ProcessEnv)

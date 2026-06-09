@@ -67,13 +67,13 @@ export function SkillsMenu(t0) {
   let groups;
   if ($[2] !== skills) {
     groups = {
-      policySettings: [],
-      userSettings: [],
-      projectSettings: [],
-      localSettings: [],
-      flagSettings: [],
-      plugin: [],
-      mcp: []
+      policySettings: [] as SkillCommand[],
+      userSettings: [] as SkillCommand[],
+      projectSettings: [] as SkillCommand[],
+      localSettings: [] as SkillCommand[],
+      flagSettings: [] as SkillCommand[],
+      plugin: [] as SkillCommand[],
+      mcp: [] as SkillCommand[]
     };
     for (const skill of skills) {
       const source = skill.source as SkillSource;
@@ -81,7 +81,7 @@ export function SkillsMenu(t0) {
         groups[source].push(skill);
       }
     }
-    for (const group of Object.values(groups)) {
+    for (const group of Object.values(groups) as SkillCommand[][]) {
       group.sort(_temp2);
     }
     $[2] = skills;

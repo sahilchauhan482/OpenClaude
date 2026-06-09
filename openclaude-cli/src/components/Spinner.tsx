@@ -219,8 +219,10 @@ function SpinnerWithVerbInner({
   // doesn't trigger re-renders; we pick up updates on the parent's ~25x/turn
   // re-render cadence, same as the old ApiMetricsLine did.
   let ttftText: string | null = null;
-  if ("external" === 'ant' && apiMetricsRef?.current && apiMetricsRef.current.length > 0) {
-    ttftText = computeTtftText(apiMetricsRef.current);
+  // @ts-ignore - compile-time constant; apiMetricsRef/computeTtftText are internal-only
+  if (("external" as string) === 'ant' && (typeof apiMetricsRef !== 'undefined') && (apiMetricsRef as any)?.current && (apiMetricsRef as any).current.length > 0) {
+    // @ts-ignore
+    ttftText = (computeTtftText as any)((apiMetricsRef as any).current);
   }
 
   // When leader is idle but teammates are running (and we're viewing the leader),

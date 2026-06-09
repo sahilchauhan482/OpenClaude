@@ -561,7 +561,7 @@ function validateHookJson(
   const validation = hookJSONOutputSchema().safeParse(parsed)
   if (validation.success) {
     logForDebugging('Successfully parsed and validated hook JSON output')
-    return { json: validation.data }
+    return { json: validation.data as HookJSONOutput }
   }
   const errors = validation.error.issues
     .map(err => `  - ${err.path.join('.')}: ${err.message}`)
@@ -637,7 +637,7 @@ function parseHttpHookOutput(body: string): {
       logForDebugging(
         'HTTP hook returned empty body, treating as empty JSON object',
       )
-      return { json: validation.data }
+      return { json: validation.data as HookJSONOutput }
     }
   }
 
@@ -832,7 +832,7 @@ function processHookJSONOutput({
       case 'PermissionRequest':
         // Extract the permission request decision
         if (json.hookSpecificOutput.decision) {
-          result.permissionRequestResult = json.hookSpecificOutput.decision
+          result.permissionRequestResult = json.hookSpecificOutput.decision as any
           // Also update permissionBehavior for consistency
           result.permissionBehavior =
             json.hookSpecificOutput.decision.behavior === 'allow'
@@ -2272,7 +2272,7 @@ async function* executeHooks({
   }
 
   // Start hook span for beta tracing
-  const hookSpan = startHookSpan(
+  const hookSpan = (startHookSpan as any)(
     hookEvent,
     hookName,
     matchingHooks.length,
@@ -3151,7 +3151,7 @@ async function* executeHooks({
   }
 
   // End hook span for beta tracing
-  endHookSpan(hookSpan, {
+  ;(endHookSpan as any)(hookSpan, {
     numSuccess: outcomes.success,
     numBlocking: outcomes.blocking,
     numNonBlockingError: outcomes.non_blocking_error,
@@ -4411,7 +4411,7 @@ export async function* executePermissionRequestHooks<ToolInput>(
     hook_event_name: 'PermissionRequest',
     tool_name: toolName,
     tool_input: toolInput,
-    permission_suggestions: permissionSuggestions,
+    permission_suggestions: permissionSuggestions as any,
   }
 
   yield* executeHooks({
@@ -4649,24 +4649,26 @@ function parseElicitationHookOutput(
 
   try {
     const parsed = hookJSONOutputSchema().parse(JSON.parse(trimmed))
-    if (isAsyncHookJSONOutput(parsed)) {
+    if (isAsyncHookJSONOutput(parsed as HookJSONOutput)) {
       return {}
     }
-    if (!isSyncHookJSONOutput(parsed)) {
+    if (!isSyncHookJSONOutput(parsed as HookJSONOutput)) {
       return {}
     }
 
+    const syncParsed = parsed as SyncHookJSONOutput
+
     // Check for top-level decision: 'block' (exit code 0 + JSON block)
-    if (parsed.decision === 'block' || result.blocked) {
+    if (syncParsed.decision === 'block' || result.blocked) {
       return {
         blockingError: {
-          blockingError: parsed.reason || 'Elicitation blocked by hook',
+          blockingError: syncParsed.reason || 'Elicitation blocked by hook',
           command: result.command,
         },
       }
     }
 
-    const specific = parsed.hookSpecificOutput
+    const specific = syncParsed.hookSpecificOutput
     if (!specific || specific.hookEventName !== expectedEventName) {
       return {}
     }
@@ -4688,7 +4690,7 @@ function parseElicitationHookOutput(
     if (specific.action === 'decline') {
       out.blockingError = {
         blockingError:
-          parsed.reason ||
+          syncParsed.reason ||
           (expectedEventName === 'Elicitation'
             ? 'Elicitation denied by hook'
             : 'Elicitation result blocked by hook'),

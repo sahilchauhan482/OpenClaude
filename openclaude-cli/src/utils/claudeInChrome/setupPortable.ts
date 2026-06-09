@@ -160,12 +160,12 @@ export async function detectExtensionInstallationPortable(
 
   // Check each browser for the extension
   for (const { browser, path: browserBasePath } of browserPaths) {
-    let browserProfileEntries = []
+    let browserProfileEntries: Awaited<ReturnType<typeof readdir>> = []
 
     try {
       browserProfileEntries = await readdir(browserBasePath, {
         withFileTypes: true,
-      })
+      }) as any
     } catch (e) {
       // Browser not installed or path doesn't exist, continue to next browser
       if (isFsInaccessible(e)) continue
@@ -175,9 +175,9 @@ export async function detectExtensionInstallationPortable(
     const profileDirs = browserProfileEntries
       .filter(entry => entry.isDirectory())
       .filter(
-        entry => entry.name === 'Default' || entry.name.startsWith('Profile '),
+        entry => String(entry.name) === 'Default' || String(entry.name).startsWith('Profile '),
       )
-      .map(entry => entry.name)
+      .map(entry => String(entry.name))
 
     if (profileDirs.length > 0) {
       log?.(

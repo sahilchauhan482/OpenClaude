@@ -504,7 +504,7 @@ export async function cleanupNpmCacheForAnthropicPackages(): Promise<void> {
     }
 
     await Promise.all(
-      keysToRemove.map(key => cacache.rm.entry(npmCachePath, key)),
+      keysToRemove.map(key => (cacache as any).rm.entry(npmCachePath, key)),
     )
 
     await fs.writeFile(markerPath, new Date().toISOString())

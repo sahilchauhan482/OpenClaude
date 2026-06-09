@@ -1,7 +1,5 @@
-import type {
-  ComputerUseInput,
-  ComputerUseInputAPI,
-} from '@ant/computer-use-input'
+// @ts-ignore -- @ant/computer-use-input is an optional internal package
+import type { ComputerUseInput, ComputerUseInputAPI } from '@ant/computer-use-input'
 
 let cached: ComputerUseInputAPI | undefined
 

@@ -27,7 +27,8 @@ export const firecrawlProvider: SearchProvider = {
     const data = await app.search(query, { limit: 15 })
 
     const hits = applyDomainFilters(
-      (data.web ?? []).map((r: { url: string; title?: string; description?: string }) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((data.web ?? []) as any[]).map((r: { url: string; title?: string; description?: string }) => ({
         title: r.title ?? r.url,
         url: r.url,
         description: r.description,

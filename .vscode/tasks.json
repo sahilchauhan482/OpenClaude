@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "openclaude-cli: typecheck",
+      "type": "npm",
+      "script": "typecheck",
+      "path": "openclaude-cli",
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "openclaude-vscode: lint",
+      "type": "npm",
+      "script": "lint",
+      "path": "openclaude-vscode",
+      "problemMatcher": "$eslint-stylish"
+    },
+    {
+      "label": "openclaude-vscode: webview:typecheck",
+      "type": "npm",
+      "script": "webview:typecheck",
+      "path": "openclaude-vscode",
+      "problemMatcher": "$tsc"
+    }
+  ]
+}

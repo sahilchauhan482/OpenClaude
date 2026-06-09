@@ -157,7 +157,7 @@ function BridgeDisconnectDialog(t0) {
   const {
     onDone
   } = t0;
-  useRegisterOverlay("bridge-disconnect-dialog");
+  useRegisterOverlay("bridge-disconnect-dialog", true);
   const setAppState = useSetAppState();
   const sessionUrl = useAppState(_temp4);
   const connectUrl = useAppState(_temp5);

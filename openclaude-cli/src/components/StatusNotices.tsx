@@ -67,7 +67,7 @@ export function StatusNotices(t0) {
       return;
     }
     void checkLocalModelContextLoad(
-      tools,
+      tools as import('../Tool.js').Tool[],
       agentDefinitions,
       memoryFiles,
       async () => toolPermissionContext,

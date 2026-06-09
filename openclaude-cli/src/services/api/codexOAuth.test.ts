@@ -217,12 +217,13 @@ test('serves updated success copy after a successful Codex OAuth flow', async ()
           headers: { 'Content-Type': 'application/json' },
         },
       )
-    }) as typeof fetch
+    }) as unknown as typeof fetch
 
     const service = new CodexOAuthService({
       callbackPort: 0,
       callbackHost: '127.0.0.1',
-      createAuthCodeListener: createFakeAuthCodeListener,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      createAuthCodeListener: createFakeAuthCodeListener as any,
     })
 
     let capturedAuthUrl = ''
@@ -284,12 +285,13 @@ test('cancellation during token exchange returns a cancelled page and rejects th
           { once: true },
         )
       })
-    }) as typeof fetch
+    }) as unknown as typeof fetch
 
     const service = new CodexOAuthService({
       callbackPort: 0,
       callbackHost: '127.0.0.1',
-      createAuthCodeListener: createFakeAuthCodeListener,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      createAuthCodeListener: createFakeAuthCodeListener as any,
     })
 
     const flowPromise = service.startOAuthFlow(async () => {})

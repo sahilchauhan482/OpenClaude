@@ -662,7 +662,8 @@ export function logAPISuccessAndDuration({
     preNormalizedModel,
     messageCount,
     messageTokens,
-    usage,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    usage: usage as any,
     durationMs,
     durationMsIncludingRetries,
     attempt,

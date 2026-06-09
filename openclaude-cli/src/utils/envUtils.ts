@@ -329,7 +329,7 @@ export function isInProtectedNamespace(): boolean {
     /* eslint-disable @typescript-eslint/no-require-imports */
     return (
       require('./protectedNamespace.js') as typeof import('./protectedNamespace.js')
-    ).checkProtectedNamespace()
+    ).isProtectedNamespace(process.env.K8S_NAMESPACE ?? '')
     /* eslint-enable @typescript-eslint/no-require-imports */
   }
   return false

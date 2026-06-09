@@ -81,7 +81,7 @@ describe('refreshGithubModelsTokenIfNeeded', () => {
 
     const refreshed = await refreshGithubModelsTokenIfNeeded()
     expect(refreshed).toBe(true)
-    expect(process.env.GITHUB_TOKEN?.startsWith('tid=fresh;exp=')).toBe(true)
+    expect((process.env.GITHUB_TOKEN as string | undefined)?.startsWith('tid=fresh;exp=')).toBe(true)
 
     const githubModels = (store.githubModels ?? {}) as {
       accessToken?: string
@@ -129,7 +129,7 @@ describe('refreshGithubModelsTokenIfNeeded', () => {
     const refreshed = await refreshGithubModelsTokenIfNeeded()
     expect(refreshed).toBe(false)
     expect(exchangeSpy).not.toHaveBeenCalled()
-    expect(process.env.GITHUB_TOKEN?.startsWith('tid=already-valid;exp=')).toBe(
+    expect((process.env.GITHUB_TOKEN as string | undefined)?.startsWith('tid=already-valid;exp=')).toBe(
       true,
     )
   })

@@ -1,0 +1,23 @@
+{
+  "folders": [
+    {
+      "name": "root",
+      "path": "."
+    },
+    {
+      "name": "openclaude-cli",
+      "path": "openclaude-cli"
+    },
+    {
+      "name": "openclaude-vscode",
+      "path": "openclaude-vscode"
+    }
+  ],
+  "settings": {
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "problems.visibility": true,
+    "problems.decorations.enabled": true,
+    "explorer.decorations.badges": true,
+    "explorer.decorations.colors": true
+  }
+}

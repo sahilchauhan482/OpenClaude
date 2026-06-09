@@ -49,29 +49,32 @@ export function selectableUserMessagesFilter(message: Message): message is UserM
  */
 export function messagesAfterAreOnlySynthetic(messages: Message[], fromIndex: number): boolean {
   for (let i = fromIndex + 1; i < messages.length; i++) {
-    const msg = messages[i]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const msg: any = messages[i]
     if (!msg) continue
 
     // Skip known non-meaningful message types
     if (isSyntheticMessage(msg)) continue
     if (isToolUseResultMessage(msg)) continue
-    if (msg.type === 'progress') continue
-    if (msg.type === 'system') continue
-    if (msg.type === 'attachment') continue
-    if (msg.type === 'user' && msg.isMeta) continue
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const m = msg as any
+    if (m.type === 'progress') continue
+    if (m.type === 'system') continue
+    if (m.type === 'attachment') continue
+    if (m.type === 'user' && m.isMeta) continue
 
     // Assistant with actual content = meaningful
-    if (msg.type === 'assistant') {
-      const content = msg.message.content
+    if (m.type === 'assistant') {
+      const content = m.message.content
       if (Array.isArray(content)) {
-        const hasMeaningfulContent = content.some(block => block.type === 'text' && block.text.trim() || block.type === 'tool_use')
+        const hasMeaningfulContent = content.some((block: any) => block.type === 'text' && block.text.trim() || block.type === 'tool_use')
         if (hasMeaningfulContent) return false
       }
       continue
     }
 
     // User messages that aren't synthetic or meta = meaningful
-    if (msg.type === 'user') {
+    if (m.type === 'user') {
       return false
     }
 

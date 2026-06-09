@@ -1,23 +1,20 @@
-import type { ToolUseContext } from '../Tool.js'
-import type { Command } from '../types/command.js'
+import type { LocalJSXCommandContext, Command } from '../types/command.js'
 import {
-  benchmarkModel,
   benchmarkMultipleModels,
   formatBenchmarkResults,
   isBenchmarkSupported,
 } from '../utils/model/benchmark.js'
-import { getOllamaModelOptions } from '../utils/model/ollamaModels.js'
+import { getCachedOllamaModelOptions } from '../utils/model/ollamaModels.js'
 
 async function runBenchmark(
   model?: string,
-  context?: ToolUseContext,
-): Promise<void> {
+  writeOutput?: (s: string) => void,
+): Promise<string> {
   if (!isBenchmarkSupported()) {
-    context?.stdout?.write(
+    return (
       'Benchmark not supported for this provider.\n' +
-        'Supported: OpenAI-compatible endpoints (Ollama, NVIDIA NIM)\n',
+      'Supported: OpenAI-compatible endpoints (Ollama, NVIDIA NIM)\n'
     )
-    return
   }
 
   let modelsToBenchmark: string[]
@@ -25,32 +22,36 @@ async function runBenchmark(
   if (model) {
     modelsToBenchmark = [model]
   } else {
-    const ollamaModels = getOllamaModelOptions()
-    modelsToBenchmark = ollamaModels.slice(0, 3).map((m) => m.value)
+    const ollamaModels = getCachedOllamaModelOptions()
+    modelsToBenchmark = ollamaModels.slice(0, 3).map((m) => m.value as string)
   }
 
-  context?.stdout?.write(`Benchmarking ${modelsToBenchmark.length} model(s)...\n`)
+  writeOutput?.(`Benchmarking ${modelsToBenchmark.length} model(s)...\n`)
 
   const results = await benchmarkMultipleModels(
     modelsToBenchmark,
     (completed, total, result) => {
-      context?.stdout?.write(
+      writeOutput?.(
         `[${completed}/${total}] ${result.model}: ` +
           `${result.success ? result.tokensPerSecond.toFixed(1) + ' tps' : 'FAILED'}\n`,
       )
     },
   )
 
-  context?.stdout?.write('\n' + formatBenchmarkResults(results) + '\n')
+  return '\n' + formatBenchmarkResults(results) + '\n'
 }
 
 export const benchmark: Command = {
+  type: 'local',
   name: 'benchmark',
-
-  async onExecute(context: ToolUseContext): Promise<void> {
-    const args = context.args ?? {}
-    const model = args.model as string | undefined
-
-    await runBenchmark(model, context)
-  },
+  description: 'Benchmark model performance',
+  supportsNonInteractive: true,
+  load: () =>
+    Promise.resolve({
+      call: async (args: string, _context: LocalJSXCommandContext) => {
+        const model = args.trim() || undefined
+        const output = await runBenchmark(model)
+        return { type: 'text', value: output }
+      },
+    }),
 }

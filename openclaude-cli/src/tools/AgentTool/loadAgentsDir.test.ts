@@ -119,6 +119,6 @@ describe('agent definition loading', () => {
     const { activeAgents } = await getAgentDefinitionsWithOverrides(projectDir)
     const agent = activeAgents.find(agent => agent.agentType === 'shared-agent')
 
-    expect(agent?.getSystemPrompt()).toBe('openclaude prompt')
+    expect((agent as any)?.getSystemPrompt()).toBe('openclaude prompt')
   })
 })

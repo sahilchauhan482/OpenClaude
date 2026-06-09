@@ -826,7 +826,7 @@ async function checkPermissionsAndCallTool(
     )
   }
 
-  const resultingMessages = []
+  const resultingMessages: MessageUpdateLazy[] = []
 
   // Defense-in-depth: strip _simulatedSedEdit from model-provided Bash input.
   // This field is internal-only — it must only be injected by the permission
@@ -1475,7 +1475,7 @@ async function checkPermissionsAndCallTool(
           toolOutput = hookResult.updatedMCPToolOutput
         }
       } else if (isMcpTool(tool)) {
-        hookResults.push(hookResult)
+        hookResults.push(hookResult as never)
         if (hookResult.message.type === 'attachment') {
           const att = hookResult.message.attachment
           if (

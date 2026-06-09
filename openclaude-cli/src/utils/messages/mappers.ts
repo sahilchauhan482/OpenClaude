@@ -15,9 +15,9 @@ import type { ClaudeAILimits } from 'src/services/claudeAiLimits.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from 'src/tools/ExitPlanModeTool/constants.js'
 import type {
   AssistantMessage,
-  CompactMetadata,
   Message,
 } from 'src/types/message.js'
+type CompactMetadata = any
 import type { DeepImmutable } from 'src/types/utils.js'
 import { stripVTControlCharacters as stripAnsi } from 'node:util'
 import { createAssistantMessage } from '../messages.js'

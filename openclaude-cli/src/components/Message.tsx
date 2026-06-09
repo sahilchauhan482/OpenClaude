@@ -55,7 +55,7 @@ export type Props = {
   /** UUID of the latest user bash output message (for auto-expanding) */
   latestBashOutputUUID?: string | null;
 };
-function MessageImpl(t0) {
+function MessageImpl(t0: Props) {
   const $ = _c(94);
   const {
     message,

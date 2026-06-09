@@ -1504,7 +1504,7 @@ async function* queryLoop(
               stopHookActive: undefined,
               turnCount,
               continuationNudgeCount: state.continuationNudgeCount,
-              transition: { reason: 'provider_fallback_retry' },
+              transition: { reason: 'provider_fallback_retry' as any },
             }
             state = next
             continue
@@ -1787,7 +1787,7 @@ async function* queryLoop(
       const { addMessageToTurn, addToolCallToTurn } = await import(
         './utils/multiTurnContext.js'
       )
-      addMessageToTurn(assistantMessage)
+      addMessageToTurn(assistantMessages.at(-1))
       for (const toolUse of toolUseBlocks) {
         addToolCallToTurn({
           id: toolUse.id,
@@ -1806,7 +1806,7 @@ async function* queryLoop(
       const { updateArcPhase, finalizeArcTurn } = await import(
         './utils/conversationArc.js'
       )
-      await updateArcPhase([assistantMessage])
+      await updateArcPhase(assistantMessages)
       await finalizeArcTurn()
     }
 
@@ -1892,7 +1892,7 @@ async function* queryLoop(
             ...toolResults,
             recoveryMessage,
           ],
-          toolUseContext: toolUseContextWithQueryTracking,
+          toolUseContext: { ...updatedToolUseContext, queryTracking },
           autoCompactTracking: tracking,
           turnCount,
           maxOutputTokensRecoveryCount: 0,
@@ -2099,7 +2099,7 @@ async function* queryLoop(
       const skillAttachments =
         await skillPrefetch.collectSkillDiscoveryPrefetch(pendingSkillPrefetch)
       for (const att of skillAttachments) {
-        const msg = createAttachmentMessage(att)
+        const msg = createAttachmentMessage(att as any)
         yield msg
         toolResults.push(msg)
       }

@@ -117,7 +117,7 @@ function processCell(
 }
 
 function cellContentToToolResult(cell: NotebookCellSource): TextBlockParam {
-  const metadata = []
+  const metadata: string[] = []
   if (cell.cellType !== 'code') {
     metadata.push(`<cell_type>${cell.cellType}</cell_type>`)
   }
@@ -169,7 +169,7 @@ export async function readNotebook(
   const buffer = await getFsImplementation().readFileBytes(fullPath)
   const content = buffer.toString('utf-8')
   const notebook = jsonParse(content) as NotebookContent
-  const language = notebook.metadata.language_info?.name ?? 'python'
+  const language = (notebook.metadata as any)?.language_info?.name ?? 'python'
   if (cellId) {
     const cell = notebook.cells.find(c => c.id === cellId)
     if (!cell) {

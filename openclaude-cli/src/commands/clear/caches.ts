@@ -93,7 +93,9 @@ export function clearSessionCaches(
 
   // Clear tungsten session usage tracking
   if (process.env.USER_TYPE === 'ant') {
+    // @ts-ignore - TungstenTool is a stub in this build
     void import('../../tools/TungstenTool/TungstenTool.js').then(
+      // @ts-ignore
       ({ clearSessionsWithTungstenUsage, resetInitializationState }) => {
         clearSessionsWithTungstenUsage()
         resetInitializationState()

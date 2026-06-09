@@ -27,6 +27,7 @@ import { useAppStateStore } from '../../state/AppState.js';
 import { isBackgroundTask, type TaskState } from '../../tasks/types.js';
 import { getPillLabel } from '../../tasks/pillLabel.js';
 import { useSelectedMessageBg } from '../messageActions.js';
+declare const HOOK_TIMING_DISPLAY_THRESHOLD_MS: number;
 type Props = {
   message: SystemMessage;
   addMargin: boolean;
@@ -603,7 +604,7 @@ function MemorySavedMessage(t0) {
   } = message;
   let t1;
   if ($[0] !== message) {
-    t1 = feature("TEAMMEM") ? teamMemSaved.teamMemSavedPart(message) : null;
+    t1 = feature("TEAMMEM") ? teamMemSaved?.teamMemSavedPart(message) : null;
     $[0] = message;
     $[1] = t1;
   } else {

@@ -27,16 +27,10 @@
  * Clipboard via `pbcopy`/`pbpaste`. No Electron `clipboard` module.
  */
 
-import type {
-  ComputerExecutor,
-  DisplayGeometry,
-  FrontmostApp,
-  InstalledApp,
-  ResolvePrepareCaptureResult,
-  RunningApp,
-  ScreenshotResult,
-} from '@ant/computer-use-mcp'
+// @ts-ignore -- @ant/computer-use-mcp is an optional internal package
+import type { ComputerExecutor, DisplayGeometry, FrontmostApp, InstalledApp, ResolvePrepareCaptureResult, RunningApp, ScreenshotResult } from '@ant/computer-use-mcp'
 
+// @ts-ignore
 import { API_RESIZE_PARAMS, targetImageSize } from '@ant/computer-use-mcp'
 import { logForDebugging } from '../debug.js'
 import { errorMessage } from '../errors.js'

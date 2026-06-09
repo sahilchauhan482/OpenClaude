@@ -1,0 +1,271 @@
+
+> vscode:test
+> npm --prefix openclaude-vscode run test
+
+
+> openclaude-vscode@0.2.27 test
+> vitest run
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90md:/OpenClaude/openclaude-vscode[39m
+
+ [33m❯[39m test/unit/integration.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/checkpointManager.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/authManager.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/sessionTracker.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/controlRouter.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/diffManager.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/processManager.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/ndjsonTransport.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/blocks.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/permissionHandler.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/agentTeamPolicy.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/toolPresentation.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/htmlGenerator.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/sessionResume.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/elicitationSchema.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/mcpIdeServer.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/webviewBridge.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/attachmentPrompt.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/diffHandler.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/webviewManager.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/observabilityEvalFixtures.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m test/unit/fuzzySearch.test.ts [2m ([22m[2m11 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [33m❯[39m test/unit/interactions.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/bypassPermissionToggle.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/observabilityEventLog.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/worktreeManager.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/recommendationEngine.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/worktreeHooks.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/blackboxSessionStore.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/planComments.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/pluginBridge.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/blackboxBridge.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/statusBarManager.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/settings.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/diffContentProvider.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/workspaceContext.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/settingsSync.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/modelCapabilities.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/uriHandler.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/sessionDiscovery.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/sessionBinding.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/transcriptFilters.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/modelCapabilityRouting.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/imageAttachment.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/permissionModeUi.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/messageContent.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/liveStatus.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/cliExecutable.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/recommendationSessionFlow.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/permissionModeSync.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+ [33m❯[39m test/unit/providerState.test.ts [2m ([22m[2m0 test[22m[2m)[22m
+
+[31m⎯⎯⎯⎯⎯⎯[1m[7m Failed Suites 50 [27m[22m⎯⎯⎯⎯⎯⎯[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/agentTeamPolicy.test.ts [2m[ test/unit/agentTeamPolicy.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/agentTeamPolicy.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/attachmentPrompt.test.ts [2m[ test/unit/attachmentPrompt.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/attachmentPrompt.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/authManager.test.ts [2m[ test/unit/authManager.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/authManager.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/blackboxBridge.test.ts [2m[ test/unit/blackboxBridge.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/blackboxBridge.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/blackboxSessionStore.test.ts [2m[ test/unit/blackboxSessionStore.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/blackboxSessionStore.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/blocks.test.ts [2m[ test/unit/blocks.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/blocks.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/bypassPermissionToggle.test.ts [2m[ test/unit/bypassPermissionToggle.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/bypassPermissionToggle.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/checkpointManager.test.ts [2m[ test/unit/checkpointManager.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/checkpointManager.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/cliExecutable.test.ts [2m[ test/unit/cliExecutable.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/cliExecutable.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/controlRouter.test.ts [2m[ test/unit/controlRouter.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/controlRouter.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/diffContentProvider.test.ts [2m[ test/unit/diffContentProvider.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/diffContentProvider.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/diffHandler.test.ts [2m[ test/unit/diffHandler.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/diffHandler.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/diffManager.test.ts [2m[ test/unit/diffManager.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/diffManager.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/elicitationSchema.test.ts [2m[ test/unit/elicitationSchema.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/elicitationSchema.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/htmlGenerator.test.ts [2m[ test/unit/htmlGenerator.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/htmlGenerator.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/imageAttachment.test.ts [2m[ test/unit/imageAttachment.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/imageAttachment.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/integration.test.ts [2m[ test/unit/integration.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/integration.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/interactions.test.ts [2m[ test/unit/interactions.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/interactions.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/liveStatus.test.ts [2m[ test/unit/liveStatus.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/liveStatus.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/mcpIdeServer.test.ts [2m[ test/unit/mcpIdeServer.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/mcpIdeServer.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/messageContent.test.ts [2m[ test/unit/messageContent.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/messageContent.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/modelCapabilities.test.ts [2m[ test/unit/modelCapabilities.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/modelCapabilities.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/modelCapabilityRouting.test.ts [2m[ test/unit/modelCapabilityRouting.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/modelCapabilityRouting.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/ndjsonTransport.test.ts [2m[ test/unit/ndjsonTransport.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/ndjsonTransport.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/observabilityEvalFixtures.test.ts [2m[ test/unit/observabilityEvalFixtures.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/observabilityEvalFixtures.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/observabilityEventLog.test.ts [2m[ test/unit/observabilityEventLog.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/observabilityEventLog.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/permissionHandler.test.ts [2m[ test/unit/permissionHandler.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/permissionHandler.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/permissionModeSync.test.ts [2m[ test/unit/permissionModeSync.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/permissionModeSync.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/permissionModeUi.test.ts [2m[ test/unit/permissionModeUi.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/permissionModeUi.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/planComments.test.ts [2m[ test/unit/planComments.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/planComments.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/pluginBridge.test.ts [2m[ test/unit/pluginBridge.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/pluginBridge.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/processManager.test.ts [2m[ test/unit/processManager.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/processManager.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/providerState.test.ts [2m[ test/unit/providerState.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/providerState.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/recommendationEngine.test.ts [2m[ test/unit/recommendationEngine.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/recommendationEngine.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/recommendationSessionFlow.test.ts [2m[ test/unit/recommendationSessionFlow.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/recommendationSessionFlow.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/sessionBinding.test.ts [2m[ test/unit/sessionBinding.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/sessionBinding.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[36/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/sessionDiscovery.test.ts [2m[ test/unit/sessionDiscovery.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/sessionDiscovery.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[37/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/sessionResume.test.ts [2m[ test/unit/sessionResume.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/sessionResume.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[38/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/sessionTracker.test.ts [2m[ test/unit/sessionTracker.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/sessionTracker.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/settings.test.ts [2m[ test/unit/settings.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/settings.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[40/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/settingsSync.test.ts [2m[ test/unit/settingsSync.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/settingsSync.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[41/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/statusBarManager.test.ts [2m[ test/unit/statusBarManager.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/statusBarManager.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[42/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/toolPresentation.test.ts [2m[ test/unit/toolPresentation.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/toolPresentation.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[43/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/transcriptFilters.test.ts [2m[ test/unit/transcriptFilters.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/transcriptFilters.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[44/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/uriHandler.test.ts [2m[ test/unit/uriHandler.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/uriHandler.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[45/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/webviewBridge.test.ts [2m[ test/unit/webviewBridge.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/webviewBridge.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[46/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/webviewManager.test.ts [2m[ test/unit/webviewManager.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/webviewManager.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[47/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/workspaceContext.test.ts [2m[ test/unit/workspaceContext.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/workspaceContext.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[48/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/worktreeHooks.test.ts [2m[ test/unit/worktreeHooks.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/worktreeHooks.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[49/50]⎯[22m[39m
+
+[31m[1m[7m FAIL [27m[22m[39m test/unit/worktreeManager.test.ts [2m[ test/unit/worktreeManager.test.ts ][22m
+[31m[1mError[22m: No test suite found in file D:/OpenClaude/openclaude-vscode/test/unit/worktreeManager.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[50/50]⎯[22m[39m
+
+[2m Test Files [22m [1m[31m50 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (51)[39m
+[2m      Tests [22m [1m[32m11 passed[39m[22m[90m (11)[39m
+[2m   Start at [22m 17:16:07
+[2m   Duration [22m 6.57s[2m (transform 3.77s, setup 11ms, collect 14.14s, tests 10ms, environment 47ms, prepare 13.62s)[22m
+

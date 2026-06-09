@@ -27,7 +27,7 @@ test('research-first-coding prompts evidence-first implementation behavior', asy
   )
   expect(skill).toBeDefined()
 
-  const blocks = await skill!.getPromptForCommand('fix provider retry bug', {} as never)
+  const blocks = await (skill as any).getPromptForCommand('fix provider retry bug', {} as never)
   const text = (blocks[0] as { text: string }).text
 
   expect(text).toContain('# Research First Coding')
@@ -42,7 +42,7 @@ test('security-review-plus requires severity-ranked findings', async () => {
   const skill = getBundledSkills().find(
     command => command.name === 'security-review-plus',
   )
-  const blocks = await skill!.getPromptForCommand('', {} as never)
+  const blocks = await (skill as any).getPromptForCommand('', {} as never)
   const text = (blocks[0] as { text: string }).text
 
   expect(text).toContain('# Security Review Plus')
@@ -57,7 +57,7 @@ test('verification-loop-plus encodes adaptive command recovery', async () => {
   const skill = getBundledSkills().find(
     command => command.name === 'verification-loop-plus',
   )
-  const blocks = await skill!.getPromptForCommand('', {} as never)
+  const blocks = await (skill as any).getPromptForCommand('', {} as never)
   const text = (blocks[0] as { text: string }).text
 
   expect(text).toContain('# Verification Loop Plus')
@@ -77,12 +77,12 @@ test('workspace and frontend skills cover repo mapping and UX noise control', as
   )
 
   const workspaceText = (
-    (await workspaceSkill!.getPromptForCommand('', {} as never))[0] as {
+    (await (workspaceSkill as any).getPromptForCommand('', {} as never))[0] as {
       text: string
     }
   ).text
   const frontendText = (
-    (await frontendSkill!.getPromptForCommand('', {} as never))[0] as {
+    (await (frontendSkill as any).getPromptForCommand('', {} as never))[0] as {
       text: string
     }
   ).text

@@ -61,7 +61,7 @@ export function MCPToolListView(t0) {
         const isReadOnly = tool.isReadOnly?.({}) ?? false;
         const isDestructive = tool.isDestructive?.({}) ?? false;
         const isOpenWorld = tool.isOpenWorld?.({}) ?? false;
-        const annotations = [];
+        const annotations: string[] = [];
         if (isReadOnly) {
           annotations.push("read-only");
         }

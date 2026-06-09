@@ -245,13 +245,15 @@ function addCodexSource(
   sourceMap: Map<string, { title: string; url: string }>,
   source: unknown,
 ): void {
-  if (typeof source?.url !== 'string' || !source.url) return
-  sourceMap.set(source.url, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s = source as any
+  if (typeof s?.url !== 'string' || !s.url) return
+  sourceMap.set(s.url, {
     title:
-      typeof source.title === 'string' && source.title
-        ? source.title
-        : source.url,
-    url: source.url,
+      typeof s.title === 'string' && s.title
+        ? s.title
+        : s.url,
+    url: s.url,
   })
 }
 

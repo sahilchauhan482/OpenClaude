@@ -77,7 +77,7 @@ function createAgent(
     whenToUse: `Use ${agentType}`,
     source,
     getSystemPrompt: () => `You are ${agentType}`,
-  }
+  } as unknown as AgentDefinition
 }
 
 beforeEach(async () => {

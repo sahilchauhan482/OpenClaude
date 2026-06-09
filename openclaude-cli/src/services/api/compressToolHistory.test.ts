@@ -145,7 +145,8 @@ function compressToolHistoryForTest<T>(
   model = 'gpt-4o',
   effectiveContextWindowSize = 100_000,
 ): T[] {
-  return compressToolHistory(messages, model, { effectiveContextWindowSize })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return compressToolHistory(messages as any, model, { effectiveContextWindowSize }) as T[]
 }
 
 // ---------- getTiers ----------

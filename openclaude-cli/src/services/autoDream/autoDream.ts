@@ -244,7 +244,8 @@ ${sessionIds.map(id => `- ${id}`).join('\n')}`
         appendSystemMessage({
           ...createMemorySavedMessage(dreamState.filesTouched),
           verb: 'Improved',
-        })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any as never)
       }
       logForDebugging(
         `[autoDream] completed — cache: read=${result.totalUsage.cache_read_input_tokens} created=${result.totalUsage.cache_creation_input_tokens}`,

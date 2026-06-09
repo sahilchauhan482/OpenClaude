@@ -17,7 +17,7 @@ const safetyCheckTool = {
       },
     }
   },
-} as Tool<Record<string, never>>
+} as any
 
 const userInteractionTool = {
   name: 'UserInteractionTool',
@@ -31,7 +31,7 @@ const userInteractionTool = {
       message: 'User interaction requires approval',
     }
   },
-} as Tool<Record<string, never>>
+} as any
 
 const plainAskRuleTool = {
   name: 'PlainAskRuleTool',
@@ -42,7 +42,7 @@ const plainAskRuleTool = {
       message: '',
     }
   },
-} as Tool<Record<string, never>>
+} as any
 
 const contentAskTool = {
   name: 'ContentAskTool',
@@ -59,7 +59,7 @@ const contentAskTool = {
       },
     }
   },
-} as Tool<Record<string, never>>
+} as any
 
 const denyTool = {
   name: 'DenyTool',
@@ -70,7 +70,7 @@ const denyTool = {
       message: 'Denied by tool',
     }
   },
-} as Tool<Record<string, never>>
+} as any
 
 function contextFor(
   mode: ToolPermissionContext['mode'],
@@ -153,7 +153,7 @@ describe('permission modes and safety checks', () => {
     )
 
     expect(result.behavior).toBe('ask')
-    expect(result.message).toBe('User interaction requires approval')
+    expect((result as any).message).toBe('User interaction requires approval')
   })
 
   test('fullAccess bypasses content-specific ask-rule prompts', async () => {
@@ -182,6 +182,6 @@ describe('permission modes and safety checks', () => {
     )
 
     expect(result.behavior).toBe('deny')
-    expect(result.message).toBe('Denied by tool')
+    expect((result as any).message).toBe('Denied by tool')
   })
 })

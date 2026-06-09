@@ -1,0 +1,90 @@
+2026-06-07T15:34:45.188Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: C:\Program Files\ClaudeCode\managed-settings.json
+2026-06-07T15:34:45.196Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: D:\OpenClaude\.openclaude\settings.json
+2026-06-07T15:34:45.197Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: D:\OpenClaude\.openclaude\settings.local.json
+2026-06-07T15:34:45.264Z [DEBUG] MDM settings load completed in 8ms
+2026-06-07T15:34:45.268Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+2026-06-07T15:34:45.721Z [DEBUG] [init] configureGlobalMTLS starting
+2026-06-07T15:34:45.723Z [DEBUG] [init] configureGlobalMTLS complete
+2026-06-07T15:34:45.723Z [DEBUG] [init] configureGlobalAgents starting
+2026-06-07T15:34:45.723Z [DEBUG] CA certs: useSystemCA=false, extraCertsPath=undefined
+2026-06-07T15:34:45.724Z [DEBUG] [init] configureGlobalAgents complete
+2026-06-07T15:34:45.773Z [DEBUG] Using bash path: "C:\Program Files\Git\bin\bash.exe"
+2026-06-07T15:34:45.774Z [DEBUG] Error log sink initialized
+2026-06-07T15:34:45.782Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: D:\OpenClaude\.openclaude\settings.json
+2026-06-07T15:34:45.782Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: D:\OpenClaude\.openclaude\settings.local.json
+2026-06-07T15:34:45.783Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: C:\Program Files\ClaudeCode\managed-settings.json
+2026-06-07T15:34:45.785Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: D:\OpenClaude\.openclaude\settings.json
+2026-06-07T15:34:45.786Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: D:\OpenClaude\.openclaude\settings.local.json
+2026-06-07T15:34:45.786Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: C:\Program Files\ClaudeCode\managed-settings.json
+2026-06-07T15:34:45.792Z [DEBUG] [ToolSearch:optimistic] mode=standard, ENABLE_TOOL_SEARCH=undefined, result=false
+2026-06-07T15:34:45.797Z [DEBUG] [claudeai-mcp] Skipped: non-first-party provider
+2026-06-07T15:34:45.798Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-06-07T15:34:45.808Z [DEBUG] [STARTUP] Running setup()...
+2026-06-07T15:34:45.813Z [DEBUG] Loading skills from: managed=C:\Program Files\ClaudeCode\.claude\skills, user=C:\Users\USER\.openclaude\skills, project=[]
+2026-06-07T15:34:45.816Z [DEBUG] Error log sink initialized
+2026-06-07T15:34:45.962Z [DEBUG] [STARTUP] setup() completed in 153ms
+2026-06-07T15:34:45.965Z [DEBUG] Cleared CA certificates cache
+2026-06-07T15:34:45.965Z [DEBUG] Cleared mTLS configuration cache
+2026-06-07T15:34:45.965Z [DEBUG] Cleared proxy agent cache
+2026-06-07T15:34:45.965Z [DEBUG] CA certs: useSystemCA=false, extraCertsPath=undefined
+2026-06-07T15:34:45.968Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-06-07T15:34:46.143Z [DEBUG] rg error (signal=null, code=2, stderr: rg: C:\Program Files\ClaudeCode\.claude\commands: IO error for operation on C:\Program Files\ClaudeCode\.claude\commands: The system cannot find the path specified. (os error 3)
+), 0 results
+2026-06-07T15:34:46.145Z [DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=D:\OpenClaude\openclaude-cli\node_modules\@vscode\ripgrep-win32-x64\bin\rg.exe)
+2026-06-07T15:34:46.163Z [DEBUG] rg error (signal=null, code=2, stderr: rg: C:\Program Files\ClaudeCode\.claude\agents: IO error for operation on C:\Program Files\ClaudeCode\.claude\agents: The system cannot find the path specified. (os error 3)
+), 0 results
+2026-06-07T15:34:46.182Z [DEBUG] installed_plugins.json doesn't exist, returning empty V2 object
+2026-06-07T15:34:46.185Z [DEBUG] Found 1 plugins (0 enabled, 1 disabled)
+2026-06-07T15:34:46.187Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-06-07T15:34:46.188Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-06-07T15:34:46.189Z [DEBUG] Total plugin skills loaded: 0
+2026-06-07T15:34:46.189Z [DEBUG] Total plugin commands loaded: 0
+2026-06-07T15:34:46.285Z [DEBUG] Git remote URL: https://github.com/sahilchauhan482/OpenClaude.git
+2026-06-07T15:34:46.289Z [DEBUG] Parsed repository: github.com/sahilchauhan482/OpenClaude from URL: https://github.com/sahilchauhan482/OpenClaude.git
+2026-06-07T15:34:46.378Z [DEBUG] Total plugin agents loaded: 0
+2026-06-07T15:34:46.406Z [DEBUG] Loaded 100 unique skills (100 unconditional, 0 conditional, managed: 0, user: 21, project: 0, additional: 0, legacy commands: 79)
+2026-06-07T15:34:46.407Z [DEBUG] getSkills returning: 100 skill dir commands, 0 plugin skills, 11 bundled skills, 0 builtin plugin skills
+2026-06-07T15:34:46.413Z [DEBUG] [STARTUP] Commands and agents loaded in 445ms
+2026-06-07T15:34:46.415Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-06-07T15:34:46.416Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-06-07T15:34:46.416Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-06-07T15:34:46.418Z [DEBUG] Starting background startup prefetches
+2026-06-07T15:34:46.422Z [DEBUG] [Bootstrap] Skipped: no additional model source
+2026-06-07T15:34:46.426Z [DEBUG] Total LSP servers loaded: 0
+2026-06-07T15:34:46.426Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-06-07T15:34:46.426Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-06-07T15:34:46.427Z [DEBUG] LSP manager initialized with 0 servers
+2026-06-07T15:34:46.430Z [DEBUG] Cleared CA certificates cache
+2026-06-07T15:34:46.432Z [DEBUG] Cleared mTLS configuration cache
+2026-06-07T15:34:46.432Z [DEBUG] Cleared proxy agent cache
+2026-06-07T15:34:46.433Z [DEBUG] CA certs: useSystemCA=false, extraCertsPath=undefined
+2026-06-07T15:34:46.435Z [DEBUG] LSP server manager initialized successfully
+2026-06-07T15:34:46.438Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-06-07T15:34:46.444Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=disabled disabledBySettings=false model=llama-3.3-70b-versatile modelSupported=false disableFastModeBreakerFires=false carouselAvailable=false canEnterAuto=false
+2026-06-07T15:34:46.445Z [WARN] auto mode disabled: tengu_auto_mode_config.enabled === "disabled" (circuit breaker)
+2026-06-07T15:34:46.445Z [DEBUG] [auto-mode] kickOutOfAutoIfNeeded applying: ctx.mode=default ctx.prePlanMode=undefined reason=circuit-breaker
+2026-06-07T15:34:46.508Z [DEBUG] Plugin autoupdate: skipped (auto-updater disabled)
+2026-06-07T15:34:46.558Z [DEBUG] [ScheduledTasks] scheduler start() — enabled=false, hasTasks=false
+2026-06-07T15:34:46.560Z [DEBUG] installPluginsForHeadless: starting
+2026-06-07T15:34:46.560Z [DEBUG] installPluginsForHeadless: no marketplaces declared
+2026-06-07T15:34:46.616Z [DEBUG] rg error (signal=null, code=2, stderr: rg: C:\Program Files\ClaudeCode\.claude\output-styles: IO error for operation on C:\Program Files\ClaudeCode\.claude\output-styles: The system cannot find the path specified. (os error 3)
+), 0 results
+2026-06-07T15:34:46.617Z [DEBUG] Watching for changes in skill/command directories: C:\Users\USER\.openclaude\skills, C:\Users\USER\.openclaude\commands...
+2026-06-07T15:34:46.621Z [DEBUG] Watching for changes in setting files C:\Users\USER\.openclaude\settings.json...
+2026-06-07T15:34:46.629Z [DEBUG] rg error (signal=null, code=2, stderr: rg: C:\Users\USER\.openclaude\output-styles: IO error for operation on C:\Users\USER\.openclaude\output-styles: The system cannot find the file specified. (os error 2)
+), 0 results
+2026-06-07T15:34:46.630Z [DEBUG] Total plugin output styles loaded: 0
+2026-06-07T15:34:46.636Z [DEBUG] rg error (signal=null, code=2, stderr: rg: C:\Users\USER\.openclaude\plugins\cache: IO error for operation on C:\Users\USER\.openclaude\plugins\cache: The system cannot find the file specified. (os error 2)
+), 0 results
+2026-06-07T15:34:47.250Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-06-07T15:34:47.252Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-06-07T15:34:47.265Z [DEBUG] autocompact: tokens=1 threshold=95000 effectiveWindow=108000
+2026-06-07T15:34:47.279Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-06-07T15:34:47.279Z [DEBUG] Cached MC gate: enabled=false modelSupported=false model=llama-3.3-70b-versatile supportedModels=undefined
+2026-06-07T15:34:47.283Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=99.0.0.e33; cc_entrypoint=sdk-cli;
+2026-06-07T15:34:47.295Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-06-07T15:34:47.308Z [DEBUG] {"type":"api_call_start","correlationId":"441f4bd3-ac53-45bc-9190-ecb8f34be3f4","provider":"openai","model":"llama-3.3-70b-versatile","timestamp":1780846487308}
+2026-06-07T15:34:49.645Z [WARN] [OpenAIShim] request failed category=context_overflow retryable=false status=413 method=POST url=https://api.groq.com/openai/v1/chat/completions model=llama-3.3-70b-versatile
+2026-06-07T15:34:49.648Z [ERROR] API error (attempt 1/16): 413 413 {"error":{"message":"Request too large for model `llama-3.3-70b-versatile` in organization `org_01ks2nkkx7f0x8jtwd63d2520b` service tier `on_demand` on tokens per minute (TPM): Limit 12000, Requested 54416, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+2026-06-07T15:34:49.721Z [ERROR] Error in API request: 413 {"error":{"message":"Request too large for model `llama-3.3-70b-versatile` in organization `org_01ks2nkkx7f0x8jtwd63d2520b` service tier `on_demand` on tokens per minute (TPM): Limit 12000, Requested 54416, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
+2026-06-07T15:34:49.772Z [DEBUG] LSP server manager shut down successfully

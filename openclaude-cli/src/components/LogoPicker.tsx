@@ -23,7 +23,7 @@ export type LogoPickerProps = {
 function previewSwatch(name: LogoPaletteName): string {
   const stops = LOGO_PALETTES[name].gradient
   return stops
-    .map(([r, g, b]) => `${ansiRgb(r, g, b)}\u2587${ANSI_RESET}`)
+    .map((rgb) => `${ansiRgb(rgb[0], rgb[1], rgb[2])}\u2587${ANSI_RESET}`)
     .join('')
 }
 

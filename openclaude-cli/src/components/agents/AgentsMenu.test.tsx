@@ -84,7 +84,7 @@ function createAgent(
     whenToUse: `Use ${agentType}`,
     source,
     getSystemPrompt: () => `You are ${agentType}`,
-  }
+  } as unknown as AgentDefinition
 }
 
 type AgentsMenuComponent = typeof import('./AgentsMenu.js').AgentsMenu

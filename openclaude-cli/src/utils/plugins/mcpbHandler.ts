@@ -1,7 +1,5 @@
-import type {
-  McpbManifest,
-  McpbUserConfigurationOption,
-} from '@anthropic-ai/mcpb'
+// @ts-ignore
+import type { McpbManifestAny as McpbManifest } from '@anthropic-ai/mcpb'
 import axios from 'axios'
 import { createHash } from 'crypto'
 import { chmod, writeFile } from 'fs/promises'
@@ -21,6 +19,8 @@ import {
 import { jsonParse, jsonStringify } from '../slowOperations.js'
 import { getSystemDirectories } from '../systemDirectories.js'
 import { classifyFetchError, logPluginFetch } from './fetchTelemetry.js'
+type McpbUserConfigurationOption = any
+
 /**
  * User configuration values for MCPB
  */

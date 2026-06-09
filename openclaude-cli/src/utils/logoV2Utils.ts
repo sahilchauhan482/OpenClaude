@@ -165,7 +165,7 @@ export function truncatePath(path: string, maxLength: number): string {
   }
 
   // Try to keep as many middle parts as possible
-  const middleParts = []
+  const middleParts: string[] = []
   for (let i = parts.length - 2; i > 0; i--) {
     const part = parts[i]
     if (part && stringWidth(part) + separatorWidth <= available) {
@@ -316,7 +316,7 @@ export function formatModelAndBilling(
 export function getRecentReleaseNotesSync(maxItems: number): string[] {
   // For ants, use bundled changelog
   if (process.env.USER_TYPE === 'ant') {
-    const changelog = MACRO.VERSION_CHANGELOG
+    const changelog = (MACRO as any).VERSION_CHANGELOG
     if (changelog) {
       const commits = changelog.trim().split('\n').filter(Boolean)
       return commits.slice(0, maxItems)

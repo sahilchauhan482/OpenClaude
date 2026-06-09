@@ -67,7 +67,8 @@ export type GrowthBookUserAttributes = {
 }
 
 /** No-op: no background refresh to subscribe to. */
-export function onGrowthBookRefresh(): void {}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function onGrowthBookRefresh(_callback?: (...args: any[]) => any): void {}
 
 /** Returns false — no env overrides when GrowthBook is disabled. */
 export function hasGrowthBookEnvOverride(_feature: string): boolean {
@@ -122,6 +123,7 @@ export function getFeatureValue_CACHED_MAY_BE_STALE<T>(
 export function getFeatureValue_CACHED_WITH_REFRESH<T>(
 	_featureName: string,
 	defaultValue: T,
+	_refreshIntervalMs?: number,
 ): T {
 	return _getFlagValue(_featureName, defaultValue)
 }

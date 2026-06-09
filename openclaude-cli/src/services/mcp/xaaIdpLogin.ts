@@ -103,7 +103,7 @@ export function issuerKey(issuer: string): string {
  */
 export function getCachedIdpIdToken(idpIssuer: string): string | undefined {
   const storage = getSecureStorage()
-  const data = storage.read()
+  const data = storage.read() as any
   const entry = data?.mcpXaaIdp?.[issuerKey(idpIssuer)]
   if (!entry) return undefined
   const remainingMs = entry.expiresAt - Date.now()
@@ -117,14 +117,14 @@ function saveIdpIdToken(
   expiresAt: number,
 ): void {
   const storage = getSecureStorage()
-  const existing = storage.read() || {}
+  const existing = storage.read() as any || {}
   storage.update({
     ...existing,
     mcpXaaIdp: {
       ...existing.mcpXaaIdp,
       [issuerKey(idpIssuer)]: { idToken, expiresAt },
     },
-  })
+  } as any)
 }
 
 /**
@@ -147,7 +147,7 @@ export function saveIdpIdTokenFromJwt(
 
 export function clearIdpIdToken(idpIssuer: string): void {
   const storage = getSecureStorage()
-  const existing = storage.read()
+  const existing = storage.read() as any
   const key = issuerKey(idpIssuer)
   if (!existing?.mcpXaaIdp?.[key]) return
   delete existing.mcpXaaIdp[key]
@@ -166,14 +166,14 @@ export function saveIdpClientSecret(
   clientSecret: string,
 ): { success: boolean; warning?: string } {
   const storage = getSecureStorage()
-  const existing = storage.read() || {}
+  const existing = storage.read() as any || {}
   return storage.update({
     ...existing,
     mcpXaaIdpConfig: {
       ...existing.mcpXaaIdpConfig,
       [issuerKey(idpIssuer)]: { clientSecret },
     },
-  })
+  } as any)
 }
 
 /**
@@ -181,7 +181,7 @@ export function saveIdpClientSecret(
  */
 export function getIdpClientSecret(idpIssuer: string): string | undefined {
   const storage = getSecureStorage()
-  const data = storage.read()
+  const data = storage.read() as any
   return data?.mcpXaaIdpConfig?.[issuerKey(idpIssuer)]?.clientSecret
 }
 
@@ -191,7 +191,7 @@ export function getIdpClientSecret(idpIssuer: string): string | undefined {
  */
 export function clearIdpClientSecret(idpIssuer: string): void {
   const storage = getSecureStorage()
-  const existing = storage.read()
+  const existing = storage.read() as any
   const key = issuerKey(idpIssuer)
   if (!existing?.mcpXaaIdpConfig?.[key]) return
   delete existing.mcpXaaIdpConfig[key]
@@ -382,7 +382,8 @@ function waitForCallback(
       res.end(
         '<html><body><h3>IdP login complete — you can close this window.</h3></body></html>',
       )
-      resolveOnce(result.code)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      resolveOnce((result as any).code)
     })
 
     server.on('error', (err: NodeJS.ErrnoException) => {
@@ -481,7 +482,7 @@ export async function acquireIdpIdToken(
     codeVerifier,
     redirectUri,
     fetchFn: (url, init) => {
-      const { signal, cleanup } = createCombinedAbortSignal(init?.signal, {
+      const { signal, cleanup } = createCombinedAbortSignal(init?.signal ?? undefined, {
         timeoutMs: IDP_REQUEST_TIMEOUT_MS,
       })
       // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins

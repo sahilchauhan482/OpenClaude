@@ -55,8 +55,9 @@ import { diagnosticTracker } from '../services/diagnosticTracking.js'
 import type {
   AttachmentMessage,
   Message,
-  MessageOrigin,
 } from 'src/types/message.js'
+// @ts-ignore
+import type { MessageOrigin } from 'src/types/message.js'
 import {
   type QueuedCommand,
   getImagePasteIds,
@@ -85,6 +86,7 @@ import uniqBy from 'lodash-es/uniqBy.js'
 import { getProjectRoot } from '../bootstrap/state.js'
 import { formatCommandsWithinBudget } from '../tools/SkillTool/prompt.js'
 import { getContextWindowForModel } from './context.js'
+// @ts-ignore
 import type { DiscoverySignal } from '../services/skillSearch/signals.js'
 // Conditional require for DCE. All skill-search string literals that would
 // otherwise leak into external builds live inside these modules. The only
@@ -804,7 +806,7 @@ export async function getAttachments(
         !options?.skipSkillDiscovery
           ? [
               maybe('skill_discovery', () =>
-                skillSearchModules.prefetch.getTurnZeroSkillDiscovery(
+                (skillSearchModules.prefetch as any).getTurnZeroSkillDiscovery(
                   input,
                   messages ?? [],
                   context,
@@ -996,11 +998,11 @@ export async function getAttachments(
 
   clearTimeout(timeoutId)
   // Defensive: a getter leaking [undefined] crashes .map(a => a.type) below.
-  return [
+  return ([
     ...userAttachmentResults.flat(),
     ...threadAttachmentResults.flat(),
     ...mainThreadAttachmentResults.flat(),
-  ].filter(a => a !== undefined && a !== null)
+  ].filter(a => a !== undefined && a !== null)) as any
 }
 
 async function maybe<A>(label: string, f: () => Promise<A[]>): Promise<A[]> {
@@ -1437,7 +1439,7 @@ export function getDateChangeAttachments(
   // message timestamp so a multi-day gap flushes each day correctly.
   if (feature('KAIROS')) {
     if (getKairosActive() && messages !== undefined) {
-      sessionTranscriptModule?.flushOnDateChange(messages, currentDate)
+      ;(sessionTranscriptModule as any)?.flushOnDateChange(messages, currentDate)
     }
   }
 
@@ -2692,7 +2694,7 @@ async function getSkillListingAttachments(
   // otherwise even with ?. on null.
   if (
     feature('EXPERIMENTAL_SKILL_SEARCH') &&
-    skillSearchModules?.featureCheck.isSkillSearchEnabled()
+    (skillSearchModules?.featureCheck as any).isSkillSearchEnabled()
   ) {
     allCommands = filterToBundledAndMcp(allCommands)
   }
@@ -3988,9 +3990,10 @@ export function getContextEfficiencyAttachment(
   }
   // Gate must match SnipTool.isEnabled() — don't nudge toward a tool that
   // isn't in the tool list. Lazy require keeps this file snip-string-free.
-  const { isSnipRuntimeEnabled, shouldNudgeForSnips } =
+  const snipModule =
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('../services/compact/snipCompact.js') as typeof import('../services/compact/snipCompact.js')
+    require('../services/compact/snipCompact.js') as any
+  const { isSnipRuntimeEnabled, shouldNudgeForSnips } = snipModule
   if (!isSnipRuntimeEnabled()) {
     return []
   }

@@ -19,7 +19,7 @@ if (typeof globalThis.File === 'undefined') {
     // Node 18.13+ exposes File in node:buffer but not as a global.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { File: NodeFile } = require('node:buffer')
-    // @ts-expect-error -- polyfilling missing global
+    // @ts-ignore -- polyfilling missing global
     globalThis.File = NodeFile
   } catch {
     // Absolute fallback: stub so `MakeTypeAssertion(File)` doesn't throw.
@@ -249,6 +249,7 @@ async function main(): Promise<void> {
   if (feature('DAEMON') && args[0] === '--daemon-worker') {
     const {
       runDaemonWorker
+      // @ts-ignore -- module not included in source snapshot
     } = await import('../daemon/workerRegistry.js');
     await runDaemonWorker(args[1]);
     return;
@@ -323,6 +324,7 @@ async function main(): Promise<void> {
     initSinks();
     const {
       daemonMain
+      // @ts-ignore -- module not included in source snapshot
     } = await import('../daemon/main.js');
     await daemonMain(args.slice(1));
     return;
@@ -337,6 +339,7 @@ async function main(): Promise<void> {
       enableConfigs
     } = await import('../utils/config.js');
     enableConfigs();
+    // @ts-ignore -- module not included in source snapshot
     const bg = await import('../cli/bg.js');
     switch (args[0]) {
       case 'ps':
@@ -362,6 +365,7 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_templates_path');
     const {
       templatesMain
+      // @ts-ignore -- module not included in source snapshot
     } = await import('../cli/handlers/templateJobs.js');
     await templatesMain(args);
     // process.exit (not return) — mountFleetView's Ink TUI can leave event
@@ -376,6 +380,7 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_environment_runner_path');
     const {
       environmentRunnerMain
+      // @ts-ignore -- module not included in source snapshot
     } = await import('../environment-runner/main.js');
     await environmentRunnerMain(args.slice(1));
     return;
@@ -388,6 +393,7 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_self_hosted_runner_path');
     const {
       selfHostedRunnerMain
+      // @ts-ignore -- module not included in source snapshot
     } = await import('../self-hosted-runner/main.js');
     await selfHostedRunnerMain(args.slice(1));
     return;

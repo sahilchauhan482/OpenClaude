@@ -2881,7 +2881,7 @@ function runHeadlessStreaming(
             initialized,
             output,
             commands,
-            modelInfos,
+            modelInfos as ModelInfo[],
             structuredIO,
             !!options.enableAuthStatus,
             options,
@@ -4443,7 +4443,7 @@ async function handleInitializeRequest(
   if (request.hooks) {
     const hooks: Partial<Record<HookEvent, HookCallbackMatcher[]>> = {}
     for (const [event, matchers] of Object.entries(request.hooks)) {
-      hooks[event as HookEvent] = matchers.map(matcher => {
+      hooks[event as HookEvent] = (matchers as Array<{hookCallbackIds: string[]; timeout?: number; matcher?: unknown}>).map(matcher => {
         const callbacks = matcher.hookCallbackIds.map(callbackId => {
           return structuredIO.createHookCallback(callbackId, matcher.timeout)
         })
@@ -4451,7 +4451,7 @@ async function handleInitializeRequest(
           matcher: matcher.matcher,
           hooks: callbacks,
         }
-      })
+      }) as HookCallbackMatcher[]
     }
     registerHookCallbacks(hooks)
   }

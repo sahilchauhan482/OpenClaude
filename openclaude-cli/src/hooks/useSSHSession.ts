@@ -21,6 +21,7 @@ import {
   isSessionEndMessage,
 } from '../remote/sdkMessageAdapter.js'
 import type { SSHSession } from '../ssh/createSSHSession.js'
+// @ts-ignore -- module not included in source snapshot
 import type { SSHSessionManager } from '../ssh/SSHSessionManager.js'
 import type { Tool } from '../Tool.js'
 import { findToolByName } from '../Tool.js'
@@ -69,7 +70,8 @@ export function useSSHSession({
     hasReceivedInitRef.current = false
     logForDebugging('[useSSHSession] wiring SSH session manager')
 
-    const manager = session.createManager({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const manager = (session as any).createManager({
       onMessage: sdkMessage => {
         if (isSessionEndMessage(sdkMessage)) {
           setIsLoading(false)
@@ -181,9 +183,11 @@ export function useSSHSession({
       },
       onDisconnected: () => {
         logForDebugging('[useSSHSession] ssh process exited (giving up)')
-        const stderr = session.getStderrTail().trim()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const stderr = (session as any).getStderrTail().trim()
         const connected = isConnectedRef.current
-        const exitCode = session.proc.exitCode
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const exitCode = (session as any).proc.exitCode
         isConnectedRef.current = false
         setIsLoading(false)
 
@@ -193,7 +197,8 @@ export function useSSHSession({
         // Surface remote stderr if it looks like an error (pre-connect always,
         // post-connect only on nonzero exit — normal --verbose noise otherwise).
         if (stderr && (!connected || exitCode !== 0)) {
-          msg += `\nRemote stderr (exit ${exitCode ?? 'signal ' + session.proc.signalCode}):\n${stderr}`
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          msg += `\nRemote stderr (exit ${exitCode ?? 'signal ' + (session as any).proc.signalCode}):\n${stderr}`
         }
         void gracefulShutdown(1, 'other', { finalMessage: msg })
       },
@@ -208,7 +213,8 @@ export function useSSHSession({
     return () => {
       logForDebugging('[useSSHSession] cleanup')
       manager.disconnect()
-      session.proxy.stop()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(session as any).proxy?.stop()
       managerRef.current = null
     }
   }, [session, setMessages, setIsLoading, setToolUseConfirmQueue])

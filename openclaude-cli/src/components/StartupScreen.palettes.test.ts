@@ -24,6 +24,6 @@ describe('startup logo palettes', () => {
   })
 
   test('palette names stay in sync with defined palettes', () => {
-    expect(LOGO_PALETTE_NAMES).toEqual(Object.keys(LOGO_PALETTES))
+    expect(LOGO_PALETTE_NAMES as string[]).toEqual(Object.keys(LOGO_PALETTES))
   })
 })

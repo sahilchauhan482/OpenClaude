@@ -14,7 +14,8 @@ function getChromeFlag(): boolean | undefined {
   return undefined;
 }
 export function useChromeExtensionNotification() {
-  useStartupNotification(_temp);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useStartupNotification(_temp as any);
 }
 async function _temp() {
   const chromeFlag = getChromeFlag();

@@ -57,7 +57,7 @@ const SAVED_ENV = {
   CODEX_API_KEY: process.env.CODEX_API_KEY,
   CHATGPT_ACCOUNT_ID: process.env.CHATGPT_ACCOUNT_ID,
 }
-const savedModel = getGlobalConfig().model
+const savedModel = (getGlobalConfig() as any).model
 
 function restoreEnv(key: keyof typeof SAVED_ENV): void {
   if (SAVED_ENV[key] === undefined) {

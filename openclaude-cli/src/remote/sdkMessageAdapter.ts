@@ -181,12 +181,12 @@ export function convertSDKMessage(
       // agent-side normalizeMessage() hardcodes it to null for top-level
       // tool results, so it can't distinguish tool results from prompt echoes.
       const isToolResult =
-        Array.isArray(content) && content.some(b => b.type === 'tool_result')
+        Array.isArray(content) && content.some(b => (b as any).type === 'tool_result')
       if (opts?.convertToolResults && isToolResult) {
         return {
           type: 'message',
           message: createUserMessage({
-            content,
+            content: content as any,
             toolUseResult: msg.tool_use_result,
             uuid: msg.uuid,
             timestamp: msg.timestamp,
@@ -201,7 +201,7 @@ export function convertSDKMessage(
           return {
             type: 'message',
             message: createUserMessage({
-              content,
+              content: content as any,
               toolUseResult: msg.tool_use_result,
               uuid: msg.uuid,
               timestamp: msg.timestamp,

@@ -173,7 +173,7 @@ export async function* handleStopHooks(
   }
 
   try {
-    const blockingErrors = []
+    const blockingErrors: Message[] = []
     const appState = toolUseContext.getAppState()
     const permissionMode = appState.toolPermissionContext.mode
 

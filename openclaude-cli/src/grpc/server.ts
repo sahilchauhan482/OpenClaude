@@ -127,7 +127,7 @@ export class GrpcServer {
                   if (reply.toLowerCase() === 'yes' || reply.toLowerCase() === 'y') {
                     resolve({ behavior: 'allow' })
                   } else {
-                    resolve({ behavior: 'deny', reason: 'User denied via gRPC' })
+                    resolve({ behavior: 'deny', message: 'User denied via gRPC', decisionReason: { type: 'other' } } as any)
                   }
                 })
               })
@@ -148,25 +148,27 @@ export class GrpcServer {
 
           for await (const msg of generator) {
             if (msg.type === 'stream_event') {
-              if (msg.event.type === 'content_block_delta' && msg.event.delta.type === 'text_delta') {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const event = (msg as any).event
+              if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
                 call.write({
                   text_chunk: {
-                    text: msg.event.delta.text
+                    text: event.delta.text
                   }
                 })
-                fullText += msg.event.delta.text
+                fullText += event.delta.text
               }
             } else if (msg.type === 'user') {
               // Extract tool results
-              const content = msg.message.content
+              const content = (msg as any).message?.content
               if (Array.isArray(content)) {
-                for (const block of content) {
+                for (const block of content as any[]) {
                   if (block.type === 'tool_result') {
                     let outputStr = ''
                     if (typeof block.content === 'string') {
                       outputStr = block.content
                     } else if (Array.isArray(block.content)) {
-                      outputStr = block.content.map(c => c.type === 'text' ? c.text : '').join('\n')
+                      outputStr = block.content.map((c: any) => c.type === 'text' ? c.text : '').join('\n')
                     }
                     call.write({
                       tool_result: {
@@ -199,7 +201,10 @@ export class GrpcServer {
             if (sessionId) {
               if (!this.sessions.has(sessionId) && this.sessions.size >= MAX_SESSIONS) {
                 // Evict oldest session (Map preserves insertion order)
-                this.sessions.delete(this.sessions.keys().next().value)
+                const oldestKey = this.sessions.keys().next().value
+                if (oldestKey !== undefined) {
+                  this.sessions.delete(oldestKey)
+                }
               }
               this.sessions.set(sessionId, previousMessages)
             }

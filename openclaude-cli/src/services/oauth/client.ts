@@ -298,7 +298,7 @@ export async function fetchAndStoreUserRoles(
           organizationRole: data.organization_role,
           workspaceRole: data.workspace_role,
           organizationName: data.organization_name,
-        }
+        } as AccountInfo
       : current.oauthAccount,
   }))
 

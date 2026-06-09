@@ -123,7 +123,7 @@ const deps = {
   reinitializeLspServerManager,
   waitForInitialization,
   discoverWorkspaceExtensions,
-}
+} as any
 
 beforeEach(() => {
   initializationStatus = { status: 'not-started' }

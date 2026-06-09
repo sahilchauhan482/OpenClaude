@@ -13,8 +13,8 @@ const tempDirs: string[] = []
 const sessionId = '00000000-0000-4000-8000-000000000999'
 const ts = '2026-04-02T00:00:00.000Z'
 
-function id(n: number): string {
-  return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+function id(n: number): `${string}-${string}-${string}-${string}-${string}` {
+  return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}` as `${string}-${string}-${string}-${string}-${string}`
 }
 
 function base(uuid: string, parentUuid: string | null) {
@@ -201,7 +201,7 @@ test('loadTranscriptFile fails closed when preserved-segment anchor is missing',
 
 test('stripPersistedToolUseResultsFromJSONLBuffer drops raw toolUseResult while preserving persisted preview content', () => {
   const persisted = user(id(31), null, 'placeholder')
-  persisted.message = {
+  ;(persisted as any).message = {
     role: 'user',
     content: [
       {
@@ -225,13 +225,13 @@ test('stripPersistedToolUseResultsFromJSONLBuffer drops raw toolUseResult while 
 
   expect(parsed?.toolUseResult).toBeUndefined()
   expect(
-    (parsed?.message.content as Array<{ content: string }>)[0]?.content,
+    (parsed?.message.content as unknown as Array<{ content: string }>)[0]?.content,
   ).toContain('Preview text')
 })
 
 test('loadTranscriptFile omits raw toolUseResult for persisted-output transcript entries', async () => {
   const persisted = user(id(41), null, 'placeholder')
-  persisted.message = {
+  ;(persisted as any).message = {
     role: 'user',
     content: [
       {
@@ -256,6 +256,6 @@ test('loadTranscriptFile omits raw toolUseResult for persisted-output transcript
   expect(loaded).toBeDefined()
   expect(loaded?.toolUseResult).toBeUndefined()
   expect(
-    (loaded?.message.content as Array<{ content: string }>)[0]?.content,
+    (loaded?.message.content as unknown as Array<{ content: string }>)[0]?.content,
   ).toContain('Preview text')
 })

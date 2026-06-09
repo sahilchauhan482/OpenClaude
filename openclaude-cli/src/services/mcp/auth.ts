@@ -267,7 +267,7 @@ export async function normalizeOAuthErrorBody(
 function createAuthFetch(): FetchLike {
   return async (url: string | URL, init?: RequestInit) => {
     const isPost = init?.method?.toUpperCase() === 'POST'
-    const { signal, cleanup } = createCombinedAbortSignal(init?.signal, {
+    const { signal, cleanup } = createCombinedAbortSignal(init?.signal ?? undefined, {
       timeoutMs: AUTH_REQUEST_TIMEOUT_MS,
     })
     try {
@@ -2088,13 +2088,15 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
         `Returning cached discovery state (authServer: ${cached.authorizationServerUrl})`,
       )
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cachedAny = cached as any
       return {
         authorizationServerUrl: cached.authorizationServerUrl,
         resourceMetadataUrl: cached.resourceMetadataUrl,
         resourceMetadata:
-          cached.resourceMetadata as OAuthDiscoveryState['resourceMetadata'],
+          cachedAny.resourceMetadata as OAuthDiscoveryState['resourceMetadata'],
         authorizationServerMetadata:
-          cached.authorizationServerMetadata as OAuthDiscoveryState['authorizationServerMetadata'],
+          cachedAny.authorizationServerMetadata as OAuthDiscoveryState['authorizationServerMetadata'],
       }
     }
 
