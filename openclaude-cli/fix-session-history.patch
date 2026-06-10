@@ -1,7 +1,0 @@
---- src/assistant/sessionHistory.ts
-+++ src/assistant/sessionHistory.ts
-@@ -2,3 +2,3 @@
- import { getOauthConfig } from '../constants/oauth.js'
--import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
-+import type { Message as SDKMessage } from '../utils/conversationCache.js'
- import { logForDebugging } from '../utils/debug.js'
