@@ -32,7 +32,10 @@ export function ToolCallBlock({ block, isStreaming, agentProgress }: ToolCallBlo
   const statusLabel = isStreaming ? 'Running' : 'Completed';
 
   return (
-    <div className={`tool-call-card ${isStreaming ? 'tool-call-card-live' : ''}`}>
+    <div
+      className={`tool-call-card ${isStreaming ? 'tool-call-card-live' : ''}`}
+      data-tool-kind={presentation.kind}
+    >
       <button
         onClick={() => {
           setUserToggled(true);
@@ -52,7 +55,9 @@ export function ToolCallBlock({ block, isStreaming, agentProgress }: ToolCallBlo
           <polyline points="9 18 15 12 9 6" />
         </svg>
 
-        {isAgent ? <AgentIcon /> : isTodo ? <TodoIcon /> : <ToolIcon />}
+        <div className="tool-icon-badge">
+          {isAgent ? <AgentIcon /> : isTodo ? <TodoIcon /> : <ToolIcon />}
+        </div>
 
         <div className="tool-call-copy">
           <div className="tool-call-topline">

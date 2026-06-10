@@ -92,13 +92,10 @@ export function MessageList({
       {userScrolledUp && (
         <button
           onClick={() => scrollToBottom('smooth')}
-          className="absolute bottom-4 right-4 z-10
-            flex items-center gap-1.5 px-3 py-1.5 rounded-full
-            bg-vscode-button-bg text-vscode-button-fg text-xs
-            shadow-lg hover:bg-vscode-button-hover transition-colors"
+          className="scroll-to-bottom"
           title="Scroll to bottom"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
           New content
@@ -111,10 +108,25 @@ export function MessageList({
 function EmptyState() {
   return (
     <div className="empty-state">
-      <div className="empty-state-content" style={{ opacity: 0.4, padding: '0 20px' }}>
-        <div style={{ fontSize: '2em', marginBottom: 12 }}>{"{ }"}</div>
-        <p style={{ fontSize: '0.85em', fontWeight: 500, marginBottom: 4 }}>No messages yet</p>
-        <p style={{ fontSize: '0.75em' }}>Type a message below to start a conversation.</p>
+      <div className="empty-state-content">
+        <div className="empty-state-card">
+          <div className="empty-state-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <div className="empty-state-heading">What can I help you build?</div>
+          <div className="empty-state-subtitle">Ask me to write code, fix bugs, explain concepts, or refactor your project.</div>
+          <div className="empty-state-chips">
+            <span className="empty-state-chip">Fix a bug</span>
+            <span className="empty-state-chip">Write tests</span>
+            <span className="empty-state-chip">Explain code</span>
+            <span className="empty-state-chip">Refactor</span>
+          </div>
+          <div className="empty-state-hint">Type a message or press / for commands</div>
+        </div>
       </div>
     </div>
   );
