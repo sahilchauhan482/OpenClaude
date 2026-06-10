@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { MermaidBlock } from './MermaidBlock';
 
 interface CodeBlockProps {
   children: string;
@@ -6,9 +7,19 @@ interface CodeBlockProps {
   className?: string;
 }
 
+const COLLAPSE_THRESHOLD = 20;
+const VISIBLE_LINES = 10;
+
 export function CodeBlock({ children, language, className }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
   const lang = language || extractLanguage(className);
+  const lines = children.split('\n');
+  const isLong = lines.length > COLLAPSE_THRESHOLD;
+  const [isExpanded, setIsExpanded] = useState(!isLong);
+
+  if (lang === 'mermaid') {
+    return <MermaidBlock code={children} />;
+  }
 
   const handleCopy = useCallback(async () => {
     try {
@@ -18,8 +29,10 @@ export function CodeBlock({ children, language, className }: CodeBlockProps) {
     } catch { /* ignore */ }
   }, [children]);
 
+  const displayCode = isExpanded ? children : lines.slice(0, VISIBLE_LINES).join('\n');
+
   return (
-    <div className="code-block-wrapper group">
+    <div className={`code-block-wrapper group${!isExpanded ? ' code-block-collapsed' : ''}`}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '4px 12px', fontSize: 'var(--text-sm)',
@@ -47,16 +60,27 @@ export function CodeBlock({ children, language, className }: CodeBlockProps) {
           {copied ? '✓ Copied' : 'Copy'}
         </button>
       </div>
-      <pre style={{
-        margin: 0,
-        padding: '14px 16px',
-        overflowX: 'auto',
-        fontSize: 'var(--app-monospace-font-size)',
-        fontFamily: 'var(--app-monospace-font-family)',
-        lineHeight: 1.55,
-      }}>
-        <code className={className}>{children}</code>
-      </pre>
+      <div style={{ position: 'relative' }}>
+        <pre style={{
+          margin: 0,
+          padding: '14px 16px',
+          overflowX: 'auto',
+          fontSize: 'var(--app-monospace-font-size)',
+          fontFamily: 'var(--app-monospace-font-family)',
+          lineHeight: 1.55,
+        }}>
+          <code className={className}>{displayCode}</code>
+        </pre>
+        {!isExpanded && <div className="code-block-fade" />}
+      </div>
+      {isLong && (
+        <button
+          className="code-block-expand-btn"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          {isExpanded ? `Collapse (${lines.length} lines)` : `Show all ${lines.length} lines`}
+        </button>
+      )}
     </div>
   );
 }

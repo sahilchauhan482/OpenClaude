@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { SessionCard } from './SessionCard';
 import type { SessionData, GroupedSessionData } from '../../hooks/useSession';
 
@@ -11,6 +11,21 @@ interface SessionListProps {
   onResumeSession: (session: SessionData) => void;
   onDeleteSession: (id: string) => void;
   onClose: () => void;
+}
+
+const BOOKMARKS_KEY = 'openclaude.session.bookmarks';
+
+function loadBookmarks(): Set<string> {
+  try {
+    const raw = localStorage.getItem(BOOKMARKS_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveBookmarks(bookmarks: Set<string>) {
+  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify([...bookmarks]));
 }
 
 export const SessionList: React.FC<SessionListProps> = ({
@@ -26,13 +41,22 @@ export const SessionList: React.FC<SessionListProps> = ({
   const searchRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const isSearching = searchQuery.trim().length > 0;
+  const [bookmarks, setBookmarks] = useState<Set<string>>(loadBookmarks);
 
-  // Auto-focus search input on mount
+  const toggleBookmark = useCallback((sessionId: string) => {
+    setBookmarks((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) next.delete(sessionId);
+      else next.add(sessionId);
+      saveBookmarks(next);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     searchRef.current?.focus();
   }, []);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -41,7 +65,6 @@ export const SessionList: React.FC<SessionListProps> = ({
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Close on click outside (with brief delay to avoid catching the opening click)
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     const timer = setTimeout(() => {
@@ -59,12 +82,27 @@ export const SessionList: React.FC<SessionListProps> = ({
     };
   }, [onClose]);
 
+  const allSessions = groupedSessions.flatMap((g) => g.sessions);
+  const pinnedSessions = allSessions.filter((s) => bookmarks.has(s.id));
+
+  const BookmarkButton = ({ sessionId }: { sessionId: string }) => (
+    <button
+      className={`bookmark-icon${bookmarks.has(sessionId) ? ' bookmark-active' : ''}`}
+      onClick={(e) => { e.stopPropagation(); toggleBookmark(sessionId); }}
+      title={bookmarks.has(sessionId) ? 'Remove bookmark' : 'Bookmark session'}
+      aria-label={bookmarks.has(sessionId) ? 'Remove bookmark' : 'Bookmark session'}
+    >
+      <svg width="12" height="12" viewBox="0 0 16 16" fill={bookmarks.has(sessionId) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
+        <path d="M8 1.5l2 4 4.5.65-3.25 3.17.77 4.48L8 11.77l-4.02 2.03.77-4.48L1.5 6.15 6 5.5z" />
+      </svg>
+    </button>
+  );
+
   return (
     <div
       ref={panelRef}
       className="absolute top-[40px] left-0 right-0 z-50 bg-[var(--vscode-sideBar-background)] border border-vscode-border rounded-b shadow-lg max-h-[400px] flex flex-col"
     >
-      {/* Search */}
       <div className="px-3 py-2 border-b border-vscode-border">
         <div className="relative">
           <svg
@@ -95,18 +133,47 @@ export const SessionList: React.FC<SessionListProps> = ({
         </div>
       </div>
 
-      {/* Session list body */}
       <div className="overflow-y-auto flex-1 py-1">
+        {/* Pinned sessions */}
+        {!isSearching && pinnedSessions.length > 0 && (
+          <div className="session-group-pinned">
+            <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider opacity-50">
+              Pinned
+            </div>
+            {pinnedSessions.map((s) => (
+              <div key={s.id} className="group relative flex items-center">
+                <div className="flex-1">
+                  <SessionCard
+                    session={s}
+                    isActive={s.id === activeSessionId}
+                    onResume={onResumeSession}
+                    onDelete={onDeleteSession}
+                  />
+                </div>
+                <div className="pr-2">
+                  <BookmarkButton sessionId={s.id} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {isSearching ? (
           filteredSessions.length > 0 ? (
             filteredSessions.map((s) => (
-              <SessionCard
-                key={s.id}
-                session={s}
-                isActive={s.id === activeSessionId}
-                onResume={onResumeSession}
-                onDelete={onDeleteSession}
-              />
+              <div key={s.id} className="group relative flex items-center">
+                <div className="flex-1">
+                  <SessionCard
+                    session={s}
+                    isActive={s.id === activeSessionId}
+                    onResume={onResumeSession}
+                    onDelete={onDeleteSession}
+                  />
+                </div>
+                <div className="pr-2">
+                  <BookmarkButton sessionId={s.id} />
+                </div>
+              </div>
             ))
           ) : (
             <div className="px-3 py-6 text-center text-xs opacity-50">
@@ -120,13 +187,19 @@ export const SessionList: React.FC<SessionListProps> = ({
                 {group.group}
               </div>
               {group.sessions.map((s) => (
-                <SessionCard
-                  key={s.id}
-                  session={s}
-                  isActive={s.id === activeSessionId}
-                  onResume={onResumeSession}
-                  onDelete={onDeleteSession}
-                />
+                <div key={s.id} className="group relative flex items-center">
+                  <div className="flex-1">
+                    <SessionCard
+                      session={s}
+                      isActive={s.id === activeSessionId}
+                      onResume={onResumeSession}
+                      onDelete={onDeleteSession}
+                    />
+                  </div>
+                  <div className="pr-2">
+                    <BookmarkButton sessionId={s.id} />
+                  </div>
+                </div>
               ))}
             </div>
           ))

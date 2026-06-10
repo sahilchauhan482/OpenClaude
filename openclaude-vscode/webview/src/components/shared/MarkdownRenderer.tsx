@@ -4,19 +4,34 @@ import rehypeHighlight from 'rehype-highlight';
 import type { Components } from 'react-markdown';
 import { CodeBlock } from './CodeBlock';
 
+let remarkMath: typeof import('remark-math').default | null = null;
+let rehypeKatex: typeof import('rehype-katex').default | null = null;
+
+try {
+  remarkMath = require('remark-math');
+  rehypeKatex = require('rehype-katex');
+  require('katex/dist/katex.min.css');
+} catch {
+  // LaTeX packages not installed — math rendering disabled
+}
+
 interface MarkdownRendererProps {
-  /** Markdown text to render */
   content: string;
-  /** Whether the content is still streaming (affects cursor display) */
   isStreaming?: boolean;
 }
 
 export function MarkdownRenderer({ content, isStreaming = false }: MarkdownRendererProps) {
+  const remarkPlugins: Array<typeof remarkGfm> = [remarkGfm];
+  const rehypePlugins: Array<typeof rehypeHighlight> = [rehypeHighlight];
+
+  if (remarkMath) remarkPlugins.push(remarkMath as typeof remarkGfm);
+  if (rehypeKatex) rehypePlugins.push(rehypeKatex as typeof rehypeHighlight);
+
   return (
     <div className="markdown-body prose prose-sm max-w-none text-vscode-fg">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
         components={markdownComponents}
       >
         {content}
@@ -25,17 +40,11 @@ export function MarkdownRenderer({ content, isStreaming = false }: MarkdownRende
   );
 }
 
-/**
- * Custom component overrides for react-markdown.
- * Routes fenced code blocks to our CodeBlock component.
- */
 const markdownComponents: Components = {
-  // Override <pre> to strip the wrapper (CodeBlock handles its own <pre>)
   pre({ children }) {
     return <>{children}</>;
   },
 
-  // Override <code> — inline code vs. block code
   code({ className, children, ...props }) {
     const isInline = !className && typeof children === 'string' && !children.includes('\n');
 
@@ -50,7 +59,6 @@ const markdownComponents: Components = {
       );
     }
 
-    // Block code — extract text content and pass to CodeBlock
     const codeText = extractTextContent(children);
 
     return (
@@ -60,7 +68,6 @@ const markdownComponents: Components = {
     );
   },
 
-  // Links open in VS Code's external browser
   a({ href, children }) {
     return (
       <a
@@ -74,7 +81,6 @@ const markdownComponents: Components = {
     );
   },
 
-  // Tables with VS Code styling
   table({ children }) {
     return (
       <div className="overflow-x-auto my-2">
@@ -101,9 +107,7 @@ const markdownComponents: Components = {
     );
   },
 
-  // Task list items (from remark-gfm)
   li({ children, ...props }) {
-    // remark-gfm uses className 'task-list-item' for checkbox list items
     const isTaskItem = props.className?.includes('task-list-item');
     return (
       <li className={isTaskItem ? 'list-none' : undefined}>
@@ -112,7 +116,6 @@ const markdownComponents: Components = {
     );
   },
 
-  // Block quotes styled as callouts
   blockquote({ children }) {
     return (
       <blockquote className="border-l-4 border-vscode-link pl-4 my-2 opacity-80 italic">
@@ -122,11 +125,6 @@ const markdownComponents: Components = {
   },
 };
 
-/**
- * Extract plain text from React children.
- * react-markdown passes the code content as nested children —
- * this flattens them to a string for our CodeBlock component.
- */
 function extractTextContent(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
   if (Array.isArray(children)) return children.map(extractTextContent).join('');
@@ -135,4 +133,3 @@ function extractTextContent(children: React.ReactNode): string {
   }
   return String(children ?? '');
 }
-

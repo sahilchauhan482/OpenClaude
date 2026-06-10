@@ -53,7 +53,7 @@ export interface ToolActivity {
 
 export type { WorkPlanState };
 
-interface AvailableModel {
+export interface AvailableModel {
   value: string;
   displayName: string;
   id?: string;

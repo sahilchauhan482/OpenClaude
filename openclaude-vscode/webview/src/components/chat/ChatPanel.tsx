@@ -5,9 +5,15 @@ import { useProcessState } from '../../hooks/useProcessState';
 import { useSlashCommands } from '../../hooks/useSlashCommands';
 import { useAtMentions } from '../../hooks/useAtMentions';
 import { useActiveFile } from '../../hooks/useActiveFile';
+import { useMessageSearch } from '../../hooks/useMessageSearch';
+import { useContextMenu } from '../../hooks/useContextMenu';
+import { useDragDrop } from '../../hooks/useDragDrop';
+import { ToastContext, useToastState, useToast } from '../../hooks/useToast';
 import { ChatHeader } from '../header/ChatHeader';
 import { SessionList } from '../header/SessionList';
 import { MessageList } from './MessageList';
+import { MessageSearch } from './MessageSearch';
+import { SettingsPanel } from './SettingsPanel';
 import { CostDisplay } from '../shared/CostDisplay';
 import { PermissionModeIndicator } from '../input/PermissionModeIndicator';
 import { vscode } from '../../vscode';
@@ -27,6 +33,9 @@ import { McpServerManager } from '../dialogs/McpServerManager';
 import { PluginManager } from '../dialogs/PluginManager';
 import { PolicyPackManager } from '../dialogs/PolicyPackManager';
 import { OnboardingChecklist } from '../onboarding/OnboardingChecklist';
+import { ToastContainer } from '../shared/ToastContainer';
+import { KeyboardShortcutGuide } from '../shared/KeyboardShortcutGuide';
+import { ContextMenu } from '../shared/ContextMenu';
 import type { AtMentionResult } from '../../hooks/useAtMentions';
 import type { ToolActivity, WorkPlanState } from '../../hooks/useChat';
 import type { PermissionRequest } from '../../hooks/usePermissions';
@@ -58,7 +67,16 @@ interface ChatPanelProps {
   onPermissionDeny?: (requestId: string) => void;
 }
 
-export function ChatPanel({
+export function ChatPanel(props: ChatPanelProps) {
+  const toastState = useToastState();
+  return (
+    <ToastContext.Provider value={toastState}>
+      <ChatPanelInner {...props} />
+    </ToastContext.Provider>
+  );
+}
+
+function ChatPanelInner({
   permissionRequest = null,
   permissionQueue = [],
   pendingPermissionCount = 0,
@@ -116,6 +134,9 @@ export function ChatPanel({
   const [showMcpManager, setShowMcpManager] = useState(false);
   const [showPluginManager, setShowPluginManager] = useState(false);
   const [showPolicyPackManager, setShowPolicyPackManager] = useState(false);
+  const [showShortcutGuide, setShowShortcutGuide] = useState(false);
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [recommendation, setRecommendation] = useState<CapabilityRecommendationView | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('openclaude.onboarding.dismissed');
@@ -194,6 +215,28 @@ export function ChatPanel({
     vscode.postMessage({ type: 'set_permission_mode', mode: toHostPermissionMode(mode) });
   }, []);
 
+  // Message search hook
+  const messageSearch = useMessageSearch(messages);
+
+  // Context menu hook
+  const { menu: contextMenuState, showContextMenu, hideContextMenu } = useContextMenu();
+
+  // Keyboard shortcuts: Cmd+K for shortcut guide, Ctrl+F for search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowShortcutGuide((prev) => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setShowMessageSearch((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, []);
+
   const isStarting = processState === 'starting';
   const latestAssistantText = [...messages]
     .reverse()
@@ -245,6 +288,19 @@ export function ChatPanel({
         )}
       </div>
 
+      {/* Message search bar */}
+      {showMessageSearch && (
+        <MessageSearch
+          query={messageSearch.query}
+          onQueryChange={messageSearch.setQuery}
+          currentIndex={messageSearch.currentIndex}
+          total={messageSearch.total}
+          onNext={messageSearch.next}
+          onPrev={messageSearch.prev}
+          onClose={() => { setShowMessageSearch(false); messageSearch.setQuery(''); }}
+        />
+      )}
+
       {(workPlan || toolActivity || activeFileEdit || isStreaming) && (
         <AgentActivityStrip
           workPlan={workPlan}
@@ -274,6 +330,9 @@ export function ChatPanel({
         toolActivity={toolActivity}
         activeFileEdit={activeFileEdit}
         agentTaskProgress={agentTaskProgress}
+        highlightedMessageId={messageSearch.currentMatchId}
+        searchQuery={showMessageSearch ? messageSearch.query : ''}
+        onContextMenu={showContextMenu}
       />
 
       {/* Onboarding checklist */}
@@ -378,6 +437,19 @@ export function ChatPanel({
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              title="Settings"
+              style={{
+                fontSize: 10, padding: '1px 5px', cursor: 'pointer',
+                background: showSettings ? 'rgba(14, 165, 233, 0.14)' : 'transparent',
+                border: showSettings ? '1px solid rgba(14, 165, 233, 0.45)' : '1px solid var(--app-input-border)',
+                borderRadius: 'var(--corner-radius-small)',
+                color: showSettings ? 'var(--app-primary-foreground)' : 'var(--app-secondary-foreground)',
+              }}
+            >
+              Settings
+            </button>
             {agentTeamBoard && (
               <button
                 onClick={() => setShowAgentTeamBoard((prev) => !prev)}
@@ -440,6 +512,42 @@ export function ChatPanel({
       <McpServerManager isOpen={showMcpManager} onClose={() => setShowMcpManager(false)} />
       <PluginManager isOpen={showPluginManager} onClose={() => setShowPluginManager(false)} />
       {showPolicyPackManager && <PolicyPackManager onClose={() => setShowPolicyPackManager(false)} />}
+
+      {/* Settings panel */}
+      <SettingsPanel
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        permissionMode={permissionMode}
+        onModeChange={handleModeChange}
+        currentModel={model}
+        availableModels={availableModels}
+        effortLevel={effortLevel}
+        onEffortChange={setEffortLevel}
+        fastModeEnabled={fastModeState.enabled}
+        fastModeCanToggle={fastModeState.canToggle}
+        onFastModeToggle={() => {
+          const newEnabled = !fastModeState.enabled;
+          setFastModeState({ ...fastModeState, enabled: newEnabled });
+          vscode.postMessage({ type: 'toggle_fast_mode', enabled: newEnabled });
+        }}
+      />
+
+      {/* Keyboard shortcut guide overlay */}
+      {showShortcutGuide && (
+        <KeyboardShortcutGuide onClose={() => setShowShortcutGuide(false)} />
+      )}
+
+      {/* Context menu */}
+      <ContextMenu
+        visible={contextMenuState.visible}
+        x={contextMenuState.x}
+        y={contextMenuState.y}
+        items={contextMenuState.items}
+        onClose={hideContextMenu}
+      />
+
+      {/* Toast notifications */}
+      <ToastContainer />
     </div>
   );
 }
@@ -1494,6 +1602,17 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const hasDraftContent = inputValue.trim().length > 0 || attachments.length > 0;
 
+  // Toast for feedback
+  const { addToast } = useToast();
+
+  // Drag & drop
+  const { isDragging, handlers: dragHandlers } = useDragDrop(
+    useCallback((files: AttachmentItem[]) => {
+      setAttachments((prev) => [...prev, ...files]);
+      addToast({ type: 'success', message: `${files.length} file${files.length > 1 ? 's' : ''} added` });
+    }, [addToast])
+  );
+
   // Slash commands
   const { filteredCommands, isLoaded: slashCommandsLoaded } = useSlashCommands();
   const [slashMenuVisible, setSlashMenuVisible] = useState(false);
@@ -1738,7 +1857,11 @@ function InputArea({ isStreaming, isStarting, onSend, onInterrupt, effortLevel, 
   const sendDisabled = isStarting || (!hasDraftContent && !isStreaming);
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div
+      style={{ position: 'relative' }}
+      {...dragHandlers}
+      className={isDragging ? 'drag-over' : undefined}
+    >
       {/* Floating pickers — positioned above the input container */}
       <AtMentionPicker
         results={atResults}
