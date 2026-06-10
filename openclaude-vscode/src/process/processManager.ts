@@ -233,6 +233,9 @@ export class ProcessManager {
   private stderrCallbacks: StderrCallback[] = [];
   private stateCallbacks: StateCallback[] = [];
 
+  // Buffered control handlers registered before spawn creates the router
+  private pendingHandlers = new Map<string, ControlRequestHandler>();
+
   constructor(options: ProcessManagerOptions) {
     this.options = options;
   }
@@ -299,6 +302,12 @@ export class ProcessManager {
 
       // Create router that writes through transport
       this.router = new ControlRouter((msg) => this.transport?.write(msg));
+
+      // Flush any handlers registered before spawn()
+      for (const [subtype, handler] of this.pendingHandlers) {
+        this.router.registerHandler(subtype, handler);
+      }
+      this.pendingHandlers.clear();
 
       // Handle parsed messages from stdout
       this.transport.onMessage((msg) => this.handleMessage(msg as StdoutMessage));
@@ -394,12 +403,18 @@ export class ProcessManager {
 
   /**
    * Register a handler for an incoming control_request subtype from the CLI.
+   * If the router hasn't been created yet (spawn not called), the handler is
+   * buffered and applied when spawn() creates the router.
    */
   registerControlHandler(
     subtype: string,
     handler: ControlRequestHandler,
   ): void {
-    this.router?.registerHandler(subtype, handler);
+    if (this.router) {
+      this.router.registerHandler(subtype, handler);
+    } else {
+      this.pendingHandlers.set(subtype, handler);
+    }
   }
 
   /**
