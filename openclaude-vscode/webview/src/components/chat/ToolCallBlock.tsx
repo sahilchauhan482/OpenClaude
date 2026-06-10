@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ToolUseBlock, ServerToolUseBlock } from '../../types/messages';
 import type { AgentTaskProgress } from '../../types/chat';
 import { CodeBlock } from '../shared/CodeBlock';
@@ -16,9 +16,16 @@ interface ToolCallBlockProps {
 }
 
 export function ToolCallBlock({ block, isStreaming, agentProgress }: ToolCallBlockProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   const presentation = getToolPresentation(block.name, block.input);
+  const isFileEdit = presentation.kind === 'file';
+  const [isExpanded, setIsExpanded] = useState(isFileEdit && isStreaming);
+  const [userToggled, setUserToggled] = useState(false);
+
+  useEffect(() => {
+    if (isFileEdit && !userToggled) {
+      setIsExpanded(isStreaming);
+    }
+  }, [isStreaming, isFileEdit, userToggled]);
   const hasInput = Object.keys(block.input).length > 0;
   const isAgent = isAgentToolName(block.name);
   const isTodo = presentation.kind === 'todo' && presentation.todos && presentation.todos.length > 0;
@@ -27,7 +34,10 @@ export function ToolCallBlock({ block, isStreaming, agentProgress }: ToolCallBlo
   return (
     <div className={`tool-call-card ${isStreaming ? 'tool-call-card-live' : ''}`}>
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => {
+          setUserToggled(true);
+          setIsExpanded(!isExpanded);
+        }}
         className="tool-call-button"
       >
         <svg
@@ -78,6 +88,19 @@ export function ToolCallBlock({ block, isStreaming, agentProgress }: ToolCallBlo
       {isExpanded && (
         <div className="tool-call-expanded">
           <ExpandedToolContent presentation={presentation} hasInput={hasInput} />
+          {isStreaming && isFileEdit && (
+            <div style={{
+              padding: '4px 12px',
+              fontSize: 11,
+              opacity: 0.6,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+              <span className="tool-call-status-dot" />
+              Writing changes...
+            </div>
+          )}
         </div>
       )}
     </div>

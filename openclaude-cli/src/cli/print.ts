@@ -800,10 +800,13 @@ export async function runHeadless(
   )
   let filteredTools = [...tools, ...allowedMcpTools]
 
-  // When using SDK URL, always use stdio permission prompting to delegate to the SDK
-  const effectivePermissionPromptToolName = options.sdkUrl
-    ? 'stdio'
-    : options.permissionPromptToolName
+  // Use stdio permission prompting when the CLI can exchange control_request/
+  // control_response over NDJSON — either via sdkUrl or bidirectional stream-json
+  // (e.g. VSCode extension spawning the CLI with --output-format stream-json
+  // --input-format stream-json). Without this, permission checks that return
+  // 'ask' have no way to reach the host UI and tools are silently denied.
+  const effectivePermissionPromptToolName = options.permissionPromptToolName
+    ?? (options.sdkUrl || options.outputFormat === 'stream-json' ? 'stdio' : undefined)
 
   // Callback for when a permission prompt is shown
   const onPermissionPrompt = (details: RequiresActionDetails) => {
