@@ -9,8 +9,14 @@ export interface FileEditHunk {
   added: string;
 }
 
+export interface TodoItem {
+  content: string;
+  activeForm?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
 export interface ToolPresentation {
-  kind: 'command' | 'file' | 'search' | 'web' | 'generic';
+  kind: 'command' | 'file' | 'search' | 'web' | 'agent' | 'todo' | 'generic';
   title: string;
   summary: string;
   detail?: string;
@@ -19,6 +25,7 @@ export interface ToolPresentation {
   filePath?: string;
   delta?: ToolDeltaSummary;
   hunks?: FileEditHunk[];
+  todos?: TodoItem[];
   rawInput: string;
 }
 
@@ -384,15 +391,41 @@ export function getToolPresentation(
   }
 
   if (PLAN_TOOL_PATTERNS.some((pattern) => normalized.includes(pattern))) {
-    const firstItem = planItems[0];
+    const parsedTodos = extractTodoItems(input);
+    const completed = parsedTodos.filter(t => t.status === 'completed').length;
+    const inProgress = parsedTodos.filter(t => t.status === 'in_progress').length;
+    const total = parsedTodos.length;
+
+    let summary = 'Tracking work plan';
+    if (total > 0) {
+      const parts: string[] = [];
+      if (completed > 0) parts.push(`${completed} done`);
+      if (inProgress > 0) parts.push(`${inProgress} active`);
+      const pending = total - completed - inProgress;
+      if (pending > 0) parts.push(`${pending} pending`);
+      summary = parts.join(' · ');
+    }
+
     return {
-      kind: 'generic',
-      title: 'Plan',
-      summary: firstItem ? truncateSingleLine(firstItem, 96) : 'Tracking work plan',
-      detail:
-        planItems.length > 0
-          ? `${planItems.length} plan step${planItems.length === 1 ? '' : 's'} tracked`
-          : 'No plan steps found',
+      kind: 'todo',
+      title: 'Progress',
+      summary,
+      detail: total > 0 ? `${completed}/${total} tasks completed` : undefined,
+      todos: parsedTodos.length > 0 ? parsedTodos : undefined,
+      code: rawInput === '{}' ? undefined : rawInput,
+      language: rawInput === '{}' ? undefined : 'json',
+      rawInput,
+    };
+  }
+
+  if (normalized.includes('agent')) {
+    const desc = typeof input.description === 'string' ? input.description.trim() : undefined;
+    const agentType = typeof input.subagent_type === 'string' ? input.subagent_type.trim() : undefined;
+    return {
+      kind: 'agent' as const,
+      title: agentType ? humanizeToolName(agentType) : 'Agent',
+      summary: desc ? truncateSingleLine(desc, 96) : 'Running background agent',
+      detail: agentType ? `Type: ${agentType}` : undefined,
       code: rawInput === '{}' ? undefined : rawInput,
       language: rawInput === '{}' ? undefined : 'json',
       rawInput,
@@ -524,6 +557,26 @@ function extractPlanItems(input: Record<string, unknown>): string[] {
     }
   }
 
+  return items;
+}
+
+function extractTodoItems(input: Record<string, unknown>): TodoItem[] {
+  const todos = input.todos;
+  if (!Array.isArray(todos)) return [];
+
+  const items: TodoItem[] = [];
+  for (const todo of todos) {
+    if (!todo || typeof todo !== 'object') continue;
+    const record = todo as Record<string, unknown>;
+    const content = firstNonEmptyString([record.content, record.activeForm]);
+    if (!content) continue;
+    const status = typeof record.status === 'string'
+      && ['pending', 'in_progress', 'completed'].includes(record.status)
+      ? record.status as TodoItem['status']
+      : 'pending';
+    const activeForm = typeof record.activeForm === 'string' ? record.activeForm : undefined;
+    items.push({ content, activeForm, status });
+  }
   return items;
 }
 

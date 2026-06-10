@@ -1303,7 +1303,7 @@ export function useTypeahead({
   const handleKeyDown = (e: KeyboardEvent): void => {
     // Handle right arrow to accept prompt suggestion ghost text
     if (e.key === 'right' && !isViewingTeammate) {
-      const suggestionText = promptSuggestion.text;
+      const suggestionText = promptSuggestion.texts[0] ?? null;
       const suggestionShownAt = promptSuggestion.shownAt;
       if (suggestionText && suggestionShownAt > 0 && input === '') {
         markAccepted();
@@ -1321,7 +1321,7 @@ export function useTypeahead({
         return;
       }
       // Accept prompt suggestion if it exists in AppState
-      const suggestionText = promptSuggestion.text;
+      const suggestionText = promptSuggestion.texts[0] ?? null;
       const suggestionShownAt = promptSuggestion.shownAt;
       if (suggestionText && suggestionShownAt > 0 && input === '' && !isViewingTeammate) {
         e.preventDefault();

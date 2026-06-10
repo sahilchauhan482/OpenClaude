@@ -19,6 +19,7 @@ import { CompanyAnnouncement } from './CompanyAnnouncement';
 import { SpinnerStatus } from './SpinnerStatus';
 import { ErrorBanner } from './ErrorBanner';
 import { PromptSuggestions } from './PromptSuggestions';
+import { OptionCard } from '../shared/OptionCard';
 import { AtMentionPicker } from '../input/AtMentionPicker';
 import { SlashCommandMenu } from '../input/SlashCommandMenu';
 import { AttachmentBar } from '../input/AttachmentBar';
@@ -73,6 +74,7 @@ export function ChatPanel({
     error,
     rateLimitInfo,
     promptSuggestions,
+    clearPromptSuggestions,
     processState,
     fastModeState,
     setFastModeState,
@@ -84,6 +86,7 @@ export function ChatPanel({
     activeFileEdit,
     workPlan,
     agentTeamBoard,
+    agentTaskProgress,
     sendMessage,
     interrupt,
   } = useChat();
@@ -270,6 +273,7 @@ export function ChatPanel({
         processState={processState}
         toolActivity={toolActivity}
         activeFileEdit={activeFileEdit}
+        agentTaskProgress={agentTaskProgress}
       />
 
       {/* Onboarding checklist */}
@@ -314,11 +318,12 @@ export function ChatPanel({
         message={attachmentProcessing ?? undefined}
       />
 
-      {/* Prompt suggestions */}
-      {promptSuggestions.length > 0 && !isStreaming && (
+      {/* Prompt suggestions — hidden when a structured question is active */}
+      {promptSuggestions.length > 0 && !isStreaming && permissionRequest?.interaction?.kind !== 'structured_questions' && (
         <PromptSuggestions
           suggestions={promptSuggestions}
           onSelect={sendMessage}
+          onOtherSelected={clearPromptSuggestions}
           isVisible={!isStreaming}
           variant={promptSuggestionVariant}
           title={promptSuggestionVariant === 'choices' ? 'Choose a response' : 'Suggested prompts:'}
@@ -439,34 +444,8 @@ export function ChatPanel({
   );
 }
 
-function looksLikeChoicePrompt(latestAssistantText: string, suggestions: string[]): boolean {
-  if (suggestions.length === 0) {
-    return false;
-  }
-
-  const normalized = latestAssistantText.toLowerCase();
-  if (
-    normalized.includes('would you like me to') ||
-    normalized.includes('do you authorize me to') ||
-    normalized.includes('do you want me to') ||
-    normalized.includes('which option') ||
-    normalized.includes('choose one') ||
-    normalized.includes('select one')
-  ) {
-    return true;
-  }
-
-  if (suggestions.length >= 2) {
-    return true;
-  }
-
-  const suggestion = suggestions[0]?.toLowerCase() ?? '';
-  return (
-    suggestion.startsWith('yes') ||
-    suggestion.startsWith('no') ||
-    suggestion.includes('proceed') ||
-    suggestion.includes('skip')
-  );
+function looksLikeChoicePrompt(_latestAssistantText: string, suggestions: string[]): boolean {
+  return suggestions.length > 0;
 }
 
 function AgentActivityStrip({
@@ -555,6 +534,30 @@ function PermissionRail({
   onAlwaysAllow?: (requestId: string) => void;
   onDeny?: (requestId: string) => void;
 }) {
+  const isStructuredQuestion = request.interaction?.kind === 'structured_questions';
+  const isExitPlanMode = request.toolName === 'ExitPlanMode';
+
+  if (isStructuredQuestion) {
+    return (
+      <StructuredQuestionRail
+        request={request}
+        pendingCount={pendingCount}
+        onAllow={onAllow}
+        onDeny={onDeny}
+      />
+    );
+  }
+
+  if (isExitPlanMode) {
+    return (
+      <PlanModeRail
+        request={request}
+        onAllow={onAllow}
+        onDeny={onDeny}
+      />
+    );
+  }
+
   const preview = formatPermissionPreview(request);
   const queuedTools = queue.slice(1, 4).map((item) => item.toolName);
 
@@ -604,6 +607,370 @@ function PermissionRail({
           Next: {queuedTools.join(', ')}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function StructuredQuestionRail({
+  request,
+  pendingCount,
+  onAllow,
+  onDeny,
+}: {
+  request: PermissionRequest;
+  pendingCount: number;
+  onAllow?: (requestId: string, updatedInput?: Record<string, unknown>) => void;
+  onDeny?: (requestId: string) => void;
+}) {
+  const [selectedValues, setSelectedValues] = useState<Record<string, unknown>>({});
+  const [otherTextByField, setOtherTextByField] = useState<Record<string, string>>({});
+  const [otherActiveFields, setOtherActiveFields] = useState<Set<string>>(new Set());
+
+  const fields = request.interaction?.fields ?? [];
+
+  const isValid = fields.every((field) => {
+    if (!field.required) return true;
+    if (otherActiveFields.has(field.name)) {
+      return (otherTextByField[field.name] ?? '').trim().length > 0;
+    }
+    const value = selectedValues[field.name];
+    if (Array.isArray(value)) return value.length > 0;
+    return typeof value === 'string' && value.trim().length > 0;
+  });
+
+  const handleSubmit = () => {
+    const answers: Record<string, string> = {};
+    for (const field of fields) {
+      if (otherActiveFields.has(field.name)) {
+        answers[field.name] = (otherTextByField[field.name] ?? '').trim();
+        continue;
+      }
+      const value = selectedValues[field.name];
+      if (Array.isArray(value)) {
+        answers[field.name] = value.map(String).join(', ');
+      } else if (value !== undefined && value !== null) {
+        answers[field.name] = String(value);
+      }
+    }
+    onAllow?.(request.requestId, { ...request.toolInput, answers });
+  };
+
+  return (
+    <div style={{
+      padding: '10px 16px 0',
+    }}>
+      <div style={{
+        border: '1px solid var(--app-input-border, var(--vscode-input-border))',
+        borderRadius: 14,
+        background: 'color-mix(in srgb, var(--app-panel-background, var(--vscode-editorWidget-background)) 88%, transparent)',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          padding: '10px 14px 8px',
+          borderBottom: '1px solid var(--app-input-border, var(--vscode-input-border))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <div style={{
+            fontSize: 11,
+            letterSpacing: 0.2,
+            textTransform: 'uppercase',
+            color: 'var(--app-secondary-foreground, var(--vscode-descriptionForeground))',
+          }}>
+            {request.interaction?.title || 'Question from AI'}
+          </div>
+          {pendingCount > 1 && (
+            <span style={{
+              fontSize: 10,
+              color: 'var(--app-secondary-foreground, var(--vscode-descriptionForeground))',
+            }}>
+              +{pendingCount - 1} more
+            </span>
+          )}
+        </div>
+
+        <div style={{ padding: '10px 14px' }}>
+          {request.interaction?.helperText && (
+            <div style={{
+              fontSize: 12,
+              color: 'var(--app-primary-foreground, var(--vscode-editor-foreground))',
+              marginBottom: 10,
+              lineHeight: 1.5,
+            }}>
+              {request.interaction.helperText}
+            </div>
+          )}
+
+          {fields.map((field) => (
+            <div key={field.name} style={{ marginBottom: fields.length > 1 ? 12 : 0 }}>
+              {fields.length > 1 && (
+                <div style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: 'var(--app-primary-foreground, var(--vscode-editor-foreground))',
+                  marginBottom: 6,
+                }}>
+                  {field.label}
+                  {field.required ? ' *' : ''}
+                </div>
+              )}
+              {field.helperText && fields.length > 1 && (
+                <div style={{
+                  fontSize: 11,
+                  color: 'var(--app-secondary-foreground, var(--vscode-descriptionForeground))',
+                  marginBottom: 8,
+                }}>
+                  {field.helperText}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gap: 6 }}>
+                {field.type.type === 'select' && (field.type.options ?? []).map((option) => (
+                  <OptionCard
+                    key={`${field.name}-${option.value}`}
+                    fieldName={field.name}
+                    option={option}
+                    selected={!otherActiveFields.has(field.name) && selectedValues[field.name] === option.value}
+                    onSelect={() => {
+                      setOtherActiveFields((prev) => {
+                        const next = new Set(prev);
+                        next.delete(field.name);
+                        return next;
+                      });
+                      setSelectedValues((prev) => ({ ...prev, [field.name]: option.value }));
+                    }}
+                  />
+                ))}
+
+                {field.type.type === 'multiselect' && (field.type.options ?? []).map((option) => {
+                  const current = Array.isArray(selectedValues[field.name]) ? selectedValues[field.name] as string[] : [];
+                  const selected = current.includes(option.value);
+                  return (
+                    <OptionCard
+                      key={`${field.name}-${option.value}`}
+                      fieldName={field.name}
+                      option={option}
+                      selected={selected}
+                      multi={true}
+                      onSelect={() => {
+                        const next = selected
+                          ? current.filter((v) => v !== option.value)
+                          : [...current, option.value];
+                        setSelectedValues((prev) => ({ ...prev, [field.name]: next }));
+                      }}
+                    />
+                  );
+                })}
+
+                {/* "Other" option */}
+                {(field.type.type === 'select') && (
+                  <label
+                    className={`flex items-start gap-3 px-3 py-3 rounded-xl border cursor-pointer text-sm transition-colors ${
+                      otherActiveFields.has(field.name)
+                        ? 'border-[var(--vscode-focusBorder)] bg-[var(--vscode-list-activeSelectionBackground)] text-[var(--vscode-editor-foreground)]'
+                        : 'border-[var(--vscode-input-border)] bg-transparent text-[var(--vscode-descriptionForeground)] hover:border-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-list-hoverBackground)]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`${field.name}-other`}
+                      checked={otherActiveFields.has(field.name)}
+                      onChange={() => {
+                        setOtherActiveFields((prev) => new Set(prev).add(field.name));
+                        setSelectedValues((prev) => {
+                          const next = { ...prev };
+                          delete next[field.name];
+                          return next;
+                        });
+                      }}
+                      className="sr-only"
+                    />
+                    <div
+                      className="flex-shrink-0 flex items-center justify-center w-3.5 h-3.5 rounded-full border-2"
+                      style={{
+                        marginTop: 2,
+                        borderColor: otherActiveFields.has(field.name)
+                          ? 'var(--vscode-focusBorder)'
+                          : 'var(--vscode-input-border)',
+                      }}
+                    >
+                      {otherActiveFields.has(field.name) && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--vscode-focusBorder)]" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium">Other</div>
+                      {otherActiveFields.has(field.name) && (
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Type your answer..."
+                          value={otherTextByField[field.name] ?? ''}
+                          onChange={(e) => setOtherTextByField((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && isValid) {
+                              e.preventDefault();
+                              handleSubmit();
+                            }
+                          }}
+                          style={{
+                            marginTop: 6,
+                            width: '100%',
+                            padding: '4px 8px',
+                            fontSize: 12,
+                            borderRadius: 6,
+                            border: '1px solid var(--vscode-input-border)',
+                            background: 'var(--vscode-input-background)',
+                            color: 'var(--vscode-input-foreground)',
+                            outline: 'none',
+                          }}
+                        />
+                      )}
+                    </div>
+                  </label>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{
+          padding: '8px 14px 10px',
+          borderTop: '1px solid var(--app-input-border, var(--vscode-input-border))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{
+            fontSize: 10,
+            color: 'var(--app-secondary-foreground, var(--vscode-descriptionForeground))',
+          }}>
+            Select an option, then submit
+          </span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={() => onDeny?.(request.requestId)}
+              style={{
+                padding: '5px 12px',
+                fontSize: 11,
+                borderRadius: 6,
+                border: '1px solid var(--vscode-input-border)',
+                background: 'transparent',
+                color: 'var(--vscode-editor-foreground)',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!isValid}
+              style={{
+                padding: '5px 12px',
+                fontSize: 11,
+                borderRadius: 6,
+                border: 'none',
+                background: isValid ? 'var(--vscode-button-background)' : 'var(--vscode-button-background)',
+                color: 'var(--vscode-button-foreground)',
+                cursor: isValid ? 'pointer' : 'not-allowed',
+                opacity: isValid ? 1 : 0.5,
+              }}
+            >
+              {request.interaction?.submitLabel || 'Submit Choice'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlanModeRail({
+  request,
+  onAllow,
+  onDeny,
+}: {
+  request: PermissionRequest;
+  onAllow?: (requestId: string, updatedInput?: Record<string, unknown>) => void;
+  onDeny?: (requestId: string) => void;
+}) {
+  return (
+    <div style={{
+      padding: '10px 16px 0',
+    }}>
+      <div style={{
+        border: '1px solid var(--vscode-focusBorder)',
+        borderRadius: 14,
+        background: 'color-mix(in srgb, var(--vscode-button-background) 8%, var(--vscode-editorWidget-background, transparent))',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          padding: '10px 14px 8px',
+          borderBottom: '1px solid color-mix(in srgb, var(--vscode-focusBorder) 40%, transparent)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          <span style={{
+            fontSize: 11,
+            letterSpacing: 0.2,
+            textTransform: 'uppercase',
+            color: 'var(--vscode-focusBorder)',
+            fontWeight: 600,
+          }}>
+            Plan Ready for Review
+          </span>
+        </div>
+
+        <div style={{ padding: '10px 14px' }}>
+          <div style={{
+            fontSize: 12,
+            color: 'var(--app-primary-foreground, var(--vscode-editor-foreground))',
+            lineHeight: 1.5,
+          }}>
+            {request.description || 'Claude has finished planning and is ready for your approval to proceed with implementation.'}
+          </div>
+        </div>
+
+        <div style={{
+          padding: '8px 14px 10px',
+          borderTop: '1px solid color-mix(in srgb, var(--vscode-focusBorder) 40%, transparent)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 6,
+        }}>
+          <button
+            onClick={() => onDeny?.(request.requestId)}
+            style={{
+              padding: '5px 14px',
+              fontSize: 11,
+              borderRadius: 6,
+              border: '1px solid var(--vscode-input-border)',
+              background: 'transparent',
+              color: 'var(--vscode-editor-foreground)',
+              cursor: 'pointer',
+            }}
+          >
+            Reject Plan
+          </button>
+          <button
+            onClick={() => onAllow?.(request.requestId)}
+            style={{
+              padding: '5px 14px',
+              fontSize: 11,
+              borderRadius: 6,
+              border: 'none',
+              background: 'var(--vscode-button-background)',
+              color: 'var(--vscode-button-foreground)',
+              cursor: 'pointer',
+            }}
+          >
+            Approve Plan
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

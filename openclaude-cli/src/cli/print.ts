@@ -1085,7 +1085,7 @@ function runHeadlessStreaming(
     abortController: AbortController | null
     inflightPromise: Promise<void> | null
     lastEmitted: {
-      text: string
+      texts: string[]
       emittedAt: number
       promptId: PromptVariant
       generationRequestId: string | null
@@ -1093,11 +1093,12 @@ function runHeadlessStreaming(
     pendingSuggestion: {
       type: 'prompt_suggestion'
       suggestion: string
+      suggestions: string[]
       uuid: UUID
       session_id: string
     } | null
     pendingLastEmittedEntry: {
-      text: string
+      texts: string[]
       promptId: PromptVariant
       generationRequestId: string | null
     } | null
@@ -2121,7 +2122,7 @@ function runHeadlessStreaming(
                     )?.text
               if (typeof inputText === 'string') {
                 logSuggestionOutcome(
-                  suggestionState.lastEmitted.text,
+                  suggestionState.lastEmitted.texts[0],
                   inputText,
                   suggestionState.lastEmitted.emittedAt,
                   suggestionState.lastEmitted.promptId,
@@ -2309,12 +2310,13 @@ function runHeadlessStreaming(
                   if (!result || localAbort.signal.aborted) return
                   const suggestionMsg = {
                     type: 'prompt_suggestion' as const,
-                    suggestion: result.suggestion,
+                    suggestion: result.suggestions[0],
+                    suggestions: result.suggestions,
                     uuid: randomUUID(),
                     session_id: getSessionId(),
                   }
                   const lastEmittedEntry = {
-                    text: result.suggestion,
+                    texts: result.suggestions,
                     emittedAt: Date.now(),
                     promptId: result.promptId,
                     generationRequestId: result.generationRequestId,
@@ -2327,7 +2329,7 @@ function runHeadlessStreaming(
                   if (heldBackResult) {
                     suggestionState.pendingSuggestion = suggestionMsg
                     suggestionState.pendingLastEmittedEntry = {
-                      text: lastEmittedEntry.text,
+                      texts: lastEmittedEntry.texts,
                       promptId: lastEmittedEntry.promptId,
                       generationRequestId: lastEmittedEntry.generationRequestId,
                     }

@@ -129,7 +129,7 @@ export async function tryGenerateSuggestion(
   cacheSafeParams: CacheSafeParams,
   source?: 'cli' | 'sdk',
 ): Promise<{
-  suggestion: string
+  suggestions: string[]
   promptId: PromptVariant
   generationRequestId: string | null
 } | null> {
@@ -163,7 +163,7 @@ export async function tryGenerateSuggestion(
   }
 
   const promptId = getPromptVariant()
-  const { suggestion, generationRequestId } = await generateSuggestion(
+  const { suggestions, generationRequestId } = await generateSuggestion(
     abortController,
     promptId,
     cacheSafeParams,
@@ -172,13 +172,14 @@ export async function tryGenerateSuggestion(
     logSuggestionSuppressed('aborted', undefined, undefined, source)
     return null
   }
-  if (!suggestion) {
+  if (suggestions.length === 0) {
     logSuggestionSuppressed('empty', undefined, promptId, source)
     return null
   }
-  if (shouldFilterSuggestion(suggestion, promptId, source)) return null
+  const filtered = suggestions.filter(s => !shouldFilterSuggestion(s, promptId, source))
+  if (filtered.length === 0) return null
 
-  return { suggestion, promptId, generationRequestId }
+  return { suggestions: filtered, promptId, generationRequestId }
 }
 
 export async function executePromptSuggestion(
@@ -203,17 +204,18 @@ export async function executePromptSuggestion(
     context.toolUseContext.setAppState(prev => ({
       ...prev,
       promptSuggestion: {
-        text: result.suggestion,
+        texts: result.suggestions,
         promptId: result.promptId,
         shownAt: 0,
         acceptedAt: 0,
+        acceptedIndex: -1,
         generationRequestId: result.generationRequestId,
       },
     }))
 
-    if (isSpeculationEnabled() && result.suggestion) {
+    if (isSpeculationEnabled() && result.suggestions[0]) {
       void startSpeculation(
-        result.suggestion,
+        result.suggestions[0],
         context,
         context.toolUseContext.setAppState,
         false,
@@ -257,45 +259,66 @@ export function getParentCacheSuppressReason(
 
 const SUGGESTION_PROMPT = `[SUGGESTION MODE: Suggest what the user might naturally type next into Claude Code.]
 
-FIRST: Look at the user's recent messages and original request.
+Look at the user's recent messages and original request.
 
-Your job is to predict what THEY would type - not what you think they should do.
-
-THE TEST: Would they think "I was just about to type that"?
+Return exactly 3 numbered suggestions for what the user might type next:
+1. The most natural next step — something they'd think "I was just about to type that"
+2. A reasonable alternative approach or follow-up
+3. A creative or unexpected suggestion they might not have thought of but would find useful
 
 EXAMPLES:
-User asked "fix the bug and run tests", bug is fixed → "run the tests"
-After code written → "try it out"
-Claude offers options → suggest the one the user would likely pick, based on conversation
-Claude asks to continue → "yes" or "go ahead"
-Task complete, obvious follow-up → "commit this" or "push it"
-After error or misunderstanding → silence (let them assess/correct)
+User asked "fix the bug and run tests", bug is fixed →
+1. run the tests
+2. show me the diff
+3. check for similar bugs in other files
 
-Be specific: "run the tests" beats "continue".
+After code written →
+1. try it out
+2. run the linter
+3. add tests for edge cases
+
+Claude asks to continue →
+1. yes, go ahead
+2. show me the plan first
+3. do it but skip the tests for now
 
 NEVER SUGGEST:
 - Evaluative ("looks good", "thanks")
 - Questions ("what about...?")
 - Claude-voice ("Let me...", "I'll...", "Here's...")
-- New ideas they didn't ask about
-- Multiple sentences
+- Multiple sentences per suggestion
 
-Stay silent if the next step isn't obvious from what the user said.
+If only 1-2 ideas are clear, output only those. Stay silent if next step isn't obvious.
 
-Format: 2-12 words, match the user's style. Or nothing.
-
-Reply with ONLY the suggestion, no quotes or explanation.`
+Format: Each suggestion on its own line, prefixed with number and period. 2-12 words each. Match the user's style.
+Reply with ONLY the numbered suggestions, no quotes or explanation.`
 
 const SUGGESTION_PROMPTS: Record<PromptVariant, string> = {
   user_intent: SUGGESTION_PROMPT,
   stated_intent: SUGGESTION_PROMPT,
 }
 
+function parseSuggestions(text: string): string[] {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+  const suggestions: string[] = []
+  for (const line of lines) {
+    const cleaned = line.replace(/^\d+[.)]\s*|^[-*]\s*/, '').trim()
+    const unquoted = cleaned.replace(/^["']|["']$/g, '').trim()
+    if (unquoted.length > 0 && unquoted.length < 100) {
+      suggestions.push(unquoted)
+    }
+  }
+  if (suggestions.length === 0 && text.trim().length > 0 && text.trim().length < 100) {
+    return [text.trim()]
+  }
+  return suggestions.slice(0, 5)
+}
+
 export async function generateSuggestion(
   abortController: AbortController,
   promptId: PromptVariant,
   cacheSafeParams: CacheSafeParams,
-): Promise<{ suggestion: string | null; generationRequestId: string | null }> {
+): Promise<{ suggestions: string[]; generationRequestId: string | null }> {
   const prompt = SUGGESTION_PROMPTS[promptId]
 
   // Deny tools via callback, NOT by passing tools:[] - that busts cache (0% hit)
@@ -341,14 +364,14 @@ export async function generateSuggestion(
     if (msg.type !== 'assistant') continue
     const textBlock = msg.message.content.find(b => b.type === 'text')
     if (textBlock?.type === 'text') {
-      const suggestion = textBlock.text.trim()
-      if (suggestion) {
-        return { suggestion, generationRequestId }
+      const suggestions = parseSuggestions(textBlock.text)
+      if (suggestions.length > 0) {
+        return { suggestions, generationRequestId }
       }
     }
   }
 
-  return { suggestion: null, generationRequestId }
+  return { suggestions: [], generationRequestId }
 }
 
 export function shouldFilterSuggestion(

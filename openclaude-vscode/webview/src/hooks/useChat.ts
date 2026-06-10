@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { vscode } from '../vscode';
 import { useStream } from './useStream';
 import type {
+  AgentTaskProgress,
   AgentTeamBoardState,
   ChatMessage,
   FileEditMessageState,
@@ -15,6 +16,7 @@ import { describeUserMessageContent } from '../utils/messageContent';
 import { getProviderStateModel } from '../utils/providerState';
 import { resolveModelSupportsImages } from '../utils/modelCapabilities';
 import { formatToolDelta, getToolPresentation } from '../utils/toolPresentation';
+import { deriveProgressNote } from '../utils/agentProgress';
 import {
   sanitizeAssistantContentBlocks,
   sanitizeAssistantRenderableBlocks,
@@ -489,6 +491,7 @@ export function useChat() {
   const [activeFileEdit, setActiveFileEdit] = useState<FileEditMessageState | null>(null);
   const [workPlan, setWorkPlan] = useState<WorkPlanState | null>(null);
   const [agentTeamBoard, setAgentTeamBoard] = useState<AgentTeamBoardState | null>(null);
+  const [agentTaskProgress, setAgentTaskProgress] = useState<Record<string, AgentTaskProgress>>({});
 
   const { processStreamEvent, resetStream } = useStream();
   const streamingUuidRef = useRef<string | null>(null);
@@ -913,11 +916,10 @@ export function useChat() {
           }
 
           case 'prompt_suggestion': {
-            const suggestion = msgAny.suggestion as string;
-            if (suggestion) {
-              setPromptSuggestions((prev) =>
-                [...prev.filter((s) => s !== suggestion), suggestion].slice(-5),
-              );
+            const suggestions = (msgAny.suggestions as string[]) ??
+              [msgAny.suggestion as string].filter(Boolean);
+            if (suggestions.length > 0) {
+              setPromptSuggestions(suggestions);
             }
             break;
           }
@@ -1044,10 +1046,28 @@ export function useChat() {
                 break;
               case 'task_started': {
                 const taskId = String(msgAny.task_id ?? Date.now());
+                const toolUseId = typeof msgAny.tool_use_id === 'string' ? msgAny.tool_use_id : taskId;
                 const taskDescription = typeof msgAny.description === 'string' ? msgAny.description.trim() : '';
                 const taskPrompt = typeof msgAny.prompt === 'string' ? msgAny.prompt.trim() : '';
                 const workflowName = typeof msgAny.workflow_name === 'string' ? msgAny.workflow_name.trim() : '';
                 const taskType = typeof msgAny.task_type === 'string' ? msgAny.task_type.trim() : '';
+
+                setAgentTaskProgress((prev) => ({
+                  ...prev,
+                  [toolUseId]: {
+                    taskId,
+                    toolUseId,
+                    description: taskDescription || taskPrompt || 'Agent task',
+                    status: 'running',
+                    toolUses: 0,
+                    tokenCount: 0,
+                    durationMs: 0,
+                    startTime: Date.now(),
+                    progressNote: 'Starting up...',
+                    events: [{ label: 'Started', detail: taskDescription, timestamp: Date.now() }],
+                  },
+                }));
+
                 if (taskDescription) {
                   upsertSystemMessage(
                     `task-progress-${taskId}`,
@@ -1075,6 +1095,7 @@ export function useChat() {
               }
               case 'task_progress': {
                 const taskId = typeof msgAny.task_id === 'string' ? msgAny.task_id : `task-${Date.now()}`;
+                const toolUseId = typeof msgAny.tool_use_id === 'string' ? msgAny.tool_use_id : taskId;
                 const taskDescription = typeof msgAny.description === 'string' ? msgAny.description.trim() : '';
                 const lastTool = typeof msgAny.last_tool_name === 'string' ? msgAny.last_tool_name : '';
                 const taskSummary = typeof msgAny.summary === 'string' ? msgAny.summary.trim() : '';
@@ -1082,6 +1103,33 @@ export function useChat() {
                 const toolUses = typeof taskUsage?.tool_uses === 'number' ? taskUsage.tool_uses : 0;
                 const tokenCount = typeof taskUsage?.total_tokens === 'number' ? taskUsage.total_tokens : 0;
                 const durationMs = typeof taskUsage?.duration_ms === 'number' ? taskUsage.duration_ms : 0;
+
+                const progressNote = deriveProgressNote(taskSummary, lastTool);
+                setAgentTaskProgress((prev) => {
+                  const existing = prev[toolUseId];
+                  const events = existing?.events ? [...existing.events] : [];
+                  if (progressNote && (events.length === 0 || events[events.length - 1]?.label !== progressNote)) {
+                    events.push({ label: progressNote, detail: taskSummary || undefined, timestamp: Date.now() });
+                    if (events.length > 12) events.splice(0, events.length - 12);
+                  }
+                  return {
+                    ...prev,
+                    [toolUseId]: {
+                      taskId,
+                      toolUseId,
+                      description: taskDescription || existing?.description || 'Agent task',
+                      status: 'running',
+                      lastToolName: lastTool || existing?.lastToolName,
+                      progressNote,
+                      summary: taskSummary || existing?.summary,
+                      toolUses,
+                      tokenCount,
+                      durationMs,
+                      startTime: existing?.startTime ?? Date.now(),
+                      events,
+                    },
+                  };
+                });
 
                 const progressTitle = taskSummary || taskDescription || (lastTool ? `Using ${lastTool}` : 'Working...');
                 const progressId = `task-progress-${taskId}`;
@@ -1120,12 +1168,41 @@ export function useChat() {
               }
               case 'task_notification': {
                 const taskId = String(msgAny.task_id ?? Date.now());
+                const notifToolUseId = typeof msgAny.tool_use_id === 'string' ? msgAny.tool_use_id : taskId;
                 const status = typeof msgAny.status === 'string' ? msgAny.status : 'completed';
                 const summary = typeof msgAny.summary === 'string' ? msgAny.summary.trim() : '';
                 const taskUsage = msgAny.usage as Record<string, unknown> | undefined;
                 const toolUses = typeof taskUsage?.tool_uses === 'number' ? taskUsage.tool_uses : 0;
                 const tokenCount = typeof taskUsage?.total_tokens === 'number' ? taskUsage.total_tokens : 0;
                 const durationMs = typeof taskUsage?.duration_ms === 'number' ? taskUsage.duration_ms : 0;
+
+                const normalizedStatus = status === 'failed' ? 'failed' as const
+                  : status === 'stopped' ? 'stopped' as const
+                  : 'completed' as const;
+                setAgentTaskProgress((prev) => {
+                  const existing = prev[notifToolUseId];
+                  if (!existing) return prev;
+                  const finalLabel = normalizedStatus === 'failed' ? 'Failed'
+                    : normalizedStatus === 'stopped' ? 'Stopped'
+                    : 'Completed';
+                  return {
+                    ...prev,
+                    [notifToolUseId]: {
+                      ...existing,
+                      status: normalizedStatus,
+                      summary: summary || existing.summary,
+                      toolUses: toolUses || existing.toolUses,
+                      tokenCount: tokenCount || existing.tokenCount,
+                      durationMs: durationMs || existing.durationMs,
+                      progressNote: summary || finalLabel,
+                      events: [
+                        ...existing.events,
+                        { label: finalLabel, detail: summary || undefined, timestamp: Date.now() },
+                      ],
+                    },
+                  };
+                });
+
                 const title =
                   status === 'failed'
                     ? 'Worker failed'
@@ -1412,6 +1489,7 @@ export function useChat() {
     error,
     rateLimitInfo,
     promptSuggestions,
+    clearPromptSuggestions: () => setPromptSuggestions([]),
     processState,
     fastModeState,
     setFastModeState,
@@ -1423,6 +1501,7 @@ export function useChat() {
     activeFileEdit,
     workPlan,
     agentTeamBoard,
+    agentTaskProgress,
     sendMessage,
     clearMessages,
     interrupt,

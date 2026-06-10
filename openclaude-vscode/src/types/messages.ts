@@ -187,6 +187,7 @@ export interface SDKRateLimitEvent {
 export interface SDKPromptSuggestionMessage {
   type: 'prompt_suggestion';
   suggestion: string;
+  suggestions?: string[];
   uuid: string;
   session_id: string;
 }

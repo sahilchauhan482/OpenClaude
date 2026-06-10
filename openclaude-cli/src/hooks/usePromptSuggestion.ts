@@ -28,12 +28,14 @@ export function usePromptSuggestion({
   const setAppState = useSetAppState()
   const isTerminalFocused = useTerminalFocus()
   const {
-    text: suggestionText,
+    texts: suggestionTexts,
     promptId,
     shownAt,
     acceptedAt,
     generationRequestId,
   } = promptSuggestion
+
+  const suggestionText = suggestionTexts[0] ?? null
 
   const suggestion =
     isAssistantResponding || inputValue.length > 0 ? null : suggestionText
@@ -69,10 +71,11 @@ export function usePromptSuggestion({
     setAppState(prev => ({
       ...prev,
       promptSuggestion: {
-        text: null,
+        texts: [],
         promptId: null,
         shownAt: 0,
         acceptedAt: 0,
+        acceptedIndex: -1,
         generationRequestId: null,
       },
     }))
@@ -94,7 +97,7 @@ export function usePromptSuggestion({
     // (depending on shownAt causes infinite loop when this callback is called)
     setAppState(prev => {
       // Only mark shown if not already shown and suggestion exists
-      if (prev.promptSuggestion.shownAt !== 0 || !prev.promptSuggestion.text) {
+      if (prev.promptSuggestion.shownAt !== 0 || prev.promptSuggestion.texts.length === 0) {
         return prev
       }
       return {

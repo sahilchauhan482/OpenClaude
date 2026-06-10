@@ -1153,15 +1153,16 @@ function PromptInput({
   // If suggestion was generated but can't be shown due to timing, log suppression.
   // Exclude teammate view: markShown() is gated above, so shownAt stays 0 there —
   // but that's not a timing failure, the suggestion is valid when returning to leader.
-  if (promptSuggestionState.text && !promptSuggestion && promptSuggestionState.shownAt === 0 && !viewingAgentTaskId) {
-    logSuggestionSuppressed('timing', promptSuggestionState.text);
+  if (promptSuggestionState.texts.length > 0 && !promptSuggestion && promptSuggestionState.shownAt === 0 && !viewingAgentTaskId) {
+    logSuggestionSuppressed('timing', promptSuggestionState.texts[0]!);
     setAppState(prev => ({
       ...prev,
       promptSuggestion: {
-        text: null,
+        texts: [],
         promptId: null,
         shownAt: 0,
         acceptedAt: 0,
+        acceptedIndex: -1,
         generationRequestId: null
       }
     }));

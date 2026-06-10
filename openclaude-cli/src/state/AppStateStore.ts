@@ -386,10 +386,11 @@ export type AppState = DeepImmutable<{
     host: string
   } | null
   promptSuggestion: {
-    text: string | null
+    texts: string[]
     promptId: 'user_intent' | 'stated_intent' | null
     shownAt: number
     acceptedAt: number
+    acceptedIndex: number
     generationRequestId: string | null
   }
   speculation: SpeculationState
@@ -547,10 +548,11 @@ export function getDefaultAppState(): AppState {
     pendingWorkerRequest: null,
     pendingSandboxRequest: null,
     promptSuggestion: {
-      text: null,
+      texts: [],
       promptId: null,
       shownAt: 0,
       acceptedAt: 0,
+      acceptedIndex: -1,
       generationRequestId: null,
     },
     speculation: IDLE_SPECULATION_STATE,

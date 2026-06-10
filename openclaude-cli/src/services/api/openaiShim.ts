@@ -745,15 +745,15 @@ function convertMessages(
                   toolCall.extra_content = { ...tu.extra_content }
                 }
 
-                // Gemini OpenAI-compatible endpoints require Google's
-                // thought_signature to be replayed with prior function-call
-                // parts. Preserve only real signatures received from the
-                // provider; synthetic placeholders are rejected by GMI.
+                // Gemini endpoints require thought_signature on every
+                // function-call part. Use the real one when captured, or
+                // Google's documented bypass value as fallback.
                 if (preserveGeminiThoughtSignature) {
                   const signature =
                     tu.signature ??
                     geminiThoughtSignatureFromExtraContent(tu.extra_content) ??
-                    (thinkingBlock as { signature?: string } | undefined)?.signature
+                    (thinkingBlock as { signature?: string } | undefined)?.signature ??
+                    'context_engineering_is_the_way_to_go'
 
                   toolCall.extra_content = mergeGeminiThoughtSignature(
                     toolCall.extra_content,
@@ -1178,6 +1178,7 @@ async function* geminiSseToAnthropic(
   let hasEmittedCurrentTool = false
   let usage: Partial<AnthropicUsage> | undefined
   let finishReason: string | undefined
+  let pendingThoughtSignature: string | undefined
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function readWithAbort(): Promise<any> {
@@ -1273,6 +1274,12 @@ async function* geminiSseToAnthropic(
           const text = part.text as string | undefined
           const fc = part.functionCall as { name?: string; args?: unknown } | undefined
 
+          // Gemini native API uses camelCase thoughtSignature; also check snake_case
+          const partSig = (part.thoughtSignature ?? part.thought_signature) as string | undefined
+          if (typeof partSig === 'string' && partSig.length > 0) {
+            pendingThoughtSignature = partSig
+          }
+
           if (text) {
             if (hasEmittedCurrentTool) {
               yield { type: 'content_block_stop', index: contentBlockIndex }
@@ -1299,15 +1306,22 @@ async function* geminiSseToAnthropic(
               hasEmittedTextStart = false
             }
             const toolId = `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`
+            const signature = pendingThoughtSignature
+            pendingThoughtSignature = undefined
+            const contentBlock: Record<string, unknown> = {
+              type: 'tool_use',
+              id: toolId,
+              name: fc.name,
+              input: {},
+            }
+            if (typeof signature === 'string' && signature.length > 0) {
+              contentBlock.signature = signature
+              contentBlock.extra_content = { google: { thought_signature: signature } }
+            }
             yield {
               type: 'content_block_start',
               index: contentBlockIndex,
-              content_block: {
-                type: 'tool_use',
-                id: toolId,
-                name: fc.name,
-                input: {},
-              },
+              content_block: contentBlock,
             }
             hasEmittedCurrentTool = true
             yield {
@@ -1912,6 +1926,7 @@ class OpenAIShimMessages {
   private reasoningEffort?: 'low' | 'medium' | 'high' | 'xhigh'
   private providerOverride?: { model: string; baseURL: string; apiKey: string }
   private activeGeminiApiKeyIndex = 0
+  private geminiDailyExhaustedKeys = new Map<number, number>()
 
   constructor(defaultHeaders: Record<string, string>, reasoningEffort?: 'low' | 'medium' | 'high' | 'xhigh', providerOverride?: { model: string; baseURL: string; apiKey: string }) {
     this.defaultHeaders = filterAnthropicHeaders(defaultHeaders)
@@ -2400,16 +2415,24 @@ class OpenAIShimMessages {
         if (typeof msg.content === 'string') {
           parts.push({ text: msg.content })
         } else if (Array.isArray(msg.content)) {
-          for (const block of msg.content as Array<{ type?: string; text?: string; id?: string; name?: string; input?: unknown; tool_use_id?: string; content?: unknown; is_error?: boolean }>) {
+          for (const block of msg.content as Array<{ type?: string; text?: string; id?: string; name?: string; input?: unknown; tool_use_id?: string; content?: unknown; is_error?: boolean; signature?: string; extra_content?: Record<string, unknown> }>) {
             if (block.type === 'text' && block.text) {
               parts.push({ text: block.text })
             } else if (block.type === 'tool_use' && block.id && block.name) {
-              parts.push({
+              const signature =
+                block.signature ??
+                geminiThoughtSignatureFromExtraContent(block.extra_content)
+              const fcPart: Record<string, unknown> = {
                 functionCall: {
                   name: block.name,
                   args: block.input ?? {},
                 },
-              })
+              }
+              fcPart.thoughtSignature =
+                typeof signature === 'string' && signature.length > 0
+                  ? signature
+                  : 'context_engineering_is_the_way_to_go'
+              parts.push(fcPart)
             } else if (block.type === 'tool_result' && block.tool_use_id) {
               const funcName = toolUseIdToName.get(block.tool_use_id) ?? block.tool_use_id
               let resultContent = typeof block.content === 'string'
@@ -2529,6 +2552,10 @@ class OpenAIShimMessages {
     if (activeGeminiApiKeyIndex >= 0) {
       attemptedGeminiApiKeyIndices.add(activeGeminiApiKeyIndex)
     }
+
+    const GEMINI_KEY_CYCLE_DELAY_MS = 10_000
+    const MAX_GEMINI_KEY_CYCLES = 6
+    let geminiKeyCycleCount = 0
     const configuredAuthHeaderValue = process.env.OPENAI_AUTH_HEADER_VALUE?.trim()
     const customAuthHeader = process.env.OPENAI_AUTH_HEADER?.trim()
     const hasCustomAuthHeader = Boolean(
@@ -2752,7 +2779,8 @@ class OpenAIShimMessages {
       ? localRetryBaseUrls.length + 1
       : 0
     const maxGeminiFallbackAttempts = isGemini
-      ? Math.max(0, geminiApiKeys.length - 1)
+      ? Math.max(0, geminiApiKeys.length - 1) +
+        MAX_GEMINI_KEY_CYCLES * geminiApiKeys.length
       : 0
     const maxAttempts =
       (isGithub ? GITHUB_429_MAX_RETRIES : 1) +
@@ -2767,11 +2795,23 @@ class OpenAIShimMessages {
         return false
       }
 
+      const isDailyQuota =
+        failureBody.toLowerCase().includes('per day') ||
+        failureBody.toLowerCase().includes('daily') ||
+        failureBody.toLowerCase().includes('rpd')
+      if (isDailyQuota && activeGeminiApiKeyIndex >= 0) {
+        this.geminiDailyExhaustedKeys.set(activeGeminiApiKeyIndex, Date.now())
+      }
+
       for (let offset = 1; offset <= geminiApiKeys.length; offset++) {
         const candidateIndex =
           ((activeGeminiApiKeyIndex < 0 ? 0 : activeGeminiApiKeyIndex) + offset) %
           geminiApiKeys.length
         if (attemptedGeminiApiKeyIndices.has(candidateIndex)) {
+          continue
+        }
+        const dailyExhaustedAt = this.geminiDailyExhaustedKeys.get(candidateIndex)
+        if (dailyExhaustedAt && Date.now() - dailyExhaustedAt < 24 * 60 * 60 * 1000) {
           continue
         }
 
@@ -2784,6 +2824,26 @@ class OpenAIShimMessages {
           { level: 'warn' },
         )
         return true
+      }
+
+      if (geminiKeyCycleCount < MAX_GEMINI_KEY_CYCLES) {
+        geminiKeyCycleCount++
+        const availableKeys = geminiApiKeys.filter((_, i) => {
+          const exhaustedAt = this.geminiDailyExhaustedKeys.get(i)
+          return !exhaustedAt || Date.now() - exhaustedAt >= 24 * 60 * 60 * 1000
+        })
+        if (availableKeys.length >= 2) {
+          logForDebugging(
+            `[OpenAIShim] all keys attempted, cycling (${geminiKeyCycleCount}/${MAX_GEMINI_KEY_CYCLES}) — waiting ${GEMINI_KEY_CYCLE_DELAY_MS / 1000}s for RPM/TPM reset`,
+            { level: 'warn' },
+          )
+          await sleepMs(GEMINI_KEY_CYCLE_DELAY_MS)
+          attemptedGeminiApiKeyIndices.clear()
+          if (activeGeminiApiKeyIndex >= 0) {
+            attemptedGeminiApiKeyIndices.add(activeGeminiApiKeyIndex)
+          }
+          return promoteNextGeminiApiKey(reason, failureBody)
+        }
       }
 
       return false
@@ -3239,12 +3299,18 @@ class OpenAIShimMessages {
         const fc = part.functionCall as { name?: string; args?: unknown } | undefined
         if (fc?.name) {
           hasToolUse = true
-          content.push({
+          const partSignature = (part.thoughtSignature ?? part.thought_signature) as string | undefined
+          const toolBlock: Record<string, unknown> = {
             type: 'tool_use',
             id: `toolu_${crypto.randomUUID().replace(/-/g, '').slice(0, 24)}`,
             name: fc.name,
             input: fc.args ?? {},
-          })
+          }
+          if (typeof partSignature === 'string' && partSignature.length > 0) {
+            toolBlock.signature = partSignature
+            toolBlock.extra_content = { google: { thought_signature: partSignature } }
+          }
+          content.push(toolBlock)
         }
       }
     }

@@ -102,6 +102,27 @@ export interface AgentTeamBoardState {
   summaries: AgentTeamSummaryState[];
 }
 
+export interface AgentTaskProgressEvent {
+  label: string;
+  detail?: string;
+  timestamp: number;
+}
+
+export interface AgentTaskProgress {
+  taskId: string;
+  toolUseId: string;
+  description: string;
+  status: 'running' | 'completed' | 'failed' | 'stopped';
+  lastToolName?: string;
+  progressNote?: string;
+  summary?: string;
+  toolUses: number;
+  tokenCount: number;
+  durationMs: number;
+  startTime: number;
+  events: AgentTaskProgressEvent[];
+}
+
 /** A renderable content block with streaming state */
 export interface RenderableBlock {
   /** Index of this block in the assistant message */

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { ChatMessage } from '../../types/chat';
+import type { ChatMessage, AgentTaskProgress } from '../../types/chat';
 import { useAutoScroll } from '../../hooks/useAutoScroll';
 import type { ToolActivity } from '../../hooks/useChat';
 import { UserMessage } from './UserMessage';
@@ -15,6 +15,7 @@ interface MessageListProps {
   processState?: 'idle' | 'starting' | 'running' | 'stopped' | 'crashed';
   toolActivity?: ToolActivity | null;
   activeFileEdit?: ChatMessage['fileEdit'] | null;
+  agentTaskProgress?: Record<string, AgentTaskProgress>;
 }
 
 export function MessageList({
@@ -23,6 +24,7 @@ export function MessageList({
   processState,
   toolActivity = null,
   activeFileEdit = null,
+  agentTaskProgress,
 }: MessageListProps) {
   const { containerRef, userScrolledUp, autoScroll, scrollToBottom } = useAutoScroll();
   const liveStatus = getLiveStatus(toolActivity, isStreaming);
@@ -59,7 +61,7 @@ export function MessageList({
               ) : msg.role === 'system' ? (
                 msg.fileEdit ? <FileEditCard fileEdit={msg.fileEdit} /> : <SystemMessage text={msg.text ?? ''} system={msg.system} />
               ) : (
-                <AssistantMessage message={msg} />
+                <AssistantMessage message={msg} agentTaskProgress={agentTaskProgress} />
               )}
             </div>
           ))}

@@ -3,6 +3,7 @@ import React from 'react';
 interface PromptSuggestionsProps {
   suggestions: string[];
   onSelect: (suggestion: string) => void;
+  onOtherSelected?: () => void;
   isVisible: boolean;
   variant?: 'chips' | 'choices';
   title?: string;
@@ -11,6 +12,7 @@ interface PromptSuggestionsProps {
 export const PromptSuggestions: React.FC<PromptSuggestionsProps> = ({
   suggestions,
   onSelect,
+  onOtherSelected,
   isVisible,
   variant = 'chips',
   title,
@@ -81,6 +83,43 @@ export const PromptSuggestions: React.FC<PromptSuggestionsProps> = ({
                 </span>
               </button>
             ))}
+            {onOtherSelected && (
+              <button
+                onClick={onOtherSelected}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  border: '1px dashed var(--app-input-border)',
+                  background: 'transparent',
+                  color: 'var(--app-secondary-foreground)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: 16,
+                    height: 16,
+                    minWidth: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 13,
+                  }}
+                >
+                  {'...'}
+                </span>
+                <span style={{ flex: 1, lineHeight: 1.45 }}>
+                  Other — type your own response
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -101,6 +140,14 @@ export const PromptSuggestions: React.FC<PromptSuggestionsProps> = ({
             {suggestion.length > 60 ? suggestion.slice(0, 57) + '...' : suggestion}
           </button>
         ))}
+        {onOtherSelected && (
+          <button
+            className="px-2.5 py-1 text-xs rounded-full border border-dashed border-vscode-border text-vscode-fg/50 bg-transparent hover:bg-vscode-input-bg hover:text-vscode-fg cursor-pointer transition-colors"
+            onClick={onOtherSelected}
+          >
+            Other...
+          </button>
+        )}
       </div>
     </div>
   );

@@ -2938,10 +2938,11 @@ async function run(): Promise<CommanderCommand> {
         messages: []
       },
       promptSuggestion: {
-        text: null,
+        texts: [],
         promptId: null,
         shownAt: 0,
         acceptedAt: 0,
+        acceptedIndex: -1,
         generationRequestId: null
       },
       speculation: IDLE_SPECULATION_STATE,

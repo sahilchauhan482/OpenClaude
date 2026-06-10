@@ -372,21 +372,22 @@ async function generatePipelinedSuggestion(
     if (pipelineAbortController.signal.aborted) return
 
     const promptId = getPromptVariant()
-    const { suggestion, generationRequestId } = await generateSuggestion(
+    const { suggestions, generationRequestId } = await generateSuggestion(
       pipelineAbortController,
       promptId,
       createCacheSafeParams(augmentedContext),
     )
 
     if (pipelineAbortController.signal.aborted) return
-    if (shouldFilterSuggestion(suggestion, promptId)) return
+    const firstSuggestion = suggestions[0] ?? null
+    if (shouldFilterSuggestion(firstSuggestion, promptId)) return
 
     logForDebugging(
-      `[Speculation] Pipelined suggestion: "${suggestion!.slice(0, 50)}..."`,
+      `[Speculation] Pipelined suggestion: "${firstSuggestion?.slice(0, 50)}..."`,
     )
     updateActiveSpeculationState(setAppState, () => ({
       pipelinedSuggestion: {
-        text: suggestion!,
+        text: firstSuggestion!,
         promptId,
         generationRequestId,
       },
@@ -851,7 +852,7 @@ export async function handleSpeculationAccept(
     // but was called with skipReset to avoid aborting speculation before we use it.
     setAppState(prev => {
       if (
-        prev.promptSuggestion.text === null &&
+        prev.promptSuggestion.texts.length === 0 &&
         prev.promptSuggestion.promptId === null
       ) {
         return prev
@@ -859,10 +860,11 @@ export async function handleSpeculationAccept(
       return {
         ...prev,
         promptSuggestion: {
-          text: null,
+          texts: [],
           promptId: null,
           shownAt: 0,
           acceptedAt: 0,
+          acceptedIndex: -1,
           generationRequestId: null,
         },
       }
@@ -936,10 +938,11 @@ export async function handleSpeculationAccept(
       setAppState(prev => ({
         ...prev,
         promptSuggestion: {
-          text,
+          texts: [text],
           promptId,
           shownAt: Date.now(),
           acceptedAt: 0,
+          acceptedIndex: -1,
           generationRequestId,
         },
       }))

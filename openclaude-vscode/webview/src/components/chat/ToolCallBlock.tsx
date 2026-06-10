@@ -1,20 +1,27 @@
 import { useState } from 'react';
 import type { ToolUseBlock, ServerToolUseBlock } from '../../types/messages';
+import type { AgentTaskProgress } from '../../types/chat';
 import { CodeBlock } from '../shared/CodeBlock';
 import {
   getToolPresentation,
 } from '../../utils/toolPresentation';
+import { isAgentToolName } from '../../utils/agentProgress';
+import { AgentActivityFeed } from './AgentActivityFeed';
+import { TodoProgressCard } from './TodoProgressCard';
 
 interface ToolCallBlockProps {
   block: ToolUseBlock | ServerToolUseBlock;
   isStreaming: boolean;
+  agentProgress?: AgentTaskProgress;
 }
 
-export function ToolCallBlock({ block, isStreaming }: ToolCallBlockProps) {
+export function ToolCallBlock({ block, isStreaming, agentProgress }: ToolCallBlockProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const presentation = getToolPresentation(block.name, block.input);
   const hasInput = Object.keys(block.input).length > 0;
+  const isAgent = isAgentToolName(block.name);
+  const isTodo = presentation.kind === 'todo' && presentation.todos && presentation.todos.length > 0;
   const statusLabel = isStreaming ? 'Running' : 'Completed';
 
   return (
@@ -35,7 +42,7 @@ export function ToolCallBlock({ block, isStreaming }: ToolCallBlockProps) {
           <polyline points="9 18 15 12 9 6" />
         </svg>
 
-        <ToolIcon />
+        {isAgent ? <AgentIcon /> : isTodo ? <TodoIcon /> : <ToolIcon />}
 
         <div className="tool-call-copy">
           <div className="tool-call-topline">
@@ -57,6 +64,16 @@ export function ToolCallBlock({ block, isStreaming }: ToolCallBlockProps) {
           {statusLabel}
         </span>
       </button>
+
+      {/* Agent live activity feed */}
+      {isAgent && agentProgress && (
+        <AgentActivityFeed progress={agentProgress} />
+      )}
+
+      {/* Todo progress card — always visible when todos exist */}
+      {isTodo && presentation.todos && (
+        <TodoProgressCard todos={presentation.todos} isStreaming={isStreaming} />
+      )}
 
       {isExpanded && (
         <div className="tool-call-expanded">
@@ -276,6 +293,44 @@ function ToolIcon() {
       className="opacity-60"
     >
       <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  );
+}
+
+function AgentIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="opacity-60"
+    >
+      <circle cx="12" cy="8" r="5" />
+      <path d="M20 21a8 8 0 0 0-16 0" />
+    </svg>
+  );
+}
+
+function TodoIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="opacity-60"
+    >
+      <path d="M9 11l3 3L22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
     </svg>
   );
 }

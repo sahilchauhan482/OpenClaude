@@ -2023,6 +2023,7 @@ export type SDKElicitationCompleteMessage = {
 export type SDKPromptSuggestionMessage = {
   type: "prompt_suggestion"
   suggestion: string
+  suggestions?: string[]
   uuid: string
   session_id: string
 }

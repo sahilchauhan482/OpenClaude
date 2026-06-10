@@ -451,13 +451,15 @@ export async function* runAgent({
     // Set flag to auto-deny prompts for agents that can't show UI
     // Use explicit canShowPermissionPrompts if provided, otherwise:
     //   - bubble mode: always show prompts (bubbles to parent terminal)
-    //   - default: !isAsync (sync agents show prompts, async agents don't)
+    //   - default: avoid prompts only if the parent is already headless
+    //     (async agents in interactive sessions CAN show dialogs via
+    //     awaitAutomatedChecksBeforeDialog below)
     const shouldAvoidPrompts =
       canShowPermissionPrompts !== undefined
         ? !canShowPermissionPrompts
         : agentPermissionMode === 'bubble'
           ? false
-          : isAsync
+          : isAsync && state.toolPermissionContext.shouldAvoidPermissionPrompts === true
     if (shouldAvoidPrompts) {
       toolPermissionContext = {
         ...toolPermissionContext,

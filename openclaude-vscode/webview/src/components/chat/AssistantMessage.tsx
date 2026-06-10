@@ -1,4 +1,4 @@
-import type { ChatMessage, RenderableBlock } from '../../types/chat';
+import type { ChatMessage, RenderableBlock, AgentTaskProgress } from '../../types/chat';
 import type { TextBlock, ToolUseBlock, ServerToolUseBlock } from '../../types/messages';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer';
 import { ToolCallBlock } from './ToolCallBlock';
@@ -11,11 +11,12 @@ interface AssistantMessageProps {
   message: ChatMessage;
   isLatest?: boolean;
   isStreaming?: boolean;
+  agentTaskProgress?: Record<string, AgentTaskProgress>;
   onRetry?: (uuid: string) => void;
   onStop?: () => void;
 }
 
-export function AssistantMessage({ message, isLatest = false, isStreaming = false, onRetry, onStop }: AssistantMessageProps) {
+export function AssistantMessage({ message, isLatest = false, isStreaming = false, agentTaskProgress, onRetry, onStop }: AssistantMessageProps) {
   const blocks = message.blocks || [];
   if (blocks.length === 0) {
     return null;
@@ -50,6 +51,7 @@ export function AssistantMessage({ message, isLatest = false, isStreaming = fals
             key={renderableBlock.index}
             renderableBlock={renderableBlock}
             isMessageStreaming={message.isStreaming}
+            agentTaskProgress={agentTaskProgress}
           />
         ))}
       </div>
@@ -64,9 +66,10 @@ export function AssistantMessage({ message, isLatest = false, isStreaming = fals
 interface BlockRendererProps {
   renderableBlock: RenderableBlock;
   isMessageStreaming: boolean;
+  agentTaskProgress?: Record<string, AgentTaskProgress>;
 }
 
-function BlockRenderer({ renderableBlock, isMessageStreaming: _isMessageStreaming }: BlockRendererProps) {
+function BlockRenderer({ renderableBlock, isMessageStreaming: _isMessageStreaming, agentTaskProgress }: BlockRendererProps) {
   const { block, isStreaming } = renderableBlock;
 
   switch (block.type) {
@@ -79,13 +82,16 @@ function BlockRenderer({ renderableBlock, isMessageStreaming: _isMessageStreamin
       );
 
     case 'tool_use':
-    case 'server_tool_use':
+    case 'server_tool_use': {
+      const toolBlock = block as ToolUseBlock | ServerToolUseBlock;
       return (
         <ToolCallBlock
-          block={block as ToolUseBlock | ServerToolUseBlock}
+          block={toolBlock}
           isStreaming={isStreaming}
+          agentProgress={agentTaskProgress?.[toolBlock.id]}
         />
       );
+    }
 
     case 'tool_result':
       return (
